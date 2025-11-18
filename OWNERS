@@ -1,0 +1,2 @@
+include chromiumos/owners:v1:/firmware/OWNERS.zephyr
+include chromiumos/owners:v1:/bots/OWNERS.copybot #{LAST_RESORT_SUGGESTION}
