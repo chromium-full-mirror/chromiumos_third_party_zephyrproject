@@ -70,4 +70,8 @@ if(CONFIG_HAS_STM32LIB)
     target_link_libraries(app PUBLIC stm32wba_ll_lib)
 
   endif()
+  if(CONFIG_AUDIO_MPXXDTYY)
+    zephyr_include_directories(audio/microphone)
+    zephyr_sources(audio/microphone/OpenPDMFilter.c)
+  endif()
 endif()
