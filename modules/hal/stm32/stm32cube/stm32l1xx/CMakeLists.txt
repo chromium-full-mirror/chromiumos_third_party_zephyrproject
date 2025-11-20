@@ -57,6 +57,7 @@ zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_GPIO drivers/src/stm32l1xx_ll_g
 zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_I2C drivers/src/stm32l1xx_ll_i2c.c)
 zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_OPAMP drivers/src/stm32l1xx_ll_opamp.c)
 zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_PWR drivers/src/stm32l1xx_ll_pwr.c)
+zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_RCC drivers/src/stm32l1xx_ll_rcc.c)
 zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_RTC drivers/src/stm32l1xx_ll_rtc.c)
 zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_SDMMC drivers/src/stm32l1xx_ll_sdmmc.c)
 zephyr_library_sources_ifdef(CONFIG_USE_STM32_LL_SPI drivers/src/stm32l1xx_ll_spi.c)
