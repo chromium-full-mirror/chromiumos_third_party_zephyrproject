@@ -1,2 +1,1 @@
-peress@google.com
-pfagerburg@google.com
+include chromiumos/third_party/zephyr:main:/OWNERS
