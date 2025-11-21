@@ -51,11 +51,14 @@ bool checkreturn pb_read(pb_istream_t *stream, uint8_t *buf, size_t count)
 static bool checkreturn buf_read(pb_istream_t *stream, uint8_t *buf, size_t count)
 {
     uint8_t *source = (uint8_t*)stream->state;
+    stream->state = source + count;
     
     if (buf != NULL)
-        memcpy(buf, source, count);
+    {
+        while (count--)
+            *buf++ = *source++;
+    }
     
-    stream->state = source + count;
     return true;
 }
 
