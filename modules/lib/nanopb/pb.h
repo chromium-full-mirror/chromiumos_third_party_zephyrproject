@@ -214,7 +214,11 @@ typedef enum {
  * messages if not used.
  */
 #ifdef PB_NO_ERRMSG
-#define PB_RETURN_ERROR(stream,msg) return false
+#define PB_RETURN_ERROR(stream,msg) \
+    do {\
+        UNUSED(stream); \
+        return false; \
+    } while(0)
 #define PB_GET_ERROR(stream) "(errmsg disabled)"
 #else
 #define PB_RETURN_ERROR(stream,msg) \
