@@ -62,6 +62,26 @@ static bool checkreturn buf_read(pb_istream_t *stream, uint8_t *buf, size_t coun
     return true;
 }
 
+/* Read a single byte from input stream. buf may not be NULL.
+ * This is an optimization for the varint decoding. */
+static bool checkreturn pb_readbyte(pb_istream_t *stream, uint8_t *buf)
+{
+    if (!stream->bytes_left)
+        PB_RETURN_ERROR(stream, "end-of-stream");
+
+#ifndef PB_BUFFER_ONLY
+    if (!stream->callback(stream, buf, 1))
+        PB_RETURN_ERROR(stream, "io error");
+#else
+    *buf = *(uint8_t*)stream->state;
+    stream->state = (uint8_t*)stream->state + 1;
+#endif
+
+    stream->bytes_left--;
+    
+    return true;    
+}
+
 pb_istream_t pb_istream_from_buffer(uint8_t *buf, size_t bufsize)
 {
     pb_istream_t stream;
@@ -83,7 +103,7 @@ static bool checkreturn pb_decode_varint32(pb_istream_t *stream, uint32_t *dest)
     uint8_t byte;
     uint32_t result;
     
-    if (!pb_read(stream, &byte, 1))
+    if (!pb_readbyte(stream, &byte))
         return false;
     
     if (!(byte & 0x80))
@@ -102,7 +122,7 @@ static bool checkreturn pb_decode_varint32(pb_istream_t *stream, uint32_t *dest)
             if (bitpos >= 32)
                 PB_RETURN_ERROR(stream, "varint overflow");
             
-            if (!pb_read(stream, &byte, 1))
+            if (!pb_readbyte(stream, &byte))
                 return false;
             
             result |= (uint32_t)(byte & 0x7F) << bitpos;
@@ -125,7 +145,7 @@ bool checkreturn pb_decode_varint(pb_istream_t *stream, uint64_t *dest)
         if (bitpos >= 64)
             PB_RETURN_ERROR(stream, "varint overflow");
         
-        if (!pb_read(stream, &byte, 1))
+        if (!pb_readbyte(stream, &byte))
             return false;
 
         result |= (uint64_t)(byte & 0x7F) << bitpos;
