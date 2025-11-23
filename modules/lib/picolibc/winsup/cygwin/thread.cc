@@ -345,7 +345,7 @@ pthread::create (void *(*func) (void *), pthread_attr *newattr,
 {
   precreate (newattr);
   if (!magic)
-      return;
+    return;
    function = func;
    arg = threadarg;
 
