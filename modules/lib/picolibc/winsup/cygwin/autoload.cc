@@ -69,7 +69,7 @@ details. */
 /* Create a "decorated" name */
 #define mangle(name, n) #name "@" #n
 
-/* Standard DLL load macro.  Invokes a fatal warning if the function isn't
+/* Standard DLL load macro.  May invoke a fatal error if the function isn't
    found. */
 #define LoadDLLfunc(name, n, dllname) LoadDLLfuncEx (name, n, dllname, 0)
 #define LoadDLLfuncEx(name, n, dllname, notimp) LoadDLLfuncEx2(name, n, dllname, notimp, 0)
@@ -111,7 +111,6 @@ extern "C" void dll_chain1 () __asm__ ("dll_chain1");
 
 extern "C" {
 
-/* FIXME: This is not thread-safe? */
 __asm__ ("								\n\
 msg1:									\n\
 	.ascii	\"couldn't dynamically determine load address for '%s' (handle %p), %E\\0\"\n\
