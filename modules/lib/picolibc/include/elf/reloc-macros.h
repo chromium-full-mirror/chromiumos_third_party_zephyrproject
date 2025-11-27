@@ -113,4 +113,4 @@ name (rtype)							\
 
 #endif
 
-#endif /* RELOC_MACROS_H */
+#endif /* _RELOC_MACROS_H */
