@@ -154,3 +154,69 @@ uint64_t HAL_read_mtime64()
     return AE350_PLMT->MTIME;
 #endif
 }
+
+HAL_STATUS HAL_measure_ext_clock(uint32_t* result)
+{
+    struct {
+        uint32_t tick;
+        uint32_t mcycle;
+    } est[2], sum;
+
+    const uint32_t tolerance = 10;
+    const uint32_t tick_count = 91; // The larger the prime number, the higher the accuracy, but the longer the calculation time.
+    const uint32_t est_count = sizeof(est) / sizeof(*est);
+    const uint32_t cpu_clk = HAL_SMU_GetClock(SMU_CLK_CPU);
+    const uint32_t delay = tick_count * tolerance * (cpu_clk / 1000) / (32000 / 1000);
+    
+    uint32_t ch = 0; // PIT_CH0;
+
+    if (SMU_CLK_SRC_250M != (ET171_AOSMU->CLK_SRC & SMU_CLK_SRC_SEL)) {
+        *result = 0;
+        return HAL_ERROR;
+    }
+
+    // Search idle channel
+    while (AE350_PIT->CHNEN & (0xF << (ch * 4))) {
+        ++ch;
+    }
+    if (ch >= sizeof(AE350_PIT->CHANNEL) / sizeof(*AE350_PIT->CHANNEL)) {
+        *result = 0;
+        return HAL_ERROR;
+    }
+
+    #define HAL_PIT_Start(chn) do { AE350_PIT->CHNEN |= (0x1 << (4 * (chn))); } while(0)
+    #define HAL_PIT_Stop(chn) do { AE350_PIT->CHNEN &= ~(0x1 << (4 * (chn))); } while(0)
+    #define HAL_PIT_SetPeriod(chn, period) do { AE350_PIT->CHANNEL[chn].RELOAD = period; } while(0)
+    #define HAL_PIT_Read(chn) (AE350_PIT->CHANNEL[chn].RELOAD - AE350_PIT->CHANNEL[chn].COUNTER)
+
+    // HAL_PIT_InitEx(ch, PIT_CHNCTRL_TMR_32BIT | PIT_CLKSRC_EXTERNAL);
+    AE350_PIT->CHANNEL[ch].CTRL = 0x00000001;
+    HAL_PIT_SetPeriod(ch, 0xFFFFFFFF);
+    HAL_PIT_Start(ch);
+
+    for (int i = 0;;) {
+        const uint32_t tick_passed = HAL_PIT_Read(ch);
+        const uint32_t now_mcycle = HAL_read_mcycle32();
+        est[i].tick = tick_passed;
+        est[i].mcycle = now_mcycle;
+        if (++i >= est_count) break;
+        while (HAL_PIT_Read(ch) - tick_passed < tick_count) {
+            if ((uint32_t)(HAL_read_mcycle32() - now_mcycle) > delay) {
+                HAL_PIT_Stop(ch);
+                *result = 0;
+                return HAL_TIMEOUT;
+            }
+        }
+    }
+    HAL_PIT_Stop(ch);
+    sum.tick = est[est_count - 1].tick - est[0].tick;
+    sum.mcycle = est[est_count - 1].mcycle - est[0].mcycle;
+
+    extern uint32_t __g_et171_exten_clock;
+    __g_et171_exten_clock = (uint32_t)(((uint64_t)sum.tick * cpu_clk + sum.mcycle / 2) / sum.mcycle);
+    if (result) {
+        *result = __g_et171_exten_clock;
+    }
+
+    return HAL_OK;
+}

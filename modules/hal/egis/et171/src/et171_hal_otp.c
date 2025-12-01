@@ -248,9 +248,14 @@ OTP_ANALOG_OPTION HAL_OTP_GetAnalogConfig()
 extern uint32_t __g_et171_root_clock;
 void HAL_OTP_GetRootClock()
 {
-    if (ET171_OTP->UID[3])
+    const uint32_t root_clock = ET171_OTP->UID[3];
+
+    if (root_clock)
     {
-        __g_et171_root_clock = ET171_OTP->UID[3];
+        if (__g_et171_root_clock != root_clock) {
+            __g_et171_root_clock = root_clock;
+            HAL_measure_ext_clock(NULL);
+        }
     }
     #if defined(CFG_FPGA) && defined(ROM_HAL)
     __g_et171_root_clock = 60 * MHz;

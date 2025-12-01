@@ -95,5 +95,12 @@ void HAL_write_mtime(unsigned long long mtime);
 uint32_t HAL_read_mtime32();
 uint64_t HAL_read_mtime64();
 
+/**
+ *  \brief       Measure extern clock frequence
+ *  \param[out]  result: frequence Hz
+ *  \return      HAL_STATUS
+ */
+HAL_STATUS HAL_measure_ext_clock(uint32_t* result);
+
 
 #endif /* __ET171_HAL_UTILS_H__ */

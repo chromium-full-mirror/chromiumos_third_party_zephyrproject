@@ -346,6 +346,26 @@ typedef struct {
     __IO unsigned int USB2PHY[8];           /* 0x600 ~ 0x61C */
 } SMU2_RegDef;
 
+/*****************************************************************************
+ * PIT - AE350
+ ****************************************************************************/
+typedef struct {
+	__IO unsigned int CTRL;                 /* PIT Channel Control Register */
+	__IO unsigned int RELOAD;               /* PIT Channel Reload Register */
+	__IO unsigned int COUNTER;              /* PIT Channel Counter Register */
+	__IO unsigned int RESERVED[1];
+} PIT_CHANNEL_REG;
+
+typedef struct {
+	__I  unsigned int IDREV;                /* 0x00 ID and Revision Register */
+	     unsigned int RESERVED[3];          /* 0x04 ~ 0x0C Reserved */
+	__I  unsigned int CFG;                  /* 0x10 Configuration Register */
+	__IO unsigned int INTEN;                /* 0x14 Interrupt Enable Register */
+	__IO unsigned int INTST;                /* 0x18 Interrupt Status Register */
+	__IO unsigned int CHNEN;                /* 0x1C Channel Enable Register */
+	PIT_CHANNEL_REG   CHANNEL[4];           /* 0x20 ~ 0x50 Channel #n Registers */
+} PIT_RegDef;
+
 /*0x100 Pad MUX A*/
 
 /*0x104 Pad MUX B*/
@@ -457,6 +477,7 @@ typedef struct {
 #define SMU2_BASE               _IO_(0xF0E00000)
 
 // ET170/ET171
+#define PIT_BASE                _IO_(0xF0400000)
 #define OTPC_BASE               _IO_(0xF1000000)
 #define PLMT_BASE               _IO_(0xE6000000)
 
@@ -466,6 +487,7 @@ typedef struct {
 
 // ET171
 #define AE350_PLMT              ((PLMT_RegDef *) PLMT_BASE)
+#define AE350_PIT               ((PIT_RegDef *)  PIT_BASE)
 #define ET171_OTPC              ((OTPC_RegDef *)  OTPC_BASE)
 #define ET171_AOSMU             ((AOSMU_RegDef* ) AOSMU_BASE)
 #define ET171_SMU2              ((SMU2_RegDef* ) SMU2_BASE)
