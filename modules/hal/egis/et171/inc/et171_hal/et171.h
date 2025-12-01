@@ -12,6 +12,14 @@
 #define SRAM2NONCACHE_ADDR(addr)    ((unsigned int)(addr) | SRAM_NONCACHE_OFFSET)
 #define SRAM2CACHE_ADDR(addr)       ((unsigned int)(addr) & 0x0FFFFFFF)
 
+#ifndef BIT
+#define BIT(n)                      ((unsigned int) 1 << (n))
+#endif
+
+#ifndef BITS
+#define BITS(m,n)                   (~(BIT(m)-1) & ((BIT(n) - 1) | BIT(n)))
+#endif
+
 #ifndef __ASSEMBLER__
 /*****************************************************************************
  * SMU - ET171
@@ -120,6 +128,8 @@ typedef struct {
 #define SMU_SECURE_SYS_RST              BIT(1)
 
 /* SMU 0x14 CLK_EN, 0x18 SW_RST*/
+#define SMU_RST_SYSRAM1     BIT(21)
+#define SMU_RST_LIN         BIT(20)
 #define SMU_RST_CAN         BIT(19)
 #define SMU_RST_SPIM3       BIT(18)
 #define SMU_RST_SYSRAM3     BIT(17)
@@ -141,6 +151,8 @@ typedef struct {
 #define SMU_RST_WDT         BIT(1)
 #define SMU_RST_RTC         BIT(0)
 
+#define SMU_CLKEN_SYSRAM1   SMU_RST_SYSRAM1
+#define SMU_CLKEN_LIN       SMU_RST_LIN
 #define SMU_CLKEN_CAN       SMU_RST_CAN
 #define SMU_CLKEN_SPIM3     SMU_RST_SPIM3
 #define SMU_CLKEN_SYSRAM3   SMU_RST_SYSRAM3
@@ -240,6 +252,7 @@ typedef struct {
 #define PAD3_SPIM3_WPN      BIT(3)  //                         DBG3, boot_strapping[2]
 #define PAD4_SPIM3_MISO     BIT(4)  //           SPIS_MISO     DBG4, boot_strapping[3]
 #define PAD5_SPIM3_CSN      BIT(5)  //           SPIS_CSN      DBG5
+#define PAD_SPIM3           BITS(0, 5)
 #define PAD6_JTAG_TCK       BIT(6)  // GPIO3
 #define PAD7_JTAG_TMS       BIT(7)  // GPIO4
 #define PAD8_JTAG_TDI       BIT(8)  // GPIO5
@@ -257,7 +270,7 @@ typedef struct {
 #define PAD18_SPIM1_HOLDN   BIT(18)
 #define PAD19_SPIM1_CK      BIT(19)
 #define PAD20_SPIM1_MOSI    BIT(20)
-#define PAD_SPIS_MODE0      BIT(21, 24)
+#define PAD_SPIS_MODE0      BITS(21, 24)
 #define PAD21_SPIS_MOSI     BIT(21) // GPIO13, CAN_TX
 #define PAD22_SPIS_MISO     BIT(22) // GPIO14, CAN_RX
 #define PAD23_SPIS_CK       BIT(23) // GPIO15, LIN_TX
@@ -269,6 +282,18 @@ typedef struct {
 #define PAD29_SPIM2_CSN     BIT(29) // GPIO11                  DBG14
 #define PAD30_SPIM2_CK      BIT(30)
 #define PAD_SPIM2           (PAD26_SPIM2_MISO | PAD28_SPIM2_MOSI | PAD29_SPIM2_CSN | PAD30_SPIM2_CK)
+
+#define SMU_GPIO_PIN_TO_PAD(gpio_pin)														 	 \
+(																								 \
+		((gpio_pin) & BITS( 0, 2)) ? (gpio_pin << 10			)/* GPIO_0~2   => PAD_10~12    */\
+    :	((gpio_pin) & BITS( 3, 6)) ? (gpio_pin <<  3			)/* GPIO_3~6   => PAD_6~9	   */\
+    :	((gpio_pin) & BITS( 7, 8)) ? (gpio_pin <<  6			)/* GPIO_7~8   => PAD_13~14    */\
+    :	((gpio_pin) & BITS( 9,11)) ? ((gpio_pin * gpio_pin) << 7)/* GPIO_9~11  => PAD_25,27,29 */\
+    :	((gpio_pin) & BIT(12)    ) ? (BIT(5)					)/* GPIO_12    => PAD_5        */\
+	:	((gpio_pin) & BITS(13,16)) ? (gpio_pin << 8				)/* GPIO_13~16 => PAD_21~24    */\
+    :	0																						 \
+)
+#define SMU_GPIO_NUM_TO_PAD(gpio_num) SMU_GPIO_PIN_TO_PAD(BIT(gpio_num))
 
 
 // 0x200
