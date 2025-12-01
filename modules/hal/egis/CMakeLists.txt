@@ -1,3 +1,5 @@
 if(CONFIG_HAS_EGIS_ET171_HAL)
     add_subdirectory(et171)
+#    add_subdirectory(et171/lib/usbcore)
+#    add_subdirectory(et171/lib/mcrypt)
 endif()

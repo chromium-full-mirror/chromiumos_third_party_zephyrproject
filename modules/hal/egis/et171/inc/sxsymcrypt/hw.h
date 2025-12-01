@@ -40,6 +40,9 @@ uint32_t sx_rdreg(struct sx_regs *regs, uint32_t addr);
 /** Map user memory for access by DMA */
 char *sx_map_usrdata(char *s);
 
+/** Map access DMA address to user memory */
+char *sx_map_dmadata(char *s);
+
 /** Map internal memory for access by DMA */
 char *sx_map_internal(struct sx_regs *regs, char *s);
 

@@ -125,6 +125,8 @@ int sx_hash_resume_state(struct sxhash *c);
  */
 int sx_hash_feed(struct sxhash *c, const char *msg, size_t sz);
 
+int sx_hash_spit_tail(struct sxhash *c, char *buffer, size_t *sz);
+
 /** Starts the partial hashing operation.
  *
  * This function updates the partial hashing based on the data chunks fed since

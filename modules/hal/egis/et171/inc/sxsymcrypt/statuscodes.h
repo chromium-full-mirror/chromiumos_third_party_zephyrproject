@@ -23,6 +23,8 @@
  */
 #define SX_ERR_INCOMPATIBLE_HW -3
 
+#define SX_ERR_WRONG_EMPTY -4
+
 /** Invalid authentication tag in authenticated decryption */
 #define SX_ERR_INVALID_TAG -16
 
