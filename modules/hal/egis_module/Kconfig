@@ -1,0 +1,3 @@
+rsource "boards/egis/egis_et171/Kconfig.defconfig"
+rsource "soc/egis/et171/Kconfig.defconfig"
+
