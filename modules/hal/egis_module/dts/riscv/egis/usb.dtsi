@@ -1,0 +1,12 @@
+/ {
+	soc {
+		usb: usb@e8100000 {
+			compatible = "egis,et171-usbd";
+			reg = <0xe8100000 0x1000>;
+			num-bidir-endpoints = <16>;
+			interrupts = <1 1>, <2 1>;
+			interrupt-parent = <&plic0>;
+			status = "disabled";
+		};
+	};
+};

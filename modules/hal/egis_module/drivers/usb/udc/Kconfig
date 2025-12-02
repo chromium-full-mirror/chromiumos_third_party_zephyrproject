@@ -1,0 +1,9 @@
+if UDC_DRIVER
+
+module = UDC_DRIVER
+module-str = usb drv
+source "subsys/logging/Kconfig.template.log_config"
+
+rsource "./Kconfig.*"
+
+endif # UDC_DRIVER

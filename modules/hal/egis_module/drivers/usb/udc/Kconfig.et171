@@ -1,0 +1,11 @@
+# Copyright (c) 2022 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+config UDC_ET171
+	bool "ET171 USB device controller driver"
+	depends on DT_HAS_EGIS_ET171_USBD_ENABLED
+    select HAS_EGIS_ET171_HAL
+	select HAS_EGIS_ET171_USBCORE
+	default y
+	help
+	  et171 USB Device Controller Driver.

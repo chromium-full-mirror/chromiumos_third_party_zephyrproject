@@ -1,6 +1,7 @@
 #include "clock.dtsi"
 #include "crypto.dtsi"
 #include "trng.dtsi"
+#include "usb.dtsi"
 
 /delete-node/ &clk_mtimer;
 
@@ -19,5 +20,9 @@
 };
 
 &crypto {
+	status = "okay";
+};
+
+zephyr_udc0: &usb {
 	status = "okay";
 };
