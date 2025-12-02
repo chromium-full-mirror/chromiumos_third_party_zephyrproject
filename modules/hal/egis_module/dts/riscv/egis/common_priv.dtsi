@@ -1,6 +1,7 @@
 #include "clock.dtsi"
 #include "crypto.dtsi"
 #include "pinctrl.dtsi"
+#include "power.dtsi"
 #include "trng.dtsi"
 #include "usb.dtsi"
 

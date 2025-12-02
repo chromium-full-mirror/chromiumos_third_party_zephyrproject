@@ -6,6 +6,9 @@ if SOC_EGIS_ET171
 config HAS_EGIS_ET171_HAL
 	default y
 
+config PM
+	default y
+
 config CLOCK_CONTROL
 	# Auto select 'CLOCK_CONTROL' when ns16550 doesn't have porperty 'clock-frequency'
 	default y

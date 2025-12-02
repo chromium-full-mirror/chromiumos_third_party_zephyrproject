@@ -16,6 +16,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/usb/udc.h>
 #include <zephyr/usb/usb_ch9.h>
+#include <zephyr/pm/policy.h>
 
 #include "udc_common.h"
 
@@ -101,6 +102,9 @@ static struct udc_et171_device {
 	struct k_work _work;
 	sys_slist_t _slist;
 	uint8_t _usbd_config_init_flag;
+#if defined(CONFIG_PM)
+	uint8_t _pm_policy_locked;
+#endif
 } udc_et171_device_inst;
 
 #define DEV_TO_INST(dev) CONTAINER_OF((dev)->data, struct udc_et171_device, _data)
@@ -117,6 +121,34 @@ static inline struct udc_et171_setup_event* get_setup_event(struct udc_et171_dev
 	arch_irq_unlock(key);
 	return node ? SNODE_TO_EVENT(node) : NULL;
 }
+
+#if defined(CONFIG_PM)
+static void lock_pm_policy(const struct device * dev, uint8_t lock)
+{
+	struct udc_et171_device *dev_inst = DEV_TO_INST(dev);
+
+	unsigned int irq_lock_key = arch_irq_lock();
+	if (dev_inst->_pm_policy_locked != lock)
+	{
+		const struct pm_state_info *cpu_states;
+		uint32_t num_cpu_states = pm_state_cpu_get_all(0, &cpu_states);
+
+		if (lock) {
+			for (uint32_t i = 0; i < num_cpu_states; i++) {
+				pm_policy_state_lock_get(cpu_states[i].state, PM_ALL_SUBSTATES);
+			}
+		} else {
+			for (uint32_t i = 0; i < num_cpu_states; i++) {
+				pm_policy_state_lock_put(cpu_states[i].state, PM_ALL_SUBSTATES);
+			}
+		}
+		dev_inst->_pm_policy_locked = lock;
+	}
+    arch_irq_unlock(irq_lock_key);
+}
+#else
+#define lock_pm_policy(dev, lock);
+#endif
 
 static void isr_cb_connect(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
@@ -207,11 +239,13 @@ static uint32_t work_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 static void isr_cb_suspend(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
 	udc_submit_event(dev, UDC_EVT_SUSPEND, 0);
+	lock_pm_policy(dev, false);
 }
 static void isr_cb_resume(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
 	OUT_REG(USB2PHY, IN_REG(USB2PHY) & ~SMU_USB2PHY_WAKEUP);
 	udc_submit_event(dev, UDC_EVT_RESUME, 0);
+	lock_pm_policy(dev, true);
 }
 static void * mem_cb_alloc(void * privateData, uint32_t requireSize)  {
     return USB_mem_alloc(requireSize);
@@ -591,6 +625,8 @@ static int udc_et171_enable(const struct device *dev)
 	IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority), udc_et171_irq_handler, DEVICE_DT_INST_GET(0), 0);
 	irq_enable(DT_INST_IRQN(0));
 
+	lock_pm_policy(dev, true);
+
 	return 0;
 }
 
@@ -605,6 +641,8 @@ static int udc_et171_disable(const struct device *dev)
 
 	// stop all.
 	drv->stop(pD);
+
+	lock_pm_policy(dev, false);
 
 	return 0;
 }
