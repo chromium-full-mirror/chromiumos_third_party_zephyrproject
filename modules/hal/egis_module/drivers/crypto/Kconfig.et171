@@ -1,0 +1,13 @@
+# Copyright (c) 2025 Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config CRYPTO_EGIS_ET171
+	bool "Egis ET171 SHA driver"
+	default y
+	depends on DT_HAS_EGIS_ET171_SHA_ENABLED
+	select HAS_EGIS_ET171_HAL
+	select HAS_EGIS_ET171_SXSMCRYPT
+	help
+	  Enable Egis ET171 SHA driver.
+	  This driver supports hardware accelerator to calculate
+	  SHA-2 hash.

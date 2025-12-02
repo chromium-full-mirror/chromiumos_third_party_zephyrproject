@@ -1,0 +1,19 @@
+# Crypto configuration options
+
+# SPDX-License-Identifier: Apache-2.0
+
+if CRYPTO
+
+config CRYPTO_INIT_PRIORITY
+	int "Crypto devices init priority"
+	default 90
+	help
+	  Crypto devices initialization priority.
+
+module = CRYPTO
+module-str = CRYPTO
+source "subsys/logging/Kconfig.template.log_config"
+
+rsource "Kconfig.et171"
+
+endif # CRYPTO

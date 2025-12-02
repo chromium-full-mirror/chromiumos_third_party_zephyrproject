@@ -1,0 +1,8 @@
+/ {
+	soc {
+		crypto: crypto {
+			compatible = "egis,et171-sha";
+			status = "disabled";
+		};
+	};
+};
