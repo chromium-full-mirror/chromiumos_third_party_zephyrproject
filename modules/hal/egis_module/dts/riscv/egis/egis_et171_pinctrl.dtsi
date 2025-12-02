@@ -1,0 +1,268 @@
+/*
+ * Copyright (c) 2025 Egis Technology Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/pinctrl/egis-et171-pinctrl.h>
+
+&pinctrl {
+
+	/* GPIOs */
+
+	/omit-if-no-ref/ gpio_pin0_pad10: gpio_pin0_pad10 {
+		pinmux = <MUX_GPIO_PIN0_PAD10>;
+	};
+
+	/omit-if-no-ref/ gpio_pin1_pad11: gpio_pin1_pad11 {
+		pinmux = <MUX_GPIO_PIN1_PAD11>;
+	};
+
+	/omit-if-no-ref/ gpio_pin2_pad12: gpio_pin2_pad12 {
+		pinmux = <MUX_GPIO_PIN2_PAD12>;
+	};
+
+	/omit-if-no-ref/ gpio_pin3_pad6: gpio_pin3_pad6 {
+		pinmux = <MUX_GPIO_PIN3_PAD6>;
+	};
+
+	/omit-if-no-ref/ gpio_pin4_pad7: gpio_pin4_pad7 {
+		pinmux = <MUX_GPIO_PIN4_PAD7>;
+	};
+
+	/omit-if-no-ref/ gpio_pin5_pad8: gpio_pin5_pad8 {
+		pinmux = <MUX_GPIO_PIN5_PAD8>;
+	};
+
+	/omit-if-no-ref/ gpio_pin6_pad9: gpio_pin6_pad9 {
+		pinmux = <MUX_GPIO_PIN6_PAD9>;
+	};
+
+	/omit-if-no-ref/ gpio_pin7_pad13: gpio_pin7_pad13 {
+		pinmux = <MUX_GPIO_PIN7_PAD13>;
+	};
+
+	/omit-if-no-ref/ gpio_pin8_pad14: gpio_pin8_pad14 {
+		pinmux = <MUX_GPIO_PIN8_PAD14>;
+	};
+
+	/omit-if-no-ref/ gpio_pin9_pad25: gpio_pin9_pad25 {
+		pinmux = <MUX_GPIO_PIN9_PAD25>;
+	};
+
+	/omit-if-no-ref/ gpio_pin10_pad27: gpio_pin10_pad27 {
+		pinmux = <MUX_GPIO_PIN10_PAD27>;
+	};
+
+	/omit-if-no-ref/ gpio_pin11_pad29: gpio_pin11_pad29 {
+		pinmux = <MUX_GPIO_PIN11_PAD29>;
+	};
+
+	/omit-if-no-ref/ gpio_pin12_pad5: gpio_pin12_pad5 {
+		pinmux = <MUX_GPIO_PIN12_PAD5>;
+	};
+
+	/omit-if-no-ref/ gpio_pin13_pad21: gpio_pin13_pad21 {
+		pinmux = <MUX_GPIO_PIN13_PAD21>;
+	};
+
+	/omit-if-no-ref/ gpio_pin14_pad22: gpio_pin14_pad22 {
+		pinmux = <MUX_GPIO_PIN14_PAD22>;
+	};
+
+	/omit-if-no-ref/ gpio_pin15_pad23: gpio_pin15_pad23 {
+		pinmux = <MUX_GPIO_PIN15_PAD23>;
+	};
+
+	/omit-if-no-ref/ gpio_pin16_pad24: gpio_pin16_pad24 {
+		pinmux = <MUX_GPIO_PIN16_PAD24>;
+	};
+
+	/* SPIM1 (spi0) */
+
+	/omit-if-no-ref/ spim1_wpn_pad15: spim1_wpn_pad15 {
+		pinmux = <MUX_SPIM1_WPN_PAD15>;
+	};
+
+	/omit-if-no-ref/ spim1_miso_pad16: spim1_miso_pad16 {
+		pinmux = <MUX_SPIM1_MISO_PAD16>;
+	};
+
+	/omit-if-no-ref/ spim1_csn_pad17: spim1_csn_pad17 {
+		pinmux = <MUX_SPIM1_CSN_PAD17>;
+	};
+
+	/omit-if-no-ref/ spim1_holdn_pad18: spim1_holdn_pad18 {
+		pinmux = <MUX_SPIM1_HOLDN_PAD18>;
+	};
+
+	/omit-if-no-ref/ spim1_ck_pad19: spim1_ck_pad19 {
+		pinmux = <MUX_SPIM1_CK_PAD19>;
+	};
+
+	/omit-if-no-ref/ spim1_mosi_pad20: spim1_mosi_pad20 {
+		pinmux = <MUX_SPIM1_MOSI_PAD20>;
+	};
+
+	/* SPIM2 (spi1) */
+
+	/omit-if-no-ref/ spim2_miso_pad26: spim2_miso_pad26 {
+		pinmux = <MUX_SPIM2_MISO_PAD26>;
+	};
+
+	/omit-if-no-ref/ spim2_mosi_pad28: spim2_mosi_pad28 {
+		pinmux = <MUX_SPIM2_MOSI_PAD28>;
+	};
+
+	/omit-if-no-ref/ spim2_csn_pad29: spim2_csn_pad29 {
+		pinmux = <MUX_SPIM2_CSN_PAD29>;
+	};
+
+	/omit-if-no-ref/ spim2_ck_pad30: spim2_ck_pad30 {
+		pinmux = <MUX_SPIM2_CK_PAD30>;
+	};
+
+	/* SPIM3 (spi2) */
+
+	/omit-if-no-ref/ spim3_holdn_pad0: spim3_holdn_pad0 {
+		pinmux = <MUX_SPIM3_HOLDN_PAD0>;
+	};
+
+	/omit-if-no-ref/ spim3_ck_pad1: spim3_ck_pad1 {
+		pinmux = <MUX_SPIM3_CK_PAD1>;
+	};
+
+	/omit-if-no-ref/ spim3_mosi_pad2: spim3_mosi_pad2 {
+		pinmux = <MUX_SPIM3_MOSI_PAD2>;
+	};
+
+	/omit-if-no-ref/ spim3_wpn_pad3: spim3_wpn_pad3 {
+		pinmux = <MUX_SPIM3_WPN_PAD3>;
+	};
+
+	/omit-if-no-ref/ spim3_miso_pad4: spim3_miso_pad4 {
+		pinmux = <MUX_SPIM3_MISO_PAD4>;
+	};
+
+	/omit-if-no-ref/ spim3_csn_pad5: spim3_csn_pad5 {
+		pinmux = <MUX_SPIM3_CSN_PAD5>;
+	};
+
+	/* SPIS */
+
+	/omit-if-no-ref/ spis_ck_pad1: spis_ck_pad1 {
+		pinmux = <MUX_SPIS_CK_PAD1>;
+	};
+
+	/omit-if-no-ref/ spis_mosi_pad2: spis_mosi_pad2 {
+		pinmux = <MUX_SPIS_MOSI_PAD2>;
+	};
+
+	/omit-if-no-ref/ spis_miso_pad4: spis_miso_pad4 {
+		pinmux = <MUX_SPIS_MISO_PAD4>;
+	};
+
+	/omit-if-no-ref/ spis_csn_pad5: spis_csn_pad5 {
+		pinmux = <MUX_SPIS_CSN_PAD5>;
+	};
+
+	/* UART (uart0) */
+
+	/omit-if-no-ref/ uart_rx_pad1: uart_rx_pad1 {
+		pinmux = <MUX_UART_RX_PAD1>;
+	};
+
+	/omit-if-no-ref/ uart_tx_pad2: uart_tx_pad2 {
+		pinmux = <MUX_UART_TX_PAD2>;
+	};
+
+	/omit-if-no-ref/ uart_rx_pad13: uart_rx_pad13 {
+		pinmux = <MUX_UART_RX_PAD13>;
+	};
+
+	/omit-if-no-ref/ uart_tx_pad14: uart_tx_pad14 {
+		pinmux = <MUX_UART_TX_PAD14>;
+	};
+
+	/* JTAG */
+
+	/omit-if-no-ref/ jtag_tck_pad6: jtag_tck_pad6 {
+		pinmux = <MUX_JTAG_TCK_PAD6>;
+	};
+
+	/omit-if-no-ref/ jtag_tms_pad7: jtag_tms_pad7 {
+		pinmux = <MUX_JTAG_TMS_PAD7>;
+	};
+
+	/omit-if-no-ref/ jtag_tdi_pad8: jtag_tdi_pad8 {
+		pinmux = <MUX_JTAG_TDI_PAD8>;
+	};
+
+	/omit-if-no-ref/ jtag_tdo_pad9: jtag_tdo_pad9 {
+		pinmux = <MUX_JTAG_TDO_PAD9>;
+	};
+
+	/* PWM (pit0) */
+
+	/omit-if-no-ref/ pwm_ch0_pad13: pwm_ch0_pad13 {
+		pinmux = <MUX_PWM_CH0_PAD13>;
+	};
+
+	/omit-if-no-ref/ pwm_ch1_pad14: pwm_ch1_pad14 {
+		pinmux = <MUX_PWM_CH1_PAD14>;
+	};
+
+	/omit-if-no-ref/ pwm_ch2_pad11: pwm_ch2_pad11 {
+		pinmux = <MUX_PWM_CH2_PAD11>;
+	};
+
+	/omit-if-no-ref/ pwm_ch3_pad12: pwm_ch3_pad12 {
+		pinmux = <MUX_PWM_CH3_PAD12>;
+	};
+
+	/* CAN */
+
+	/omit-if-no-ref/ can_tx_pad11: can_tx_pad11 {
+		pinmux = <MUX_CAN_TX_PAD11>;
+	};
+
+	/omit-if-no-ref/ can_rx_pad12: can_rx_pad12 {
+		pinmux = <MUX_CAN_RX_PAD12>;
+	};
+
+	/omit-if-no-ref/ can_tx_pad21: can_tx_pad21 {
+		pinmux = <MUX_CAN_TX_PAD21>;
+	};
+
+	/omit-if-no-ref/ can_rx_pad22: can_rx_pad22 {
+		pinmux = <MUX_CAN_RX_PAD22>;
+	};
+
+	/* I2C (i2c0) */
+
+	/omit-if-no-ref/ i2c_scl_pad11: i2c_scl_pad11 {
+		pinmux = <MUX_I2C_SCL_PAD11>;
+	};
+
+	/omit-if-no-ref/ i2c_sda_pad12: i2c_sda_pad12 {
+		pinmux = <MUX_I2C_SDA_PAD12>;
+	};
+
+	/omit-if-no-ref/ i2c_scl_pad13: i2c_scl_pad13 {
+		pinmux = <MUX_I2C_SCL_PAD13>;
+	};
+
+	/omit-if-no-ref/ i2c_sda_pad14: i2c_sda_pad14 {
+		pinmux = <MUX_I2C_SDA_PAD14>;
+	};
+
+	/* LIN */
+
+	/omit-if-no-ref/ lin_tx_pad23: lin_tx_pad23 {
+		pinmux = <MUX_LIN_TX_PAD23>;
+	};
+
+	/omit-if-no-ref/ lin_rx_pad24: lin_rx_pad24 {
+		pinmux = <MUX_LIN_RX_PAD24>;
+	};
+};

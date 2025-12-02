@@ -1,0 +1,7 @@
+/ {
+	soc {
+		pinctrl: pin-controller {
+			compatible = "egis,et171-pinctrl";
+		};
+	};
+};

@@ -1,7 +1,10 @@
 #include "clock.dtsi"
 #include "crypto.dtsi"
+#include "pinctrl.dtsi"
 #include "trng.dtsi"
 #include "usb.dtsi"
+
+#include <egis/egis_et171_pinctrl.dtsi>
 
 /delete-node/ &clk_mtimer;
 
@@ -15,11 +18,22 @@
 	status = "okay";
 };
 
+&uart0 {
+	status = "okay";
+	current-speed = <38400>;
+	pinctrl-0 = <&uart_rx_pad1 &uart_tx_pad14>;
+	pinctrl-names = "default";
+};
+
 &trng {
 	status = "okay";
 };
 
 &crypto {
+	status = "okay";
+};
+
+&pinctrl {
 	status = "okay";
 };
 

@@ -1,0 +1,20 @@
+# Copyright (c) 2025, Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+compatible: "egis,et171-pinctrl"
+
+include: base.yaml
+
+description: |
+    et171 pin controller
+
+child-binding:
+  description: |
+    This binding gives a base representation of the et171 pins
+    configuration
+
+  properties:
+    pinmux:
+      type: int
+      required: true
+      description: Pinmux selection
