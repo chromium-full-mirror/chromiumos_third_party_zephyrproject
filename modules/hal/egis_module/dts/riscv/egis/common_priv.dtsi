@@ -4,6 +4,7 @@
 #include "power.dtsi"
 #include "trng.dtsi"
 #include "usb.dtsi"
+#include "spi.dtsi"
 
 #include <egis/egis_et171_pinctrl.dtsi>
 
@@ -43,6 +44,14 @@
 };
 
 &pinctrl {
+	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+};
+
+&spi1 {
 	status = "okay";
 };
 
