@@ -1,0 +1,11 @@
+# Copyright The Zephyr Project Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+config HWINFO_ET171
+	bool "Egis et171 hwinfo"
+	default y
+	depends on SOC_EGIS_ET171
+	select HWINFO_HAS_DRIVER
+	select HAS_EGIS_ET171_HAL
+	help
+	  Enable Egis et171 hwinfo driver
