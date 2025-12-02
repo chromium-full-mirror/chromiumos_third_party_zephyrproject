@@ -1,7 +1,18 @@
 #include "clock.dtsi"
+#include "trng.dtsi"
 
 /delete-node/ &clk_mtimer;
 
+/ {
+	chosen {
+		zephyr,entropy = &trng;
+	};
+};
+
 &clock {
+	status = "okay";
+};
+
+&trng {
 	status = "okay";
 };

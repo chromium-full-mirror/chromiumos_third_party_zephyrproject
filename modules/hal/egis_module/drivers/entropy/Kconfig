@@ -1,0 +1,14 @@
+# Entropy generator driver configuration options
+
+# Copyright (c) 2025 Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+if ENTROPY_GENERATOR
+
+module = ENTROPY
+module-str = entropy
+source "subsys/logging/Kconfig.template.log_config"
+
+rsource "Kconfig.egis"
+
+endif # ENTROPY_GENERATOR

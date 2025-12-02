@@ -1,0 +1,8 @@
+# Copyright (c) 2025, Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: Egis ET171 true random number generator.
+
+compatible: "egis,et171-trng"
+
+include: base.yaml

@@ -1,0 +1,8 @@
+/ {
+	soc {
+		trng: rng {
+			compatible = "egis,et171-trng";
+			status = "disabled";
+		};
+	};
+};

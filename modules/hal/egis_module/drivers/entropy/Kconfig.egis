@@ -1,0 +1,14 @@
+# Egis entropy configuration options
+
+# Copyright 2025 Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+config ENTROPY_EGIS_ET171_TRNG
+	bool "Egis TRNG driver"
+	default y
+	depends on DT_HAS_EGIS_ET171_TRNG_ENABLED
+	select ENTROPY_HAS_DRIVER
+	select HAS_EGIS_ET171_HAL
+	select HAS_EGIS_ET171_SXSMCRYPT
+	help
+	  This option enables the true random number generator (TRNG)
