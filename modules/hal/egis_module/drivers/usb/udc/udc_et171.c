@@ -89,13 +89,26 @@ static CUSBD_Config usbd_config = {
     .isDevice = 1
 };
 
-struct udc_et171_setup_event {
+struct udc_et171_work_event {
 	sys_snode_t _node;
-	void * privateData;
-	uint8_t buf[];
+	enum {
+		WORK_EVT_SETUP,
+		WORK_EVT_COMPLETE,
+	} type;
+	union {
+		struct {
+			void *privateData;
+			CH9_UsbSetup ctrl;
+		} setup;
+		struct {
+			struct CUSBD_Ep *ep;
+			struct CUSBD_Req *req;
+		} complete;
+	};
 };
+#define endof(s,m) (offsetof(s,m) + sizeof(((s*)0)->m)) 
 
-#define SNODE_TO_EVENT(node) CONTAINER_OF((node), struct udc_et171_setup_event, _node)
+#define SNODE_TO_EVENT(node) CONTAINER_OF((node), struct udc_et171_work_event, _node)
 
 static struct udc_et171_device {
 	struct udc_data _data;
@@ -110,12 +123,12 @@ static struct udc_et171_device {
 #define DEV_TO_INST(dev) CONTAINER_OF((dev)->data, struct udc_et171_device, _data)
 #define WORK_TO_INST(work) CONTAINER_OF((work), struct udc_et171_device, _work)
 
-static inline void put_setup_event(struct udc_et171_device *inst, struct udc_et171_setup_event *evt) {
+static inline void put_work_event(struct udc_et171_device *inst, struct udc_et171_work_event *evt) {
 	int32_t key = arch_irq_lock();
 	sys_slist_append(&inst->_slist, &evt->_node);
 	arch_irq_unlock(key);
 }
-static inline struct udc_et171_setup_event* get_setup_event(struct udc_et171_device *inst) {
+static inline struct udc_et171_work_event* get_work_event(struct udc_et171_device *inst) {
 	int32_t key = arch_irq_lock();
 	sys_snode_t *node = sys_slist_get(&inst->_slist);
 	arch_irq_unlock(key);
@@ -159,13 +172,14 @@ static uint32_t isr_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 
 	struct device* const dev = ((struct device**)privateData)[-1];
 	struct udc_et171_device* inst = DEV_TO_INST(dev);
-	struct udc_et171_setup_event *evt =
-		(struct udc_et171_setup_event*)USB_mem_alloc(sizeof(struct udc_et171_setup_event) + sizeof(CH9_UsbSetup));
+	struct udc_et171_work_event *evt =
+		(struct udc_et171_work_event*)USB_mem_alloc(endof(struct udc_et171_work_event, setup));
 
 	if (evt) {
-		evt->privateData = privateData;
-		*(CH9_UsbSetup*)evt->buf = *ctrl;
-		put_setup_event(inst, evt);
+		evt->type = WORK_EVT_SETUP;
+		evt->setup.privateData = privateData;
+		evt->setup.ctrl = *ctrl;
+		put_work_event(inst, evt);
 		k_work_submit_to_queue(udc_get_work_q(), &inst->_work);
 		return 0;
 	}
@@ -404,6 +418,29 @@ static void udc_et171_epX_transfer__cb_complete(struct CUSBD_Ep *ep, struct CUSB
 }
 
 static void udc_et171_transfer__cb_complete(struct CUSBD_Ep *ep, struct CUSBD_Req * req)  {
+	const struct device *dev = req->context;
+	struct udc_et171_work_event *evt =
+		(struct udc_et171_work_event*)USB_mem_alloc(endof(struct udc_et171_work_event, complete));
+
+	if (evt) {
+		struct udc_et171_device* inst = DEV_TO_INST(dev);
+
+		evt->type = WORK_EVT_COMPLETE;
+		evt->complete.ep = ep;
+		evt->complete.req = req;
+		put_work_event(inst, evt);
+		k_work_submit_to_queue(udc_get_work_q(), &inst->_work);
+	} else {
+		struct udc_data *data = dev->data;
+		void* pD = data->priv;
+		const CUSBD_OBJ * drv = CUSBD_GetInstance(); // get driver handle
+
+		LOG_ERR("ep%02X_complete( %p ) out of memory", ep->address, req);
+		drv->reqFree(pD, ep, req);
+	}
+}
+
+static void work_cb_complete(struct CUSBD_Ep *ep, struct CUSBD_Req * req) {
 	if (USB_EP_GET_IDX(ep->address) == 0) { // controller
 		udc_et171_ep0_transfer__cb_complete(ep, req);
 	} else {
@@ -729,10 +766,18 @@ static int udc_et171_shutdown(const struct device *dev)
 static void udc_et171_work_handler(struct k_work *item)
 {
 	struct udc_et171_device *inst = WORK_TO_INST(item);
-	struct udc_et171_setup_event *evt;
+	struct udc_et171_work_event *evt;
 
-	while ((evt = get_setup_event(inst)) != NULL) {
-		work_cb_setup(evt->privateData, (CH9_UsbSetup*)evt->buf);
+	while ((evt = get_work_event(inst)) != NULL) {
+		switch(evt->type)
+		{
+		case WORK_EVT_SETUP:
+			work_cb_setup(evt->setup.privateData, &evt->setup.ctrl);
+			break;
+		case WORK_EVT_COMPLETE:
+			work_cb_complete(evt->complete.ep, evt->complete.req);
+			break;
+		}
 		USB_mem_free(evt);
 	}
 }
