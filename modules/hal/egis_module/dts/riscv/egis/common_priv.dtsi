@@ -1,1 +1,7 @@
+#include "clock.dtsi"
+
 /delete-node/ &clk_mtimer;
+
+&clock {
+	status = "okay";
+};

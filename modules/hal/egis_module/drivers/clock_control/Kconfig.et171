@@ -1,0 +1,12 @@
+#
+# Copyright (c) 2025 Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config CLOCK_CONTROL_ET171
+	bool "ET171 clock control driver"
+	default y
+	depends on DT_HAS_EGIS_ET171_CLOCK_ENABLED
+	select HAS_EGIS_ET171_HAL
+	help
+	  This option enables the clock driver for Egis ET171 SOC.

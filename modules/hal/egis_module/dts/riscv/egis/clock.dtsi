@@ -1,0 +1,16 @@
+#include <zephyr/dt-bindings/clock/et171_clock.h>
+
+/ {
+	soc {
+		clock: clock-controller {
+			compatible = "egis,et171-clock";
+			#clock-cells = <1>;
+			status = "disabled";
+		};
+	};
+};
+
+&uart0 {
+	clocks = <&clock ET171_CLOCK_UART>;
+};
+

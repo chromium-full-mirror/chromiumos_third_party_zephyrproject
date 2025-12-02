@@ -1,1 +1,4 @@
+zephyr_include_directories(include)
+
 add_subdirectory(soc)
+add_subdirectory(drivers)

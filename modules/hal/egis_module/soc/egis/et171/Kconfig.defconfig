@@ -6,4 +6,10 @@ if SOC_EGIS_ET171
 config HAS_EGIS_ET171_HAL
 	default y
 
+config CLOCK_CONTROL
+	# Auto select 'CLOCK_CONTROL' when ns16550 doesn't have porperty 'clock-frequency'
+	default y
+	depends on DT_HAS_NS16550_ENABLED
+	depends on !$(dt_compat_any_has_prop,$(DT_COMPAT_NS16550),clock-frequency)
+
 endif # SOC_EGIS_ET171

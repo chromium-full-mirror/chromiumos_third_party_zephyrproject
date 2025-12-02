@@ -1,0 +1,43 @@
+# Copyright (c) 2025, Egis Technology Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+description: ET171 clock controller node
+
+compatible: "egis,et171-clock"
+
+include:
+  - base.yaml
+  - clock-controller.yaml
+
+properties:
+  "#clock-cells":
+    const: 1
+
+  ahb-divide:
+    type: int
+    enum: [1, 2, 3, 4, 6, 8, 16]
+    description: |
+      The divide number of AHB base clock for bus.
+      That cannot be used simultaneously with ahb-clock.
+
+  ahb-clock:
+    type: int
+    description: |
+      Advanced High-performance Bus clock frequence.
+      That cannot be used simultaneously with ahb-divide.
+
+  apb-divide:
+    type: int
+    enum: [1, 2, 3, 4, 6, 8, 16]
+    description: |
+      The divide number of APB base clock for bus.
+      That cannot be used simultaneously with apb-clock.
+
+  apb-clock:
+    type: int
+    description: |
+      Advanced Peripheral Bus clock frequence
+      That cannot be used simultaneously with apb-divide.
+
+clock-cells:
+  - clkid
