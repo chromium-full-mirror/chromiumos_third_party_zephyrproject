@@ -26,6 +26,8 @@
 
 &clock {
 	status = "okay";
+	ahb-divide = <3>; /* ~66.666Mhz */
+	apb-divide = <1>; /* ~16.666Mhz */
 };
 
 &uart0 {

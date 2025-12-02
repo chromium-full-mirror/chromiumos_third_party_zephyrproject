@@ -76,8 +76,98 @@ void soc_early_init_hook(void)
 	/* Load Root clock triming value from OTP */
 	HAL_OTP_GetRootClock();
 
+#define AHB_BASE_CLOCK (200 * 1000000) /* 200MHz */
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(clock), okay)
+#   if DT_NODE_HAS_PROP(DT_NODELABEL(clock), ahb_divide)
+#         if DT_PROP(DT_NODELABEL(clock), ahb_divide) == 1
+#           define SET_AHB_DIV ROOT_CLK_DIV_1
+#       elif DT_PROP(DT_NODELABEL(clock), ahb_divide) == 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_2
+#       elif DT_PROP(DT_NODELABEL(clock), ahb_divide) == 3
+#           define SET_AHB_DIV ROOT_CLK_DIV_3
+#       elif DT_PROP(DT_NODELABEL(clock), ahb_divide) == 4
+#           define SET_AHB_DIV ROOT_CLK_DIV_4
+#       elif DT_PROP(DT_NODELABEL(clock), ahb_divide) == 6
+#           define SET_AHB_DIV ROOT_CLK_DIV_6
+#       elif DT_PROP(DT_NODELABEL(clock), ahb_divide) == 8
+#           define SET_AHB_DIV ROOT_CLK_DIV_8
+#       elif DT_PROP(DT_NODELABEL(clock), ahb_divide) == 16
+#           define SET_AHB_DIV ROOT_CLK_DIV_16
+#       else
+#           error "invalid property value of ahb-divide"
+#       endif
+#       define AHB_CLOCK (AHB_BASE_CLOCK / DT_PROP(DT_NODELABEL(clock), ahb_divide))
+#   elif DT_NODE_HAS_PROP(DT_NODELABEL(clock), ahb_clock)
+#       define AHB_CLOCK DT_PROP(DT_NODELABEL(clock), ahb_clock)
+#         if AHB_CLOCK > ((AHB_BASE_CLOCK / 1) + (AHB_BASE_CLOCK / 2)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_1
+#       elif AHB_CLOCK > ((AHB_BASE_CLOCK / 2) + (AHB_BASE_CLOCK / 3)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_2
+#       elif AHB_CLOCK > ((AHB_BASE_CLOCK / 3) + (AHB_BASE_CLOCK / 4)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_3
+#       elif AHB_CLOCK > ((AHB_BASE_CLOCK / 4) + (AHB_BASE_CLOCK / 6)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_4
+#       elif AHB_CLOCK > ((AHB_BASE_CLOCK / 6) + (AHB_BASE_CLOCK / 8)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_6
+#       elif AHB_CLOCK > ((AHB_BASE_CLOCK / 8) + (AHB_BASE_CLOCK / 16)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_8
+#       else /* AHB_CLOCK > (AHB_BASE_CLOCK / 16) or others */
+#           define SET_AHB_DIV ROOT_CLK_DIV_16
+#       endif
+#   endif
+#endif
+#ifndef SET_AHB_DIV
+#   define SET_AHB_DIV ROOT_CLK_DIV_3 /* default */
+#   define AHB_CLOCK (AHB_BASE_CLOCK / 3)
+#endif
+
+#define APB_BASE_CLOCK (AHB_CLOCK / 2)
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(clock), okay)
+#   if DT_NODE_HAS_PROP(DT_NODELABEL(clock), apb_divide)
+#         if DT_PROP(DT_NODELABEL(clock), apb_divide) == 1
+#           define SET_APB_DIV APB_CLK_DIV_1
+#       elif DT_PROP(DT_NODELABEL(clock), apb_divide) == 2
+#           define SET_APB_DIV APB_CLK_DIV_2
+#       elif DT_PROP(DT_NODELABEL(clock), apb_divide) == 3
+#           define SET_APB_DIV APB_CLK_DIV_3
+#       elif DT_PROP(DT_NODELABEL(clock), apb_divide) == 4
+#           define SET_APB_DIV APB_CLK_DIV_4
+#       elif DT_PROP(DT_NODELABEL(clock), apb_divide) == 6
+#           define SET_APB_DIV APB_CLK_DIV_6
+#       elif DT_PROP(DT_NODELABEL(clock), apb_divide) == 8
+#           define SET_APB_DIV APB_CLK_DIV_8
+#       elif DT_PROP(DT_NODELABEL(clock), apb_divide) == 16
+#           define SET_APB_DIV APB_CLK_DIV_16
+#       else
+#           error "invalid property value of apb-divide"
+#       endif
+#       define APB_CLOCK (APB_BASE_CLOCK / DT_PROP(DT_NODELABEL(clock), apb_divide))
+#   elif DT_NODE_HAS_PROP(DT_NODELABEL(clock), apb_clock)
+#       define APB_CLOCK DT_PROP(DT_NODELABEL(clock), apb_clock)
+#         if AHB_CLOCK > ((APB_BASE_CLOCK / 1) + (APB_BASE_CLOCK / 2)) / 2
+#           define SET_APB_DIV APB_CLK_DIV_1
+#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 2) + (APB_BASE_CLOCK / 3)) / 2
+#           define SET_APB_DIV APB_CLK_DIV_2
+#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 3) + (APB_BASE_CLOCK / 4)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_3
+#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 4) + (APB_BASE_CLOCK / 6)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_4
+#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 6) + (APB_BASE_CLOCK / 8)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_6
+#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 8) + (APB_BASE_CLOCK / 16)) / 2
+#           define SET_AHB_DIV ROOT_CLK_DIV_8
+#       else /* AHB_CLOCK > (APB_BASE_CLOCK / 16) or others */
+#           define SET_AHB_DIV ROOT_CLK_DIV_16
+#       endif
+#   endif
+#endif
+#ifndef SET_APB_DIV
+#   define SET_APB_DIV APB_CLK_DIV_2 /* default */
+#   define APB_CLOCK (APB_BASE_CLOCK / 2)
+#endif
+
 	/* AHB ~200Mhz / 3 = 66MHz AHB , ~66Mhz / 2 / 2 = 18Mhz APB */
-	HAL_SMU_SetRootClock(ROOT_CLK_250M, ROOT_CLK_DIV_3, APB_CLK_DIV_2);
+	HAL_SMU_SetRootClock(ROOT_CLK_250M, SET_AHB_DIV, SET_APB_DIV);
 
 	/* Workaround WFI wakeup issue. AE350_I2C->INTEN = 1;       */
 	sys_write32(1, 0xF0A00014U);
