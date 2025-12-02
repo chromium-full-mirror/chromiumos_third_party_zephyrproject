@@ -12,6 +12,14 @@
 	chosen {
 		zephyr,entropy = &trng;
 	};
+
+	ext_wdt: ext_wdt {
+		compatible = "egis,et171-ext-wdt";
+		status = "okay";
+		pwm-channel = <0>;
+		pinctrl-0 = <&pwm_ch0_pad13>;
+		pinctrl-names = "default";
+	};
 };
 
 &clock {

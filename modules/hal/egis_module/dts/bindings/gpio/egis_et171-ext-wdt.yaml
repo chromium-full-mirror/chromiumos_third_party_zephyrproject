@@ -1,0 +1,14 @@
+# egis,et171-ext-wdt.yaml
+
+description: Extern watch dog reset control signals
+
+compatible: "egis,et171-ext-wdt"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  pwm-channel:
+    type: int
+    required: true
+    description: pwm channel number used for wdt reset
+    enum: [0, 1, 2, 3]
