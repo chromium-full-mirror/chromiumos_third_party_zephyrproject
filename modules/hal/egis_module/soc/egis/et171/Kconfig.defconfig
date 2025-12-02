@@ -9,6 +9,20 @@ config HAS_EGIS_ET171_HAL
 config PM
 	default y
 
+if PM
+
+config PM_SOC_ET171_PREVENT_UART_RX_INCORRECT
+	bool "Prevent SOC from entering low-power mode when RX UART RX is ready"
+	default n
+	depends on DT_HAS_NS16550_ENABLED && UART_INTERRUPT_DRIVEN
+	help
+	  When the SoC enters a low-power state, the UART clock frequency also changes.
+	  This means it cannot correctly analyze the RX signal.
+	  Therefore, to prevent this error from occurring when the RX is ready to receive
+	  data, the SoC is prevented from entering low-power mode.
+
+endif # PM
+
 config CLOCK_CONTROL
 	# Auto select 'CLOCK_CONTROL' when ns16550 doesn't have porperty 'clock-frequency'
 	default y

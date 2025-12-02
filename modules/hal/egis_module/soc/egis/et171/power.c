@@ -110,10 +110,14 @@ static void suspend()
 
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(uart0), okay) && CONFIG_UART_INTERRUPT_DRIVEN
 	/* Don't switch clock when UART RX is ready for receiving */
+#if CONFIG_PM_SOC_ET171_PREVENT_UART_RX_INCORRECT
 	const bool switch_clock = !(sys_read32(0xF0200024) & BIT(0));
 	if (!switch_clock) {
 		__asm__ volatile("wfi");
 	} else {
+#else
+	{
+#endif /* if CONFIG_PM_SOC_ET171_PREVENT_UART_RX_INCORRECT */
 #endif
 
 	/*== switch to external clock =====================================================*/
