@@ -60,7 +60,7 @@ static inline void disable_unused_device()
 		HAL_SMU_ResetLow(unused_ip);
 }
 
-void soc_early_init_hook(void)
+static int soc_pre_init(void)
 {
 #if CONFIG_XIP && CONFIG_ICACHE
 	/* Since caching is enabled before z_data_copy(), RAM functions may still be cached
@@ -178,4 +178,8 @@ void soc_early_init_hook(void)
 #endif
 
 	disable_unused_device();
+
+	return 0;
 }
+
+SYS_INIT(soc_pre_init, PRE_KERNEL_1, 0);
