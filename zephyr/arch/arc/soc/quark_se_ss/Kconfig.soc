@@ -1,3 +1,0 @@
-
-config SOC_QUARK_SE_SS
-        bool "Intel Quark SE - Sensor Sub System"

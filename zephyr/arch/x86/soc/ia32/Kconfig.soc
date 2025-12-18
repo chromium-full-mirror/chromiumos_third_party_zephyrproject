@@ -1,5 +1,0 @@
-
-
-config SOC_IA32
-	bool "Generic IA32 SoC"
-	select BOOTLOADER_UNKNOWN

@@ -1,9 +1,0 @@
-
-choice
-prompt "Board Selection"
-optional
-source "boards/*/Kconfig.board"
-endchoice
-
-
-source "boards/*/Kconfig"
