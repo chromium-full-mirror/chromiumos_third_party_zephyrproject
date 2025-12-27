@@ -443,7 +443,7 @@ int vfprintf (FILE * stream, const CHAR *fmt, va_list ap_orig)
 		    continue;
 		  case '+':
 		    flags |= FL_PLUS;
-		    FALLTHROUGH;
+		    __PICOLIBC_FALLTHROUGH;
 		  case ' ':
 		    flags |= FL_SPACE;
 		    continue;
