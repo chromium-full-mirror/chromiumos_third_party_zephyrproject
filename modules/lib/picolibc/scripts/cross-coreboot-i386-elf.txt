@@ -3,8 +3,8 @@
 # so we have to add -nostdlib to the compiler configuration itself or
 # early compiler tests will fail. This can be removed when picolibc
 # requires at least version 0.54.2 of meson.
-c = ['ccache', 'i386-elf-gcc', '-march=core2', '-mfpmath=sse', '-msse2', '-fno-pic', '-fno-PIE', '-static', '-nostdlib']
-cpp = ['ccache', 'i386-elf-g++', '-march=core2', '-mfpmath=sse', '-msse2', '-fno-pic', '-fno-PIE', '-static', '-nostdlib']
+c = ['ccache', 'i386-elf-gcc', '-m32', '-march=pentium', '-mtune=i486', '-mno-mmx', '-mno-sse', '-fno-pic', '-fno-PIE', '-static', '-fno-exceptions', '-fno-defer-pop', '-nostdlib']
+cpp = ['ccache', 'i386-elf-g++', '-m32', '-march=pentium', '-mtune=i486', '-mno-mmx', '-mno-sse', '-fno-pic', '-fno-PIE', '-static', '-fno-exceptions', '-fno-defer-pop', '-nostdlib']
 ar = 'i386-elf-ar'
 as = 'i386-elf-as'
 nm = 'i386-elf-nm'
