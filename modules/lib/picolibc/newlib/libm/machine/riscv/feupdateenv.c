@@ -32,6 +32,7 @@
 */
 
 #include <fenv.h>
+#include "riscv_math.h"
 
 /* This implementation is intended to comply with the following
  * specification:
@@ -47,7 +48,7 @@
  * floating-point environment macro."
  */
 
-#if __riscv_flen
+#ifdef __RISCV_HARD_FLOAT
 
 int feupdateenv(const fenv_t *envp)
 {

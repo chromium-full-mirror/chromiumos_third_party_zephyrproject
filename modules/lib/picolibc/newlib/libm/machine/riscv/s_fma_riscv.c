@@ -36,7 +36,7 @@
 #include <math.h>
 #include "math_config.h"
 
-#if _HAVE_FAST_FMA
+#if defined(__RISCV_HARD_FLOAT) && __RISCV_HARD_FLOAT >= 64
 
 double
 fma (double x, double y, double z)

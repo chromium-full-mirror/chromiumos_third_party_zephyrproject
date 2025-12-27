@@ -32,6 +32,7 @@
 */
 
 #include <fenv.h>
+#include "riscv_math.h"
 
 /* This implementation is intended to comply with the following
  * specification:
@@ -45,7 +46,7 @@
  * the object pointed to by the argument flagp."
  */
 
-#if __riscv_flen
+#if __RISCV_HARD_FLOAT
 
 int fegetexceptflag(fexcept_t *flagp, int excepts)
 {

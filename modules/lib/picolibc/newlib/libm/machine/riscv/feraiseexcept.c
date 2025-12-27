@@ -32,6 +32,7 @@
 */
 
 #include <fenv.h>
+#include "riscv_math.h"
 
 /* This implementation is intended to comply with the following
  * specification:
@@ -51,7 +52,7 @@
  * underflow floating-point exception is implementation-defined."
  */
 
-#if __riscv_flen
+#ifdef __RISCV_HARD_FLOAT
 
 int feraiseexcept(int excepts)
 {

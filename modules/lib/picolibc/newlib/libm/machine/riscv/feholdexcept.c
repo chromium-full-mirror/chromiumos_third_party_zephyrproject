@@ -32,6 +32,7 @@
 */
 
 #include <fenv.h>
+#include "riscv_math.h"
 
 /* This implementation is intended to comply with the following
  * specification:
@@ -46,7 +47,7 @@
  * floating-point exceptions."
  */
 
-#if __riscv_flen
+#ifdef __RISCV_HARD_FLOAT
 
 int feholdexcept(fenv_t *envp)
 {

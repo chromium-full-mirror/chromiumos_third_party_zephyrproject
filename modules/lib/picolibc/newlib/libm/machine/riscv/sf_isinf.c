@@ -1,4 +1,4 @@
-/*
+ss/*
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright (c) 2020 Kito Cheng
@@ -35,8 +35,9 @@
 
 #include <math.h>
 #include <ieeefp.h>
+#include "riscv_math.h"
 
-#if defined(__riscv_flen) && __riscv_flen >= 32
+#if defined(__RISCV_HARD_FLOAT) && __RISCV_HARD_FLOAT >= 32
 
 #undef isinff
 

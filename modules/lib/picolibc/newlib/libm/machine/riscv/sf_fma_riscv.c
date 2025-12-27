@@ -36,7 +36,7 @@
 #include <math.h>
 #include "math_config.h"
 
-#if _HAVE_FAST_FMAF
+#if defined(__RISCV_HARD_FLOAT) && __RISCV_HARD_FLOAT >= 32
 
 float
 fmaf (float x, float y, float z)
