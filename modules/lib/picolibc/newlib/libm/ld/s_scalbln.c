@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
  *
- * Copyright (c) 2020 Kito Cheng
+ * Copyright © 2022 Keith Packard
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,20 +33,10 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <math.h>
+#include "math_ld.h"
 
-#if defined(__RISCV_HARD_FLOAT) && __RISCV_HARD_FLOAT >= 64
+#ifdef _NEED_FLOAT_HUGE
 
-double
-fmax (double x, double y)
-{
-    double result;
-    if (issignaling(x) || issignaling(y))
-        return x + y;
+#include "common/s_scalbln.c"
 
-    __asm__("fmax.d\t%0, %1, %2" : "=f" (result) : "f" (x), "f" (y));
-    return result;
-}
-#else
-#include "../../common/s_fmax.c"
 #endif

@@ -25,13 +25,13 @@
  */
 
 /*
-FUNCTION
+FUNCTION        
 <<fputws>>, <<fputws_unlocked>>---write a wide character string in a file or stream
 
 INDEX
-	fputws
+	fputws   
 INDEX
-	fputws_unlocked
+	fputws_unlocked 
 INDEX
 	_fputws_r
 INDEX

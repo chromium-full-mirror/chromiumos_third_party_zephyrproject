@@ -2,7 +2,7 @@
  * memset - fill memory with a constant byte
  *
  * Copyright (c) 2012-2022, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: MIT 
  */
 
 /* Assumptions:

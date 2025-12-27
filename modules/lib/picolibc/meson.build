@@ -455,7 +455,7 @@ else
   endif
   if io_pos_args
     error('newlib stdio has bugs with positional arguments (io-pos-args)')
-  endif
+  endif	
 endif
 
 if host_cpu_family == ''
@@ -549,7 +549,7 @@ else
   specs_install = true
 endif
 
-# Let targets add more support libraries
+# Let targets add more support libraries 
 additional_libs_list = meson.get_cross_property('additional_libs', [])
 
 compiler_id = cc.get_id()
@@ -707,7 +707,7 @@ if enable_multilib
   gen_multilib_crt0_path = specs_prefix_format.format(get_option('libdir') / '%M' / crt0_expr)
   crt0_gen = gen_format.format(gen_multilib_crt0_path)
 endif
-
+  
 #
 # Construct the *startfile value from the options computed
 # above. As there's only one value, it's either the
@@ -949,7 +949,7 @@ else
 endif
 
 foreach target : ['default-target'] + targets
-
+  
   message('generate linker script target ' + target)
 
   custom_mem_config = meson.get_cross_property('custom_mem_config_' + target, '')
@@ -1160,7 +1160,7 @@ foreach target : ['default-target'] + targets
                                 install: picolibc_ld_install,
                                 install_dir: lib_dir))
     endif
-
+                   
     set_variable(picolibcpp_ld_variable, get_variable(picolibcpp_ld_config_variable))
 
   endif

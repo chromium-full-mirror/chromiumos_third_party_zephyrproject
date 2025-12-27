@@ -7,7 +7,7 @@
  *  Did the following:
  *     + merged in DEFS.h
  *     + removed error check since it prevented using this setjmp
- *       to "context switch"
+ *       to "context switch" 
  *     + added the support for the "user label" and "register" prefix
  *
  * This software was developed by the Computer Systems Engineering group
@@ -51,22 +51,22 @@
  *  the version does not support this, then you will obviously
  *  have to define these as appropriate.
  */
-
+ 
 #ifndef __USER_LABEL_PREFIX__
 #define __USER_LABEL_PREFIX__ _
 #endif
-
+ 
 #ifndef __REGISTER_PREFIX__
 #define __REGISTER_PREFIX__
 #endif
 
 /* ANSI concatenation macros.  */
-
+ 
 #define CONCAT1(a, b) CONCAT2(a, b)
 #define CONCAT2(a, b) a ## b
-
+ 
 /* Use the right prefix for global labels.  */
-
+ 
 #define SYM(x) CONCAT1 (__USER_LABEL_PREFIX__, x)
 
 /*********************************************************************
@@ -86,7 +86,7 @@
 #endif
 
 
-
+ 
 /*********************************************************************
  *********************************************************************
  *                           END of DEFS.h                           *
@@ -143,7 +143,7 @@ ENTRY(_longjmp)
 
         ld      [%o0+4], %i7    /* caller's return pc */
         ld      [%o0+8], %fp    /* caller's frame pointer */
-        ld      [%o0+12], %o7
+        ld      [%o0+12], %o7 
 
         jmp     %o7 + 8         ! success, return %g1
         mov     %g1, %o0

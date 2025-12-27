@@ -2,7 +2,7 @@
  * memchr - find a character in a memory zone
  *
  * Copyright (c) 2014-2022, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: MIT 
  */
 
 #if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED)) || !defined(__LP64__)

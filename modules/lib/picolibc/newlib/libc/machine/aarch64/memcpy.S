@@ -2,7 +2,7 @@
  * memcpy - copy memory area
  *
  * Copyright (c) 2012-2022, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: MIT 
  */
 
 /* Assumptions:

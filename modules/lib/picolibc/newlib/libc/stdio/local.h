@@ -150,15 +150,15 @@ extern int    _svfwscanf (FILE *, const wchar_t *,va_list);
 extern int    _ssvfwscanf (FILE *, const wchar_t *,va_list);
 extern int    _svfiwscanf (FILE *, const wchar_t *,va_list);
 extern int    _ssvfiwscanf (FILE *, const wchar_t *,va_list);
-int	      svfprintf ( FILE *, const char *,
+int	      svfprintf ( FILE *, const char *, 
 				  va_list)
                			_ATTRIBUTE ((__format__ (__printf__, 2, 0)));
-int	      svfiprintf ( FILE *, const char *,
+int	      svfiprintf ( FILE *, const char *, 
 				  va_list)
                			_ATTRIBUTE ((__format__ (__printf__, 2, 0)));
-int	      svfwprintf ( FILE *, const wchar_t *,
+int	      svfwprintf ( FILE *, const wchar_t *, 
 				  va_list);
-int	      svfiwprintf ( FILE *, const wchar_t *,
+int	      svfiwprintf ( FILE *, const wchar_t *, 
 				  va_list);
 extern FILE  *__sfp (void);
 extern int    __sflags (const char*, int*);

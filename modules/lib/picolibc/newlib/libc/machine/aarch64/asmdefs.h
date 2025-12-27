@@ -2,7 +2,7 @@
  * Macros for asm code.  AArch64 version.
  *
  * Copyright (c) 2019-2023, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: MIT 
  */
 
 #ifndef _ASMDEFS_H

@@ -2,7 +2,7 @@
  * strcmp - compare two strings
  *
  * Copyright (c) 2012-2022, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: MIT 
  */
 
 #if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED)) || !defined(__LP64__)

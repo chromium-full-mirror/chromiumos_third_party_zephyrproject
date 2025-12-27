@@ -2,7 +2,7 @@
  * memrchr - find last character in a memory zone.
  *
  * Copyright (c) 2020-2022, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: MIT 
  */
 
 /* Assumptions:

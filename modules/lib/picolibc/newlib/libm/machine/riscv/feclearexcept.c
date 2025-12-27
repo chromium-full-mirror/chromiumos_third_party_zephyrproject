@@ -34,7 +34,6 @@
 #include <math.h>
 #include <fenv.h>
 #include <stddef.h>
-#include "riscv_math.h"
 
 /* This implementation is intended to comply with the following
  * specification:

@@ -84,7 +84,7 @@ beginning with <<"LC_">>.
 
 <<localeconv>> returns a pointer to a structure (also defined in
 `<<locale.h>>') describing the locale-specific conventions currently
-in effect.
+in effect.  
 
 RETURNS
 A successful call to <<setlocale>> returns a pointer to a string
@@ -291,7 +291,7 @@ setlocale (
   (void) category;
 #ifndef _MB_CAPABLE
   if (locale)
-    {
+    { 
       if (strcmp (locale, "POSIX") && strcmp (locale, "C")
 	  && strcmp (locale, ""))
         return NULL;

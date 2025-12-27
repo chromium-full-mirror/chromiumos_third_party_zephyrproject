@@ -38,11 +38,11 @@ SYNOPSIS
         int wscanf(const wchar_t *__restrict <[format]>, ...);
         int fwscanf(FILE *__restrict <[fd]>,
                     const wchar_t *__restrict <[format]>, ...);
-        int swscanf(const wchar_t *__restrict <[str]>,
+        int swscanf(const wchar_t *__restrict <[str]>, 
                     const wchar_t *__restrict <[format]>, ...);
 
         int wscanf( const wchar_t *<[format]>, ...);
-        int fwscanf( FILE *<[fd]>,
+        int fwscanf( FILE *<[fd]>, 
                       const wchar_t *<[format]>, ...);
         int swscanf( const wchar_t *<[str]>,
                       const wchar_t *<[format]>, ...);
@@ -412,7 +412,7 @@ Supporting OS subroutines required: <<close>>, <<fstat>>, <<isatty>>,
 #include <stdarg.h>
 #include "local.h"
 
-int
+int 
 swscanf (const wchar_t *__restrict str, const wchar_t *__restrict fmt, ...)
 {
   int ret;
