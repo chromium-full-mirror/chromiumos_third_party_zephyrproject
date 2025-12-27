@@ -31,6 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <math.h>
 #include <fenv.h>
 #include "riscv_math.h"
 
@@ -46,7 +47,7 @@
  * not changed."
  */
 
-#ifdef __RISCV_HARD_FLOAT
+#if __RISCV_HARD_FLOAT
 
 int fesetround(int round)
 {

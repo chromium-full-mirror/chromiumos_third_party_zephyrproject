@@ -1,7 +1,7 @@
 /*
    strchr - find a character in a string
 
-   Copyright (c) 2014, ARM Limited
+   Copyright (c) 2014-2022, ARM Limited
    All rights Reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,7 @@
    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
-
-#if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED)) || !defined(__LP64__)
+#if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED))
 /* See strchr-stub.c  */
 #else
 

@@ -1,7 +1,7 @@
 /*
    strcpy/stpcpy - copy a string returning pointer to start/end.
 
-   Copyright (c) 2013, 2014, 2015 ARM Ltd.
+   Copyright (c) 2013, 2014, 2015, 2020-2023 ARM Ltd.
    All Rights Reserved.
 
    Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,8 @@
    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
-
-#if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED)) || !defined(__LP64__)
-/* See strchr-stub.c  */
+#if (defined (__OPTIMIZE_SIZE__) || defined (PREFER_SIZE_OVER_SPEED))
+/* See strcpy-stub.c  */
 #else
 
 /* Assumptions:

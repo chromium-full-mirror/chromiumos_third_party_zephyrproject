@@ -31,6 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <math.h>
 #include <fenv.h>
 #include "riscv_math.h"
 
@@ -48,7 +49,7 @@
  * floating-point environment macro."
  */
 
-#ifdef __RISCV_HARD_FLOAT
+#if __RISCV_HARD_FLOAT
 
 int feupdateenv(const fenv_t *envp)
 {

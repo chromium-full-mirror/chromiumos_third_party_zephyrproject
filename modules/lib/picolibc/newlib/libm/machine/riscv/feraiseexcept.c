@@ -31,6 +31,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <math.h>
 #include <fenv.h>
 #include "riscv_math.h"
 
@@ -52,7 +53,7 @@
  * underflow floating-point exception is implementation-defined."
  */
 
-#ifdef __RISCV_HARD_FLOAT
+#if __RISCV_HARD_FLOAT
 
 int feraiseexcept(int excepts)
 {

@@ -36,7 +36,13 @@
 #ifndef _MACHINE_MATH_H_
 #define _MACHINE_MATH_H_
 
-#ifdef __riscv_flen
+#if defined(__riscv_flen) || defined(__riscv_zfinx)
+
+#if (__riscv_flen >= 64) || defined(__riscv_zdinx)
+#define __RISCV_HARD_FLOAT 64
+#else
+#define __RISCV_HARD_FLOAT 32
+#endif
 
 #ifdef _WANT_MATH_ERRNO
 #include <errno.h>
@@ -59,7 +65,7 @@
 #define FCLASS_SUBNORMAL     (FCLASS_NEG_SUBNORMAL | FCLASS_POS_SUBNORMAL)
 #define FCLASS_NAN           (FCLASS_SNAN | FCLASS_QNAN)
 
-#if __riscv_flen >= 64
+#if __RISCV_HARD_FLOAT >= 64
 
 /* anything with a 64-bit FPU has FMA */
 #define _HAVE_FAST_FMA 1
@@ -75,7 +81,7 @@
 
 #endif
 
-#if __riscv_flen >= 32
+#if __RISCV_HARD_FLOAT >= 32
 
 /* anything with a 32-bit FPU has FMAF */
 #define _HAVE_FAST_FMAF 1
@@ -94,7 +100,7 @@
 
 #ifdef __declare_extern_inline
 
-#if __riscv_flen >= 64
+#if __RISCV_HARD_FLOAT >= 64
 
 /* Double-precision functions */
 __declare_extern_inline(double)
@@ -185,9 +191,9 @@ fma (double x, double y, double z)
 	return result;
 }
 
-#endif /* __riscv_flen >= 64 */
+#endif /* __RISCV_HARD_FLOAT >= 64 */
 
-#if __riscv_flen >= 32
+#if __RISCV_HARD_FLOAT >= 32
 
 /* Single-precision functions */
 __declare_extern_inline(float)
@@ -278,10 +284,10 @@ fmaf (float x, float y, float z)
 	return result;
 }
 
-#endif /* __riscv_flen >= 32 */
+#endif /* __RISCV_HARD_FLOAT >= 32 */
 
 #endif /* defined(__GNUC_GNU_INLINE__) || defined(__GNUC_STDC_INLINE__) */
 
-#endif /* __riscv_flen */
+#endif /* __RISCV_HARD_FLOAT */
 
 #endif /* _MACHINE_MATH_H_ */
