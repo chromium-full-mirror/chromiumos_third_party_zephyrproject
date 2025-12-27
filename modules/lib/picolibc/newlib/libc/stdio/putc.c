@@ -85,8 +85,6 @@ putc (
 {
   int result;
   CHECK_INIT (ptr, fp);
-  if (ORIENT (fp, -1) != -1)
-    return EOF;
   _newlib_flockfile_start (fp);
   result = _sputc ( c, fp);
   _newlib_flockfile_end (fp);
@@ -103,8 +101,6 @@ putc (int c,
   struct _reent *reent = _REENT;
 
   CHECK_INIT (reent, fp);
-  if (ORIENT (fp, -1) != -1)
-    return EOF;
   _newlib_flockfile_start (fp);
   result = __sputc_r (reent, c, fp);
   _newlib_flockfile_end (fp);
