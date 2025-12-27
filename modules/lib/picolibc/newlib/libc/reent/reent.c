@@ -17,7 +17,7 @@ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 /*
 FUNCTION
 	<<reent>>---definition of impure data.
-	
+
 INDEX
 	reent
 
