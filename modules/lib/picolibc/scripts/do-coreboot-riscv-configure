@@ -4,4 +4,4 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
-exec "$(dirname "$0")"/do-configure coreboot-riscv64-elf -Dtests=true "$@"
+exec "$(dirname "$0")"/do-configure coreboot-riscv -Dtests=true "$@"
