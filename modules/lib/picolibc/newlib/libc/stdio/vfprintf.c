@@ -848,7 +848,10 @@ VFPRINTF (
 	CHECK_INIT (data, fp);
 	_newlib_flockfile_start (fp);
 
-	ORIENT(fp, -1);
+	if (ORIENT(fp, -1) != -1) {
+		_newlib_flockfile_exit (fp);
+		return (EOF);
+	}
 
 	/* sorry, fprintf(read_only_file, "") returns EOF, not 0 */
 	if (cantwrite (data, fp)) {

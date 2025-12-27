@@ -85,8 +85,33 @@ putc (
 {
   int result;
   CHECK_INIT (ptr, fp);
+  if (ORIENT (fp, -1) != -1)
+    return EOF;
   _newlib_flockfile_start (fp);
   result = _sputc ( c, fp);
   _newlib_flockfile_end (fp);
   return result;
 }
+
+#ifndef _REENT_ONLY
+int
+putc (int c,
+       register FILE *fp)
+{
+#if !defined(PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
+  int result;
+  struct _reent *reent = _REENT;
+
+  CHECK_INIT (reent, fp);
+  if (ORIENT (fp, -1) != -1)
+    return EOF;
+  _newlib_flockfile_start (fp);
+  result = __sputc_r (reent, c, fp);
+  _newlib_flockfile_end (fp);
+  return result;
+#else
+  return _putc_r (_REENT, c, fp);
+#endif
+}
+#endif /* !_REENT_ONLY */
+

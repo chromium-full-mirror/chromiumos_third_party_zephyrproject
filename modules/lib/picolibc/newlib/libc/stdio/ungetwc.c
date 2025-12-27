@@ -82,8 +82,9 @@ ungetwc (
   size_t len;
 
   _newlib_flockfile_start (fp);
-  ORIENT (fp, 1);
-  if (wc == WEOF)
+  if (ORIENT (fp, 1) != 1)
+    wc = WEOF;
+  else if (wc == WEOF)
     wc = WEOF;
   else if ((len = wcrtomb(buf, wc, &fp->_mbstate)) == (size_t)-1)
     {

@@ -44,7 +44,8 @@ _srefill (
 
   CHECK_INIT (ptr, fp);
 
-  ORIENT (fp, -1);
+  if (ORIENT (fp, -1) != -1)
+    return EOF;
 
   fp->_r = 0;			/* largely a convenience for callers */
 

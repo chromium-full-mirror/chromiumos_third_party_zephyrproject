@@ -35,6 +35,17 @@ fputwc_unlocked (
 	wchar_t wc,
 	FILE *fp)
 {
-  ORIENT(fp, 1);
-  return __fputwc(wc, fp);
+  if (ORIENT(fp, 1) != 1)
+    return WEOF;
+  return __fputwc(ptr, wc, fp);
+}
+
+wint_t
+fputwc_unlocked (wchar_t wc,
+	FILE *fp)
+{
+  struct _reent *reent = _REENT;
+
+  CHECK_INIT(reent, fp);
+  return _fputwc_unlocked_r (reent, wc, fp);
 }
