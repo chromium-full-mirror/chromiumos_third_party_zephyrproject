@@ -2,7 +2,7 @@
 
 #if __FLT_EVAL_METHOD__ == 0 && FLT_MANT_DIG == 24
 #define HAVE_FLOAT_FMA_VEC
-static const struct fmaf_vec fmaf_vec[] = {
+TEST_CONST struct fmaf_vec fmaf_vec[] = {
  /*    0 */ { 0.0f             , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
  /*    1 */ { -0x1p-149f       , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
  /*    2 */ { -0x1p-127f       , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
@@ -1028,7 +1028,6 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 1022 */ {           -inff  , 0x1p-127f        , -0x1.000002p-125f, {           -inff,           -inff,           -inff,           -inff } },
  /* 1023 */ { 0.0f             , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f } },
  /* 1024 */ { 0x1p-149f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
-#ifndef SMALL_FMA_TEST
  /* 1025 */ { 0x1p-127f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1026 */ { 0x1.000002p-126f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1027 */ { 0x1.000002p-125f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
@@ -5328,13 +5327,12 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 5321 */ { 0x1.000002p126f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5322 */ { 0x1.000002p127f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5323 */ {            inff  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
-#endif /* SMALL_FMA_TEST */
 };
 #endif
 
 #if __FLT_EVAL_METHOD__ == 2 && FLT_MANT_DIG == 24 && LDBL_MANT_DIG == 64 && LDBL_MIN_EXP == -16381
 #define HAVE_FLOAT_FMA_VEC
-static const struct fmaf_vec fmaf_vec[] = {
+TEST_CONST struct fmaf_vec fmaf_vec[] = {
  /*    0 */ { 0.0f             , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
  /*    1 */ { -0x1p-149f       , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
  /*    2 */ { -0x1p-127f       , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
@@ -6360,7 +6358,6 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 1022 */ {           -inff  , 0x1p-127f        , -0x1.000002p-125f, {           -inff,           -inff,           -inff,           -inff } },
  /* 1023 */ { 0.0f             , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f } },
  /* 1024 */ { 0x1p-149f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
-#ifndef SMALL_FMA_TEST
  /* 1025 */ { 0x1p-127f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1026 */ { 0x1.000002p-126f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1027 */ { 0x1.000002p-125f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
@@ -10660,13 +10657,12 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 5321 */ { 0x1.000002p126f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5322 */ { 0x1.000002p127f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5323 */ {            inff  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
-#endif /* SMALL_FMA_TEST */
 };
 #endif
 
 #if __FLT_EVAL_METHOD__ == 2 && FLT_MANT_DIG == 24 && LDBL_MANT_DIG == 64 && LDBL_MIN_EXP == -16382
 #define HAVE_FLOAT_FMA_VEC
-static const struct fmaf_vec fmaf_vec[] = {
+TEST_CONST struct fmaf_vec fmaf_vec[] = {
  /*    0 */ { 0.0f             , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
  /*    1 */ { -0x1p-149f       , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
  /*    2 */ { -0x1p-127f       , 0.0f             , 0.0f             , { 0.0f, 0.0f, 0.0f, 0.0f } },
@@ -11692,7 +11688,6 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 1022 */ {           -inff  , 0x1p-127f        , -0x1.000002p-125f, {           -inff,           -inff,           -inff,           -inff } },
  /* 1023 */ { 0.0f             , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f } },
  /* 1024 */ { 0x1p-149f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
-#ifndef SMALL_FMA_TEST
  /* 1025 */ { 0x1p-127f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1026 */ { 0x1.000002p-126f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1027 */ { 0x1.000002p-125f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
@@ -15997,7 +15992,7 @@ static const struct fmaf_vec fmaf_vec[] = {
 
 #if __FLT_EVAL_METHOD__ <= 1 && DBL_MANT_DIG == 53
 #define HAVE_DOUBLE_FMA_VEC
-static const struct fma_vec fma_vec[] = {
+TEST_CONST struct fma_vec fma_vec[] = {
  /*    0 */ { 0.0              , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
  /*    1 */ { -0x1p-1074       , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
  /*    2 */ { -0x1p-1023       , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
@@ -21327,7 +21322,7 @@ static const struct fma_vec fma_vec[] = {
 
 #if __FLT_EVAL_METHOD__ == 2 && DBL_MANT_DIG == 53 && LDBL_MANT_DIG == 64 && LDBL_MIN_EXP == -16381
 #define HAVE_DOUBLE_FMA_VEC
-static const struct fma_vec fma_vec[] = {
+TEST_CONST struct fma_vec fma_vec[] = {
  /*    0 */ { 0.0              , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
  /*    1 */ { -0x1p-1074       , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
  /*    2 */ { -0x1p-1023       , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
@@ -26657,7 +26652,7 @@ static const struct fma_vec fma_vec[] = {
 
 #if __FLT_EVAL_METHOD__ == 2 && DBL_MANT_DIG == 53 && LDBL_MANT_DIG == 64 && LDBL_MIN_EXP == -16382
 #define HAVE_DOUBLE_FMA_VEC
-static const struct fma_vec fma_vec[] = {
+TEST_CONST struct fma_vec fma_vec[] = {
  /*    0 */ { 0.0              , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
  /*    1 */ { -0x1p-1074       , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
  /*    2 */ { -0x1p-1023       , 0.0              , 0.0              , { 0.0, 0.0, 0.0, 0.0 } },
@@ -31987,7 +31982,7 @@ static const struct fma_vec fma_vec[] = {
 
 #if LDBL_MANT_DIG == 64 && LDBL_MIN_EXP == -16381
 #define HAVE_LONG_DOUBLE_FMA_VEC
-static const struct fmal_vec fmal_vec[] = {
+TEST_CONST struct fmal_vec fmal_vec[] = {
  /*    0 */ { 0.0l             , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
  /*    1 */ { -0x1p-16445l     , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
  /*    2 */ { -0x1p-16383l     , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
@@ -37317,7 +37312,7 @@ static const struct fmal_vec fmal_vec[] = {
 
 #if LDBL_MANT_DIG == 64 && LDBL_MIN_EXP == -16382
 #define HAVE_LONG_DOUBLE_FMA_VEC
-static const struct fmal_vec fmal_vec[] = {
+TEST_CONST struct fmal_vec fmal_vec[] = {
  /*    0 */ { 0.0l             , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
  /*    1 */ { -0x1p-16446l     , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
  /*    2 */ { -0x1p-16384l     , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
@@ -42647,7 +42642,7 @@ static const struct fmal_vec fmal_vec[] = {
 
 #if LDBL_MANT_DIG == 113
 #define HAVE_LONG_DOUBLE_FMA_VEC
-static const struct fmal_vec fmal_vec[] = {
+TEST_CONST struct fmal_vec fmal_vec[] = {
  /*    0 */ { 0.0l             , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
  /*    1 */ { -0x1p-16494l     , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
  /*    2 */ { -0x1p-16383l     , 0.0l             , 0.0l             , { 0.0l, 0.0l, 0.0l, 0.0l } },
@@ -47972,6 +47967,5 @@ static const struct fmal_vec fmal_vec[] = {
  /* 5321 */ { 0x1.0000000000000000000000000001p16382l,            infl  ,            infl  , {            infl,            infl,            infl,            infl } },
  /* 5322 */ { 0x1.0000000000000000000000000001p16383l,            infl  ,            infl  , {            infl,            infl,            infl,            infl } },
  /* 5323 */ {            infl  ,            infl  ,            infl  , {            infl,            infl,            infl,            infl } },
-#endif /* SMALL_FMA_TEST */
 };
 #endif
