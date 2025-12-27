@@ -39,4 +39,30 @@
 
 #include "common/s_scalbln.c"
 
+/*
+ * scalbln and scalblnf are defined elsewhere in
+ * newlib.  Ignore the freebsd versions and only compile
+ * scalblnl.
+ */
+#if 0
+double
+scalbln(double x, long n)
+{
+
+	return (scalbn(x, (n > NMAX) ? NMAX : (n < NMIN) ? NMIN : (int)n));
+}
+
+float
+scalblnf(float x, long n)
+{
+
+	return (scalbnf(x, (n > NMAX) ? NMAX : (n < NMIN) ? NMIN : (int)n));
+}
 #endif
+
+long double
+scalblnl(long double x, long n)
+{
+
+	return (scalbnl(x, (n > NMAX) ? NMAX : (n < NMIN) ? NMIN : (int)n));
+}
