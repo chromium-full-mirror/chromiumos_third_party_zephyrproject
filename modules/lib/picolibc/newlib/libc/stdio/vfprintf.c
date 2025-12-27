@@ -175,21 +175,21 @@ static char *rcsid = "$Id$";
 #ifdef STRING_ONLY
 
 # ifdef _FVWRITE_IN_STREAMIO
-#  define __SPRINT __ssprint_r
-   int __ssprint_r (struct _reent *, FILE *, register struct __suio *);
+#  define __SPRINT __ssprint
+   int __ssprint (FILE *, register struct __suio *);
 # else
-#  define __SPRINT __ssputs_r
-   int __ssputs_r (struct _reent *, FILE *, const char *, size_t);
+#  define __SPRINT __ssputs
+   int __ssputs (FILE *, const char *, size_t);
 # endif
 
 #else /* !STRING_ONLY */
 
 # ifdef _FVWRITE_IN_STREAMIO
-#  define __SPRINT __sprint_r
-   int __sprint_r (struct _reent *, FILE *, register struct __suio *);
+#  define __SPRINT __sprint
+   int __sprint (FILE *, register struct __suio *);
 # else
-#  define __SPRINT __sfputs_r
-   int __sfputs_r (struct _reent *, FILE *, const char *buf, size_t);
+#  define __SPRINT __sfputs
+   int __sfputs (FILE *, const char *buf, size_t);
 # endif
 
 #ifdef _UNBUF_STREAM_OPT
@@ -201,7 +201,7 @@ static char *rcsid = "$Id$";
  * Make sure to avoid inlining.
  */
 _NOINLINE_STATIC int
-__sbprintf (struct _reent *rptr,
+__sbprintf (
        register FILE *fp,
        const char *fmt,
        va_list ap)
@@ -617,7 +617,7 @@ VFPRINTF (
 	if ((fp->_flags & (__SNBF|__SWR|__SRW)) == (__SNBF|__SWR) &&
 	    fp->_file >= 0) {
 		_newlib_flockfile_exit (fp);
-		return (__sbprintf (data, fp, fmt0, ap));
+		return (__sbprintf (fp, fmt0, ap));
 	}
 #endif
 #else /* STRING_ONLY */

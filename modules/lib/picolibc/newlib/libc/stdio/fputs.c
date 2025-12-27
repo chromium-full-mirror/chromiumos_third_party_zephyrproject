@@ -107,7 +107,7 @@ fputs (
   if (ORIENT (fp, -1) != -1)
     result = EOF;
   else
-    result = __sfvwrite_r (ptr, fp, &uio);
+    result = _sfvwrite (fp, &uio);
   _newlib_flockfile_end (fp);
   return result;
 #else

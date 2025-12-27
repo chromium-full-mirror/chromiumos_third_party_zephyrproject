@@ -598,11 +598,10 @@ sprintf (
 }
 
 #ifdef _NANO_FORMATTED_IO
-int __nonnull((1, 2)) _NOTHROW
-siprintf ( char *, const char *, ...)
+int
+siprintf (char *, const char *, ...)
        _ATTRIBUTE ((__alias__("sprintf")));
 #endif
-
 
 #ifdef __LONG_DOUBLE_IEEE128__
 #if defined(_HAVE_ALIAS_ATTRIBUTE)

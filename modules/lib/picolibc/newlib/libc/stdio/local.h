@@ -141,7 +141,7 @@
 
 extern wint_t __fgetwc (FILE *);
 extern wint_t __fputwc (wchar_t, FILE *);
-extern u_char *__sccl (char *, u_char *fmt);
+extern unsigned char *__sccl (char *, unsigned char *fmt);
 extern int    _svfscanf (FILE *, const char *,va_list);
 extern int    _ssvfscanf (FILE *, const char *,va_list);
 extern int    _svfiscanf (FILE *, const char *,va_list);
@@ -150,15 +150,15 @@ extern int    _svfwscanf (FILE *, const wchar_t *,va_list);
 extern int    _ssvfwscanf (FILE *, const wchar_t *,va_list);
 extern int    _svfiwscanf (FILE *, const wchar_t *,va_list);
 extern int    _ssvfiwscanf (FILE *, const wchar_t *,va_list);
-int	      svfprintf ( FILE *, const char *, 
+int	      svfprintf ( FILE *, const char *,
 				  va_list)
                			_ATTRIBUTE ((__format__ (__printf__, 2, 0)));
-int	      svfiprintf ( FILE *, const char *, 
+int	      svfiprintf ( FILE *, const char *,
 				  va_list)
                			_ATTRIBUTE ((__format__ (__printf__, 2, 0)));
-int	      svfwprintf ( FILE *, const wchar_t *, 
+int	      svfwprintf ( FILE *, const wchar_t *,
 				  va_list);
-int	      svfiwprintf ( FILE *, const wchar_t *, 
+int	      svfiwprintf ( FILE *, const wchar_t *,
 				  va_list);
 extern FILE  *__sfp (void);
 extern int    __sflags (const char*, int*);
@@ -241,6 +241,9 @@ void _reclaim_reent (void *);
  * Set the orientation for a stream. If o > 0, the stream has wide-
  * orientation. If o < 0, the stream has byte-orientation.
  */
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wunused-value"
+#endif
 #define ORIENT(fp,ori)			\
   (					\
     (					\
@@ -263,34 +266,34 @@ void _reclaim_reent (void *);
 
 /* Same thing as the functions in stdio.h, but these are to be called
    from inside the wide-char functions. */
-int	__swbufw_r (struct _reent *, int, FILE *);
+int	__swbufw (int, FILE *);
 #ifdef __GNUC__
-_ELIDABLE_INLINE int __swputc_r(struct _reent *_ptr, int _c, FILE *_p) {
+_ELIDABLE_INLINE int __swputc(int _c, FILE *_p) {
 #ifdef __SCLE
 	if ((_p->_flags & __SCLE) && _c == '\n')
-	  __swputc_r (_ptr, '\r', _p);
+	  __swputc ('\r', _p);
 #endif
 	if (--_p->_w >= 0 || (_p->_w >= _p->_lbfsize && (char)_c != '\n'))
 		return (*_p->_p++ = _c);
 	else
-		return (__swbufw_r(_ptr, _c, _p));
+		return (__swbufw(_c, _p));
 }
 #else
-#define       __swputc_raw_r(__ptr, __c, __p) \
+#define       __swputc_raw(__c, __p) \
 	(--(__p)->_w < 0 ? \
 		(__p)->_w >= (__p)->_lbfsize ? \
 			(*(__p)->_p = (__c)), *(__p)->_p != '\n' ? \
 				(int)*(__p)->_p++ : \
-				__swbufw_r(__ptr, '\n', __p) : \
-			__swbufw_r(__ptr, (int)(__c), __p) : \
+				__swbufw('\n', __p) : \
+			__swbufw((int)(__c), __p) : \
 		(*(__p)->_p = (__c), (int)*(__p)->_p++))
 #ifdef __SCLE
-#define __swputc_r(__ptr, __c, __p) \
+#define __swputc(__c, __p) \
         ((((__p)->_flags & __SCLE) && ((__c) == '\n')) \
-          ? __swputc_raw_r(__ptr, '\r', (__p)) : 0 , \
-        __swputc_raw_r((__ptr), (__c), (__p)))
+          ? __swputc_raw('\r', (__p)) : 0 , \
+        __swputc_raw((__c), (__p)))
 #else
-#define __swputc_r(__ptr, __c, __p) __swputc_raw_r(__ptr, __c, __p)
+#define __swputc(__c, __p) __swputc_raw(__c, __p)
 #endif
 #endif
 

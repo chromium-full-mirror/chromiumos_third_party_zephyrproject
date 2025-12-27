@@ -140,7 +140,7 @@ fwrite (
       _newlib_flockfile_exit (fp);
       return 0;
     }
-  if (__sfvwrite_r (ptr, fp, &uio) == 0)
+  if (_sfvwrite (fp, &uio) == 0)
     {
       _newlib_flockfile_exit (fp);
       return count;

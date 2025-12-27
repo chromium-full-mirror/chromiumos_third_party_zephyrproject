@@ -180,7 +180,7 @@ fgetwc (
   if (ORIENT(fp, 1) != 1)
     r = WEOF;
   else
-    r = __fgetwc (ptr, fp);
+    r = __fgetwc (fp);
   _newlib_flockfile_end (fp);
   return r;
 }

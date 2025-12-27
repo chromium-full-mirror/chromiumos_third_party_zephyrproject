@@ -155,7 +155,7 @@ __fputwc (
     }
 
   for (i = 0; i < len; i++)
-    if (__swputc_r (ptr, (unsigned char) buf[i], fp) == EOF)
+    if (__swputc ((unsigned char) buf[i], fp) == EOF)
       return WEOF;
 
   return (wint_t) wc;
@@ -169,7 +169,7 @@ fputwc (
   wint_t r;
 
   _newlib_flockfile_start (fp);
-  __fputwc(ptr, wc, fp);
+  r = __fputwc(wc, fp);
   _newlib_flockfile_end (fp);
   return r;
 }

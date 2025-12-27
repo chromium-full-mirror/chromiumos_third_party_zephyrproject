@@ -35,15 +35,5 @@ fputwc_unlocked (
 	wchar_t wc,
 	FILE *fp)
 {
-  return __fputwc(ptr, wc, fp);
-}
-
-wint_t
-fputwc_unlocked (wchar_t wc,
-	FILE *fp)
-{
-  struct _reent *reent = _REENT;
-
-  CHECK_INIT(reent, fp);
-  return _fputwc_unlocked_r (reent, wc, fp);
+  return __fputwc(wc, fp);
 }

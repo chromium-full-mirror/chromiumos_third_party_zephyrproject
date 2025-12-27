@@ -45,19 +45,10 @@ _srget (
   if (ORIENT (fp, -1) != -1)
     return EOF;
 
-  if (__srefill_r (ptr, fp) == 0)
+  if (_srefill (fp) == 0)
     {
       fp->_r--;
       return *fp->_p++;
     }
   return EOF;
-}
-
-/* This function isn't any longer declared in stdio.h, but it's
-   required for backward compatibility with applications built against
-   earlier dynamically built newlib libraries. */
-int
-__srget (register FILE *fp)
-{
-  return _srget ( fp);
 }

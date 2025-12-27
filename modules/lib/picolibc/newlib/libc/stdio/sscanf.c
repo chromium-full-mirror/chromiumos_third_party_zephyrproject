@@ -418,8 +418,6 @@ Supporting OS subroutines required: <<close>>, <<fstat>>, <<isatty>>,
 #include <stdarg.h>
 #include "local.h"
 
-#ifndef _REENT_ONLY
-
 int
 sscanf (const char *__restrict str,
        const char * fmt, ...)
@@ -447,5 +445,3 @@ int __nonnull((1)) _NOTHROW
 siscanf (const char *, const char *, ...)
        _ATTRIBUTE ((__alias__("sscanf")));
 #endif
-
-#endif /* !_REENT_ONLY */

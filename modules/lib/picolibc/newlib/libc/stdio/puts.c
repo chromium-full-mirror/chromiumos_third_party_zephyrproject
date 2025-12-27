@@ -90,7 +90,7 @@ puts (
   if (ORIENT (fp, -1) != -1)
     result = EOF;
   else
-    result = (__sfvwrite_r (ptr, fp, &uio) ? EOF : '\n');
+    result = (_sfvwrite (fp, &uio) ? EOF : '\n');
   _newlib_flockfile_end (fp);
   return result;
 #else
