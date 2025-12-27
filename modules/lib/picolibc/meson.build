@@ -455,7 +455,7 @@ else
   endif
   if io_pos_args
     error('newlib stdio has bugs with positional arguments (io-pos-args)')
-  endif	
+  endif
 endif
 
 if host_cpu_family == ''
@@ -549,7 +549,7 @@ else
   specs_install = true
 endif
 
-# Let targets add more support libraries 
+# Let targets add more support libraries
 additional_libs_list = meson.get_cross_property('additional_libs', [])
 
 compiler_id = cc.get_id()
@@ -707,7 +707,7 @@ if enable_multilib
   gen_multilib_crt0_path = specs_prefix_format.format(get_option('libdir') / '%M' / crt0_expr)
   crt0_gen = gen_format.format(gen_multilib_crt0_path)
 endif
-  
+
 #
 # Construct the *startfile value from the options computed
 # above. As there's only one value, it's either the
@@ -949,7 +949,7 @@ else
 endif
 
 foreach target : ['default-target'] + targets
-  
+
   message('generate linker script target ' + target)
 
   custom_mem_config = meson.get_cross_property('custom_mem_config_' + target, '')
@@ -1160,7 +1160,7 @@ foreach target : ['default-target'] + targets
                                 install: picolibc_ld_install,
                                 install_dir: lib_dir))
     endif
-                   
+
     set_variable(picolibcpp_ld_variable, get_variable(picolibcpp_ld_config_variable))
 
   endif
@@ -1572,7 +1572,7 @@ endif
 # Clang does not support spec files
 specs_line = []
 if cc.get_id() != 'clang'
-  specs_line += [specs_prefix + '--specs', specs_prefix + meson.current_build_dir() / '@0@'.format(specs_name)]
+  specs_line += [specs_prefix + '--specs', specs_prefix + meson.current_build_dir() / specs_name]
 endif
 test_c_args += specs_line
 
@@ -1590,8 +1590,14 @@ if has_semihost
       picolibc_ld_value = get_variable('picolibc_' + target + '_ld', picolibc_ld)
     endif
 
+    if meson.version().version_compare('>=1.4.0')
+      picolibc_ld_string = picolibc_ld_value.full_path()
+    else
+      picolibc_ld_string = '@0@'.format(picolibc_ld_value)
+    endif
+
     set_variable(test_link_args_variable,
-		 ['-nostartfiles', '-T', '@0@'.format(picolibc_ld_value),
+		 ['-nostartfiles', '-T', picolibc_ld_string,
 		  lib_gcc] + additional_libs_list + specs_line)
 
     set_variable(test_linker_files_variable, [picolibc_ld_value])
