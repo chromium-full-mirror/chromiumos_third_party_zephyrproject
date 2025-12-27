@@ -1028,6 +1028,7 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 1022 */ {           -inff  , 0x1p-127f        , -0x1.000002p-125f, {           -inff,           -inff,           -inff,           -inff } },
  /* 1023 */ { 0.0f             , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f } },
  /* 1024 */ { 0x1p-149f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
+#ifndef SMALL_FMA_TEST
  /* 1025 */ { 0x1p-127f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1026 */ { 0x1.000002p-126f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1027 */ { 0x1.000002p-125f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
@@ -5327,6 +5328,7 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 5321 */ { 0x1.000002p126f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5322 */ { 0x1.000002p127f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5323 */ {            inff  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
+#endif /* SMALL_FMA_TEST */
 };
 #endif
 
@@ -6358,6 +6360,7 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 1022 */ {           -inff  , 0x1p-127f        , -0x1.000002p-125f, {           -inff,           -inff,           -inff,           -inff } },
  /* 1023 */ { 0.0f             , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f } },
  /* 1024 */ { 0x1p-149f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
+#ifndef SMALL_FMA_TEST
  /* 1025 */ { 0x1p-127f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1026 */ { 0x1.000002p-126f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1027 */ { 0x1.000002p-125f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
@@ -10657,6 +10660,7 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 5321 */ { 0x1.000002p126f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5322 */ { 0x1.000002p127f  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
  /* 5323 */ {            inff  ,            inff  ,            inff  , {            inff,            inff,            inff,            inff } },
+#endif /* SMALL_FMA_TEST */
 };
 #endif
 
@@ -11688,6 +11692,7 @@ static const struct fmaf_vec fmaf_vec[] = {
  /* 1022 */ {           -inff  , 0x1p-127f        , -0x1.000002p-125f, {           -inff,           -inff,           -inff,           -inff } },
  /* 1023 */ { 0.0f             , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f, -0x1.000002p-125f } },
  /* 1024 */ { 0x1p-149f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
+#ifndef SMALL_FMA_TEST
  /* 1025 */ { 0x1p-127f        , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1026 */ { 0x1.000002p-126f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
  /* 1027 */ { 0x1.000002p-125f , 0x1p-127f        , -0x1.000002p-125f, { -0x1.000002p-125f, -0x1p-125f, -0x1.000002p-125f, -0x1p-125f } },
@@ -47967,5 +47972,6 @@ static const struct fmal_vec fmal_vec[] = {
  /* 5321 */ { 0x1.0000000000000000000000000001p16382l,            infl  ,            infl  , {            infl,            infl,            infl,            infl } },
  /* 5322 */ { 0x1.0000000000000000000000000001p16383l,            infl  ,            infl  , {            infl,            infl,            infl,            infl } },
  /* 5323 */ {            infl  ,            infl  ,            infl  , {            infl,            infl,            infl,            infl } },
+#endif /* SMALL_FMA_TEST */
 };
 #endif
