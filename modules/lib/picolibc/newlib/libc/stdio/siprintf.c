@@ -50,10 +50,10 @@ SYNOPSIS
         int iprintf(const char *<[format]>, ...);
         int fiprintf(FILE *<[fd]>, const char *<[format]> , ...);
         int siprintf(char *<[str]>, const char *<[format]>, ...);
-        int sniprintf(char *<[str]>, size_t <[size]>, const char *<[format]>, 
+        int sniprintf(char *<[str]>, size_t <[size]>, const char *<[format]>,
 			...);
         int asiprintf(char **<[strp]>, const char *<[format]>, ...);
-        char *asniprintf(char *<[str]>, size_t *<[size]>, 
+        char *asniprintf(char *<[str]>, size_t *<[size]>,
 			const char *<[format]>, ...);
 
         int iprintf( const char *<[format]>, ...);
@@ -108,6 +108,7 @@ siprintf (
   FILE f;
 
   f._flags = __SWR | __SSTR;
+  f._flags2 = 0;
   f._bf._base = f._p = (unsigned char *) str;
   f._bf._size = f._w = INT_MAX;
   f._file = -1;  /* No file. */

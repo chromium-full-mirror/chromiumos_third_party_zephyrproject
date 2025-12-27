@@ -40,7 +40,7 @@ SYNOPSIS
         int siscanf(const char *<[str]>, const char *<[format]>, ...);
 
         int iscanf( const char *<[format]>, ...);
-        int fiscanf( FILE *<[fd]>, 
+        int fiscanf( FILE *<[fd]>,
                        const char *<[format]>, ...);
         int siscanf( const char *<[str]>,
                    const char *<[format]>, ...);
@@ -79,7 +79,7 @@ Supporting OS subroutines required: <<close>>, <<fstat>>, <<isatty>>,
 #include <stdarg.h>
 #include "local.h"
 
-int 
+int
 siscanf (const char *str,
        const char *fmt, ...)
 {
@@ -88,6 +88,7 @@ siscanf (const char *str,
   FILE f;
 
   f._flags = __SRD | __SSTR;
+  f._flags2 = 0;
   f._bf._base = f._p = (unsigned char *) str;
   f._bf._size = f._r = strlen (str);
   f._read = __seofread;

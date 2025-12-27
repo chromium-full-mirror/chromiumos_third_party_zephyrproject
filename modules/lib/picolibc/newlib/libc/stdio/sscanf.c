@@ -40,7 +40,7 @@ SYNOPSIS
         int sscanf(const char *restrict <[str]>, const char *restrict <[format]>, ...);
 
         int scanf( const char *restrict <[format]>, ...);
-        int fscanf( FILE *restrict <[fd]>, 
+        int fscanf( FILE *restrict <[fd]>,
                       const char *restrict <[format]>, ...);
         int sscanf( const char *restrict <[str]>,
                       const char *restrict <[format]>, ...);
@@ -306,7 +306,7 @@ DESCRIPTION
                 Stores a scanned pointer.  ANSI C leaves the details
 		to each implementation; this implementation treats
 		<<%p>> exactly the same as <<%U>>.  Corresponding
-		<[arg]>: <<(void **arg)>>.  
+		<[arg]>: <<(void **arg)>>.
                 o-
 
 	A <[pattern]> of characters surrounded by square brackets can be used
@@ -418,9 +418,9 @@ Supporting OS subroutines required: <<close>>, <<fstat>>, <<isatty>>,
 #include <stdarg.h>
 #include "local.h"
 
-#ifndef _REENT_ONLY 
+#ifndef _REENT_ONLY
 
-int 
+int
 sscanf (const char *__restrict str,
        const char * fmt, ...)
 {
@@ -429,6 +429,7 @@ sscanf (const char *__restrict str,
   FILE f;
 
   f._flags = __SRD | __SSTR;
+  f._flags2 = 0;
   f._bf._base = f._p = (unsigned char *) str;
   f._bf._size = f._r = strlen (str);
   f._read = __seofread;

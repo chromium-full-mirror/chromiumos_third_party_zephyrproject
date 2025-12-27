@@ -82,6 +82,9 @@ getc (
 {
   int result;
   CHECK_INIT (ptr, fp);
+  if (ORIENT (fp, -1) != -1)
+    return EOF;
+
   _newlib_flockfile_start (fp);
   result = _sgetc ( fp);
   _newlib_flockfile_end (fp);
