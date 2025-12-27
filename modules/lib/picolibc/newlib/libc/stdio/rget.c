@@ -40,7 +40,12 @@ _srget (
      we call __srefill_r so we may access the true read buffer. */
   CHECK_INIT(ptr, fp);
 
-  if (_srefill ( fp) == 0)
+  /* Have to set and check orientation here, otherwise the macros in
+     stdio.h never set it. */
+  if (ORIENT (fp, -1) != -1)
+    return EOF;
+
+  if (__srefill_r (ptr, fp) == 0)
     {
       fp->_r--;
       return *fp->_p++;
