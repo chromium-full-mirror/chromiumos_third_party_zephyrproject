@@ -25,13 +25,13 @@
  */
 
 /*
-FUNCTION        
+FUNCTION
 <<fputws>>, <<fputws_unlocked>>---write a wide character string in a file or stream
 
 INDEX
-	fputws   
+	fputws
 INDEX
-	fputws_unlocked 
+	fputws_unlocked
 INDEX
 	_fputws_r
 INDEX
@@ -143,7 +143,7 @@ error:
 	goto error;
       while (i < nbytes)
         {
-	  if (_sputc ( buf[i], fp) == EOF)
+	  if (__swputc_r (ptr, buf[i], fp) == EOF)
 	    goto error;
 	  i++;
         }
