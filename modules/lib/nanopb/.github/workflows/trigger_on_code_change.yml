@@ -1,15 +1,26 @@
 name: Test after any code changes
 on:
+  workflow_dispatch:
   push:
     paths:
       - '**.c'
       - '**.h'
       - '**.py'
+      - '**.sh'
+      - '**.yml'
+      - '**.proto'
+      - '**.mk'
+      - '**.cmake'
   pull_request:
     paths:
       - '**.c'
       - '**.h'
       - '**.py'
+      - '**.sh'
+      - '**.yml'
+      - '**.proto'
+      - '**.mk'
+      - '**.cmake'
 
 jobs:
   smoke_test:
@@ -24,7 +35,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          apt-get install python3-protobuf protobuf-compiler splint valgrind
+          sudo apt-get install python3-protobuf protobuf-compiler scons splint valgrind
 
       - name: Run tests
         run: |
