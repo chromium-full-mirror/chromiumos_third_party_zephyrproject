@@ -1630,6 +1630,8 @@ class Message(ProtoElement):
                 optional_only.field.remove(field)
             elif hasattr(field, 'oneof_index') and field.HasField('oneof_index'):
                 optional_only.field.remove(field)
+            elif hasattr(field, 'oneof_index') and field.HasField('oneof_index'):
+                optional_only.field.remove(field)
             elif field.type == FieldD.TYPE_ENUM:
                 # The partial descriptor doesn't include the enum type
                 # so we fake it with int64.
