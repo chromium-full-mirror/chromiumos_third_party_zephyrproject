@@ -1676,6 +1676,8 @@ class Message(ProtoElement):
 
         optional_only.ClearField(str('oneof_decl'))
         optional_only.ClearField(str('nested_type'))
+        optional_only.ClearField(str('extension'))
+        optional_only.ClearField(str('enum_type'))
         desc = google.protobuf.descriptor.MakeDescriptor(optional_only)
         msg = reflection.MakeClass(desc)()
 
