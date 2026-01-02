@@ -511,10 +511,6 @@ class Enum(ProtoElement):
             unmangledIdentifier = Globals.naming_style.define_name('_%s_ARRAYSIZE' % unmangledName)
             self.protofile.manglenames.reverse_name_mapping[identifier] = unmangledIdentifier
 
-        result += '\n#define _%s_MIN %s' % (self.names, self.values[0][0])
-        result += '\n#define _%s_MAX %s' % (self.names, self.values[-1][0])
-        result += '\n#define _%s_ARRAYSIZE ((%s)(%s+1))' % (self.names, self.names, self.values[-1][0])
-
         if not self.options.long_names:
             # Define the long names always so that enum value references
             # from other files work properly.
