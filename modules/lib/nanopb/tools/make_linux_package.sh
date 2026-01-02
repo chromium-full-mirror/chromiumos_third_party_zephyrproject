@@ -37,9 +37,6 @@ rm -rf $DEST/generator/dist $DEST/generator/build $DEST/generator/nanopb_generat
 # Make the nanopb generator available as a protoc plugin
 cp $DEST/generator-bin/nanopb_generator $DEST/generator-bin/protoc-gen-nanopb
 
-# Remove debugging symbols to reduce size of package
-( cd $DEST; strip *.so )
-
 # Tar it all up
 ( cd dist; tar -czf $VERSION.tar.gz $VERSION )
 
