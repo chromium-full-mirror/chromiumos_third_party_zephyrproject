@@ -1668,6 +1668,9 @@ class Message(ProtoElement):
         optional_only.ClearField(str('enum_type'))
         optional_only.name += str(id(self))
 
+        if len(optional_only.field) == 0:
+            return b''
+
         optional_only.ClearField(str('oneof_decl'))
         desc = google.protobuf.descriptor.MakeDescriptor(optional_only)
         msg = reflection.MakeClass(desc)()
