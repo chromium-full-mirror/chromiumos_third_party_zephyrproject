@@ -602,10 +602,6 @@ class Field(ProtoElement):
         # Parse field options
         if field_options.HasField("max_size"):
             self.max_size = field_options.max_size
-        
-        if desc.type == FieldD.TYPE_STRING and field_options.HasField("max_length"):
-            # max_length overrides max_size for strings
-            self.max_size = field_options.max_length + 1
 
         if field_options.HasField("initializer"):
             self.initializer = field_options.initializer
