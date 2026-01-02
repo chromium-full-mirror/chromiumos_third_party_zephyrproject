@@ -511,12 +511,9 @@ class Enum(ProtoElement):
             unmangledIdentifier = Globals.naming_style.define_name('_%s_ARRAYSIZE' % unmangledName)
             self.protofile.manglenames.reverse_name_mapping[identifier] = unmangledIdentifier
 
-        # sort the enum by value
-        sorted_values = sorted(self.values, key = lambda x: (x[1], x[0]))
-
-        result += '\n#define _%s_MIN %s' % (self.names, sorted_values[0][0])
-        result += '\n#define _%s_MAX %s' % (self.names, sorted_values[-1][0])
-        result += '\n#define _%s_ARRAYSIZE ((%s)(%s+1))' % (self.names, self.names, sorted_values[-1][0])
+        result += '\n#define _%s_MIN %s' % (self.names, self.values[0][0])
+        result += '\n#define _%s_MAX %s' % (self.names, self.values[-1][0])
+        result += '\n#define _%s_ARRAYSIZE ((%s)(%s+1))' % (self.names, self.names, self.values[-1][0])
 
         if not self.options.long_names:
             # Define the long names always so that enum value references
