@@ -52,6 +52,11 @@
  * Normally it is automatically detected based on __BYTE_ORDER__ macro. */
 /* #define PB_LITTLE_ENDIAN_8BIT 1 */
 
+/* Configure static assert mechanism. Instead of changing these, set your
+ * compiler to C11 standard mode if possible. */
+/* #define PB_C99_STATIC_ASSERT 1 */
+/* #define PB_NO_STATIC_ASSERT 1 */
+
 /******************************************************************
  * You usually don't need to change anything below this line.     *
  * Feel free to look around and use the defined macros, though.   *
@@ -165,20 +170,31 @@ extern "C" {
 #    if defined(__ICCARM__)
        /* IAR has static_assert keyword but no _Static_assert */
 #      define PB_STATIC_ASSERT(COND,MSG) static_assert(COND,#MSG);
-#    elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-       /* C11 standard _Static_assert mechanism */
-#      define PB_STATIC_ASSERT(COND,MSG) _Static_assert(COND,#MSG);
-#    else
+#    elif defined(PB_C99_STATIC_ASSERT)
        /* Classic negative-size-array static assert mechanism */
 #      define PB_STATIC_ASSERT(COND,MSG) typedef char PB_STATIC_ASSERT_MSG(MSG, __LINE__, __COUNTER__)[(COND)?1:-1];
 #      define PB_STATIC_ASSERT_MSG(MSG, LINE, COUNTER) PB_STATIC_ASSERT_MSG_(MSG, LINE, COUNTER)
 #      define PB_STATIC_ASSERT_MSG_(MSG, LINE, COUNTER) pb_static_assertion_##MSG##_##LINE##_##COUNTER
+#    elif defined(__cplusplus)
+       /* C++11 standard static_assert mechanism */
+#      define PB_STATIC_ASSERT(COND,MSG) static_assert(COND,#MSG);
+#    else
+       /* C11 standard _Static_assert mechanism */
+#      define PB_STATIC_ASSERT(COND,MSG) _Static_assert(COND,#MSG);
 #    endif
 #  endif
 #else
    /* Static asserts disabled by PB_NO_STATIC_ASSERT */
 #  define PB_STATIC_ASSERT(COND,MSG)
 #endif
+
+/* Test that PB_STATIC_ASSERT works
+ * If you get errors here, you may need to do one of these:
+ * - Enable C11 standard support in your compiler
+ * - Define PB_C99_STATIC_ASSERT to enable C99 standard support
+ * - Define PB_NO_STATIC_ASSERT to disable static asserts altogether
+ */
+PB_STATIC_ASSERT(1, STATIC_ASSERT_IS_NOT_WORKING)
 
 /* Number of required fields to keep track of. */
 #ifndef PB_MAX_REQUIRED_FIELDS
