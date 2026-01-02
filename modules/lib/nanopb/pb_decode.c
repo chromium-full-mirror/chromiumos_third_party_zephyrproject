@@ -1012,12 +1012,6 @@ static bool checkreturn pb_decode_inner(pb_istream_t *stream, const pb_msgdesc_t
         }
     }
 
-    if ((flags & PB_DECODE_NOINIT) == 0)
-    {
-        if (!pb_message_set_to_defaults(&iter))
-            PB_RETURN_ERROR(stream, "failed to set defaults");
-    }
-
     while (stream->bytes_left)
     {
         uint32_t tag;
