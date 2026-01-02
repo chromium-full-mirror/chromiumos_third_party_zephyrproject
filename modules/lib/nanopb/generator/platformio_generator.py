@@ -36,8 +36,8 @@ generated_src_dir = os.path.join(build_dir, 'nanopb', 'generated-src')
 generated_build_dir = os.path.join(build_dir, 'nanopb', 'generated-build')
 md5_dir = os.path.join(build_dir, 'nanopb', 'md5')
 
-nanopb_protos = env.GetProjectOption("nanopb_protos", "")
-nanopb_plugin_options = env.GetProjectOption("nanopb_options", "")
+nanopb_protos = env.GetProjectOption("custom_nanopb_protos", "")
+nanopb_plugin_options = env.GetProjectOption("custom_nanopb_options", "")
 
 if not nanopb_protos:
     print("[nanopb] No generation needed.")
@@ -50,7 +50,7 @@ else:
     protos_files = fs.match_src_files(project_dir, nanopb_protos)
     if not len(protos_files):
         print("[nanopb] ERROR: No files matched pattern:")
-        print(f"nanopb_protos: {nanopb_protos}")
+        print(f"custom_nanopb_protos: {nanopb_protos}")
         exit(1)
 
     protoc_generator = os.path.join(nanopb_root, 'generator', 'protoc')
@@ -145,4 +145,10 @@ else:
     # Add generated includes and sources to build environment
     #
     env.Append(CPPPATH=[generated_src_dir])
-    env.BuildSources(generated_build_dir, generated_src_dir)
+
+    # Fix for ESP32 ESP-IDF https://github.com/nanopb/nanopb/issues/734#issuecomment-1001544447
+    global_env = DefaultEnvironment()
+    already_called_env_name = "_PROTOBUF_GENERATOR_ALREADY_CALLED_" + env['PIOENV'].replace("-", "_")
+    if not global_env.get(already_called_env_name, False):
+        env.BuildSources(generated_build_dir, generated_src_dir)
+    global_env[already_called_env_name] = True
