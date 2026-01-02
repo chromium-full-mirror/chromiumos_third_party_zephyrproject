@@ -12,13 +12,6 @@ let package = Package(
     )
   ],
 
-  products: [
-    .library(
-      name: "nanopb",
-      targets: ["nanopb"]
-    )
-  ],
-
   targets: [
     .target(
       name: "nanopb",
