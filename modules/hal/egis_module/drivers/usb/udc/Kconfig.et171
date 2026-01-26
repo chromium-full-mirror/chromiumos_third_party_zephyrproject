@@ -4,8 +4,30 @@
 config UDC_ET171
 	bool "ET171 USB device controller driver"
 	depends on DT_HAS_EGIS_ET171_USBD_ENABLED
-    select HAS_EGIS_ET171_HAL
+	select HAS_EGIS_ET171_HAL
 	select HAS_EGIS_ET171_USBCORE
 	default y
 	help
 	  et171 USB Device Controller Driver.
+
+if UDC_ET171
+
+config UDC_ET171_WORKQUEUE
+	bool "Use an internal work queue for UDC drivers"
+	default y if !UDC_WORKQUEUE
+	help
+	  This option provides a dedicated work queue for UDC drivers.
+
+config UDC_ET171_WORKQUEUE_STACK_SIZE
+	int "UDC controller driver internal workqueue stack size"
+	depends on UDC_ET171_WORKQUEUE
+	default 1024
+
+config UDC_ET171_WORKQUEUE_PRIORITY
+	int "UDC controller driver internal workqueue priority"
+	depends on UDC_ET171_WORKQUEUE
+	default 2
+	help
+	  Device controller driver thread priority.
+
+endif # UDC_ET171

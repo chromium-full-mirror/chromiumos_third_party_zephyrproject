@@ -123,6 +123,24 @@ static struct udc_et171_device {
 #define DEV_TO_INST(dev) CONTAINER_OF((dev)->data, struct udc_et171_device, _data)
 #define WORK_TO_INST(work) CONTAINER_OF((work), struct udc_et171_device, _work)
 
+#if defined(CONFIG_UDC_ET171_WORKQUEUE)
+K_KERNEL_STACK_DEFINE(udc_et171_work_q_stack, CONFIG_UDC_ET171_WORKQUEUE_STACK_SIZE);
+static struct k_work_q udc_et171_work_q;
+static int udc_et171_work_q_init(void)
+{
+	k_work_queue_start(&udc_et171_work_q,
+			   udc_et171_work_q_stack,
+			   K_KERNEL_STACK_SIZEOF(udc_et171_work_q_stack),
+			   CONFIG_UDC_ET171_WORKQUEUE_PRIORITY, NULL);
+	k_thread_name_set(&udc_et171_work_q.thread, "udc_work_q");
+
+	return 0;
+}
+#define udc_et171_get_work_q() (&udc_et171_work_q)
+#else
+#define udc_et171_get_work_q() udc_get_work_q()
+#endif
+
 static inline void put_work_event(struct udc_et171_device *inst, struct udc_et171_work_event *evt) {
 	int32_t key = arch_irq_lock();
 	sys_slist_append(&inst->_slist, &evt->_node);
@@ -181,7 +199,7 @@ static uint32_t isr_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 		evt->setup.privateData = privateData;
 		evt->setup.ctrl = *ctrl;
 		put_work_event(inst, evt);
-		k_work_submit_to_queue(udc_get_work_q(), &inst->_work);
+		k_work_submit_to_queue(udc_et171_get_work_q(), &inst->_work);
 		return 0;
 	}
 
@@ -434,7 +452,7 @@ static void udc_et171_transfer__cb_complete(struct CUSBD_Ep *ep, struct CUSBD_Re
 		evt->complete.ep = ep;
 		evt->complete.req = req;
 		put_work_event(inst, evt);
-		k_work_submit_to_queue(udc_get_work_q(), &inst->_work);
+		k_work_submit_to_queue(udc_et171_get_work_q(), &inst->_work);
 	} else {
 		struct udc_data *data = dev->data;
 		void* pD = data->priv;
@@ -815,6 +833,10 @@ static int udc_et171_driver_init(const struct device *dev)
 	k_mutex_init(&data->mutex);
 	sys_slist_init(&inst->_slist);
 	k_work_init(&inst->_work, udc_et171_work_handler);
+
+#if defined(CONFIG_UDC_ET171_WORKQUEUE)
+	udc_et171_work_q_init();
+#endif
 
 	for (int i = 0; i < ARRAY_SIZE(ep_cfg_out); i++) {
 		ep_cfg_out[i].caps.out = 1;
