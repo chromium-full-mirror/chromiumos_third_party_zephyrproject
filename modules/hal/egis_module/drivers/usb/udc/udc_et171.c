@@ -165,6 +165,7 @@ static void lock_pm_policy(const struct device * dev, uint8_t lock)
 
 static void isr_cb_connect(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
+	LOG_DBG("%s", __func__);
 	udc_submit_event(dev, UDC_EVT_RESET, 0);
 }
 
@@ -186,6 +187,14 @@ static uint32_t isr_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 
 	return -1;
 }
+static void udc_ep_buf_flush(const struct device *dev, const uint8_t ep) {
+	struct udc_ep_config *ep_cfg = udc_get_ep_cfg(dev, ep);
+	struct net_buf *buf = udc_buf_get_all(ep_cfg);
+	if (buf != NULL) {
+		net_buf_unref(buf);
+		udc_ep_set_busy(ep_cfg, false);
+	}
+}
 static uint32_t work_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 
 	struct device* const dev = ((struct device**)privateData)[-1];
@@ -197,14 +206,8 @@ static uint32_t work_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 	int ret;
 
 	// flush all pending control
-	buf = udc_buf_get_all(udc_get_ep_cfg(dev, USB_CONTROL_EP_OUT));
-	if (buf != NULL) {
-		net_buf_unref(buf);
-	}
-	buf = udc_buf_get_all(udc_get_ep_cfg(dev, USB_CONTROL_EP_IN));
-	if (buf != NULL) {
-		net_buf_unref(buf);
-	}
+	udc_ep_buf_flush(dev, USB_CONTROL_EP_OUT);
+	udc_ep_buf_flush(dev, USB_CONTROL_EP_IN);
 
 	// Allocate for setup
 	buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, sizeof(struct usb_setup_packet));
@@ -252,11 +255,13 @@ static uint32_t work_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 }
 static void isr_cb_suspend(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
+	LOG_DBG("%s", __func__);
 	udc_submit_event(dev, UDC_EVT_SUSPEND, 0);
 	lock_pm_policy(dev, false);
 }
 static void isr_cb_resume(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
+	LOG_DBG("%s", __func__);
 	OUT_REG(USB2PHY, IN_REG(USB2PHY) & ~SMU_USB2PHY_WAKEUP);
 	udc_submit_event(dev, UDC_EVT_RESUME, 0);
 	lock_pm_policy(dev, true);
@@ -466,6 +471,8 @@ static int udc_et171_ep_enqueue(const struct device *dev, struct udc_ep_config *
 			// unlock
 			// skip status, because caps.out_ack == true;
 			assert(buf->len == 0);
+			// status stage, finished
+			LOG_DBG("%s(%p) finish", "ep0_complete already", buf);
 			udc_submit_ep_event(dev, buf, 0);
 			return 0;
 		}
@@ -484,14 +491,15 @@ static int udc_et171_ep_enqueue(const struct device *dev, struct udc_ep_config *
 		// unlock
 	}
 
+	int ret = 0;
 	uint32_t status;
 	uint32_t transfer_size = USB_EP_DIR_IS_OUT(cfg->addr) ? net_buf_tailroom(buf) : buf->len;
 	CUSBD_Ep *ep = udc_et171_get_usbd_ep(pD, cfg->addr);
 	CUSBD_Req* req = NULL;
 	drv->reqAlloc(pD, ep, &req);
 	if (!req) {
-//		udc_buf_get(cfg); // TODO: remove // ??
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto exit;
 	}
 
 	req->buf = buf->data;
@@ -510,8 +518,16 @@ static int udc_et171_ep_enqueue(const struct device *dev, struct udc_ep_config *
 	if (status != 0) {
 		LOG_ERR("%s:%u Queue fail, status = %d\n", __func__, __LINE__, status);
 		drv->reqFree(pD, ep, req);
-//		udc_buf_get(cfg); // TODO: remove // ??
-		return -EINVAL;
+		ret = -EINVAL;
+		goto exit;
+	}
+
+exit:
+	if (ret != 0) {
+		udc_buf_get(cfg);
+		udc_ep_set_busy(cfg, false);
+		udc_submit_ep_event(dev, buf, ret);
+		// forword the 'ret' to ep_event handler only
 	}
 
 	return 0;
@@ -743,6 +759,9 @@ static int udc_et171_shutdown(const struct device *dev)
 	
 	LOG_INF("shutdown");
 
+	udc_ep_disable_internal(dev, USB_CONTROL_EP_OUT);
+	udc_ep_disable_internal(dev, USB_CONTROL_EP_IN);
+
 	if (pD) {
 		drv->destroy(pD);
     
@@ -766,9 +785,11 @@ static int udc_et171_shutdown(const struct device *dev)
 static void udc_et171_work_handler(struct k_work *item)
 {
 	struct udc_et171_device *inst = WORK_TO_INST(item);
+	struct k_mutex *mutex = &inst->_data.mutex;
 	struct udc_et171_work_event *evt;
 
 	while ((evt = get_work_event(inst)) != NULL) {
+		k_mutex_lock(mutex, K_FOREVER); // udc_lock_internal(dev, K_FOREVER);
 		switch(evt->type)
 		{
 		case WORK_EVT_SETUP:
@@ -778,6 +799,7 @@ static void udc_et171_work_handler(struct k_work *item)
 			work_cb_complete(evt->complete.ep, evt->complete.req);
 			break;
 		}
+		k_mutex_unlock(mutex); // udc_unlock_internal(dev);
 		USB_mem_free(evt);
 	}
 }
