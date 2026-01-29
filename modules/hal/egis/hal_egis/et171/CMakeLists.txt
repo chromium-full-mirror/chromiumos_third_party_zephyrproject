@@ -7,25 +7,30 @@
 set(CURRENT_MODULE_DIR "../..")
 if(CONFIG_HAS_EGIS_ET171_HAL)
 
-  add_subdirectory(${CURRENT_MODULE_DIR}/et171 egis_et171_hal)
+  add_library(ET171HAL INTERFACE)
   target_include_directories(ET171HAL INTERFACE ${CURRENT_MODULE_DIR}/et171/inc)
+  target_link_directories(ET171HAL INTERFACE ${CURRENT_MODULE_DIR}/et171/lib)
+
+  if(DEFINED CONFIG_FLOAT_HARD)
+    target_link_libraries(ET171HAL INTERFACE et171hal_ilp32f)
+  else()
+    target_link_libraries(ET171HAL INTERFACE et171hal_ilp32)
+  endif()
 
   if(CONFIG_HAS_EGIS_ET171_SXSMCRYPT)
-    target_link_directories(ET171HAL INTERFACE ${CURRENT_MODULE_DIR}/et171/lib)
     if(DEFINED CONFIG_FLOAT_HARD)
-      target_link_libraries(ET171HAL PUBLIC sxsymcrypt_ilp32f)
+      target_link_libraries(ET171HAL INTERFACE sxsymcrypt_ilp32f)
     else()
-      target_link_libraries(ET171HAL PUBLIC sxsymcrypt_ilp32)
+      target_link_libraries(ET171HAL INTERFACE sxsymcrypt_ilp32)
     endif()
   endif() # CONFIG_HAS_EGIS_ET171_SXSMCRYPT
 
   if(CONFIG_HAS_EGIS_ET171_USBCORE)
-    target_include_directories(ET171HAL PUBLIC inc)
-    target_link_directories(ET171HAL INTERFACE ${CURRENT_MODULE_DIR}/et171/lib)
+    target_include_directories(ET171HAL INTERFACE inc)
     if(DEFINED CONFIG_FLOAT_HARD)
-      target_link_libraries(ET171HAL PUBLIC usbcore_ilp32f)
+      target_link_libraries(ET171HAL INTERFACE usbcore_ilp32f)
     else()
-      target_link_libraries(ET171HAL PUBLIC usbcore_ilp32)
+      target_link_libraries(ET171HAL INTERFACE usbcore_ilp32)
     endif()
   endif() # CONFIG_HAS_EGIS_ET171_USBCORE
 
