@@ -5,6 +5,7 @@
  */
 
 &i2c1 {
+
 	ti_tmp11x: ti_tmp11x@4b {
 		compatible = "ti,tmp11x";
 		reg = <0x4B>;

@@ -2,19 +2,28 @@
  * Copyright 2018-2021 NXP
  * All rights reserved.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDXLicense-Identifier: Apache-2.0
  */
 #include "flash_config.h"
 
-#if defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1)
+/* Component ID definition, used by tools. */
+#ifndef FSL_COMPONENT_ID
+#define FSL_COMPONENT_ID "platform.drivers.flash_config"
+#endif
+
+#if defined(BOOT_HEADER_ENABLE) && (BOOT_HEADER_ENABLE == 1)
+#if defined(__ARMCC_VERSION) || defined(__GNUC__)
 __attribute__((section(".flash_conf"), used))
+#elif defined(__ICCARM__)
+#pragma location = ".flash_conf"
+#endif
 
 const flexspi_nor_config_t flash_config = {
 	.memConfig = {
 		.tag = FLEXSPI_CFG_BLK_TAG,
 		.version = FLEXSPI_CFG_BLK_VERSION,
 		.readSampleClkSrc =
-			FLEXSPI_READ_SAMPLE_CLK_EXTERNAL_INPUT_FROM_DQS_PAD,
+			kFlexSPIReadSampleClk_ExternalInputFromDqsPad,
 		.csHoldTime = 3,
 		.csSetupTime = 3,
 		.deviceModeCfgEnable = 1,
@@ -29,11 +38,11 @@ const flexspi_nor_config_t flash_config = {
 		/* Enable OPI DDR mode */
 		.deviceModeArg = 2,
 		.controllerMiscOption =
-			(1u << FLEXSPI_MISC_OFFSET_SAFE_CONFIG_FREQ_ENABLE) |
-			(1u << FLEXSPI_MISC_OFFSET_DDR_MODE_ENABLE),
+			(1u << kFlexSpiMiscOffset_SafeConfigFreqEnable) |
+			(1u << kFlexSpiMiscOffset_DdrModeEnable),
 		.deviceType = kFlexSpiDeviceType_SerialNOR,
 		.sflashPadType = kSerialFlash_8Pads,
-	.serialClkFreq = FLEXSPI_SERIAL_CLK_60MHZ,
+		.serialClkFreq = kFlexSpiSerialClk_60MHz,
 		.sflashA1Size = 64ul * 1024u * 1024u,
 		.busyOffset = 0u,
 		.busyBitPolarity = 0u,
@@ -105,4 +114,4 @@ const flexspi_nor_config_t flash_config = {
 	.flashStateCtx = 0x07008200u,
 };
 
-#endif /* defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1) */
+#endif /* BOOT_HEADER_ENABLE */

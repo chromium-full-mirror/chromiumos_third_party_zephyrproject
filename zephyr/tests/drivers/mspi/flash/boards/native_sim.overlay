@@ -11,6 +11,7 @@
 };
 
 &mspi0 {
+
 	ce-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>,
 		   <&gpio0 18 GPIO_ACTIVE_LOW>;
 	dqs-support;

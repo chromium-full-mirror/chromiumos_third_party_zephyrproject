@@ -52,9 +52,3 @@ bq40z50@6 {
 	reg = <0x6>;
 	status = "okay";
 };
-
-hy4245@7 {
-	compatible = "hycon,hy4245";
-	reg = <0x7>;
-	status = "okay";
-};

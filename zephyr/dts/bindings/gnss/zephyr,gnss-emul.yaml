@@ -4,5 +4,3 @@
 description: Zephyr emulated GNSS device
 
 compatible: "zephyr,gnss-emul"
-
-include: base.yaml

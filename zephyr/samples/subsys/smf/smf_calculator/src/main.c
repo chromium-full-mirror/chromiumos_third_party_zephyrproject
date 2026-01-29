@@ -112,7 +112,6 @@ static void lv_btn_matrix_click_callback(lv_event_t *e)
 static int setup_display(void)
 {
 	const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
-	int ret;
 
 	if (!device_is_ready(display_dev)) {
 		LOG_ERR("Device not ready, aborting setup");
@@ -166,11 +165,7 @@ static int setup_display(void)
 	update_display("0");
 
 	lv_task_handler();
-	ret = display_blanking_off(display_dev);
-	if (ret < 0 && ret != -ENOSYS) {
-		LOG_ERR("Failed to turn blanking off (error %d)", ret);
-		return ret;
-	}
+	display_blanking_off(display_dev);
 
 	return 0;
 }

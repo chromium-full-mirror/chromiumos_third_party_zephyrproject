@@ -11,14 +11,13 @@ import pytest
 
 from twister_harness.device.hardware_adapter import HardwareAdapter
 from twister_harness.exceptions import TwisterHarnessException
-from twister_harness.twister_harness_config import DeviceConfig, DeviceSerialConfig
+from twister_harness.twister_harness_config import DeviceConfig
 
 
 @pytest.fixture(name='device')
 def fixture_adapter(tmp_path) -> HardwareAdapter:
     build_dir = tmp_path / 'build_dir'
     os.mkdir(build_dir)
-    serial_configs = [DeviceSerialConfig(port='')]
     device_config = DeviceConfig(
         type='hardware',
         build_dir=build_dir,
@@ -27,7 +26,6 @@ def fixture_adapter(tmp_path) -> HardwareAdapter:
         id='p_id',
         base_timeout=5.0,
         flash_command='',
-        serial_configs=serial_configs,
     )
     return HardwareAdapter(device_config)
 
@@ -43,7 +41,7 @@ def test_if_get_command_returns_proper_string_1(patched_which, device: HardwareA
     device.device_config.build_dir = Path('build')
     device.generate_command()
     assert isinstance(device.command, list)
-    assert device.command == ['west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'runner']
+    assert device.command == ['west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'runner']
 
 
 @mock.patch('shutil.which', return_value='west')
@@ -53,7 +51,7 @@ def test_if_get_command_returns_proper_string_2(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'pyocd', '--', '--board-id', 'p_id'
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'pyocd', '--', '--board-id', 'p_id'
     ]
 
 
@@ -64,7 +62,7 @@ def test_if_get_command_returns_proper_string_3(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'nrfjprog', '--', '--dev-id', 'p_id'
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'nrfjprog', '--', '--dev-id', 'p_id'
     ]
 
 
@@ -76,7 +74,7 @@ def test_if_get_command_returns_proper_string_4(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'openocd',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'openocd',
         '--', '--cmd-pre-init', 'hla_serial p_id'
     ]
 
@@ -89,7 +87,7 @@ def test_if_get_command_returns_proper_string_5(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'openocd',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'openocd',
         '--', '--cmd-pre-init', 'cmsis_dap_serial p_id'
     ]
 
@@ -101,7 +99,7 @@ def test_if_get_command_returns_proper_string_6(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'jlink',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'jlink',
         '--dev-id', 'p_id'
     ]
 
@@ -113,8 +111,8 @@ def test_if_get_command_returns_proper_string_7(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'stm32cubeprogrammer',
-        '--dev-id', 'p_id'
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'stm32cubeprogrammer',
+        '--tool-opt=sn=p_id'
     ]
 
 
@@ -126,7 +124,7 @@ def test_if_get_command_returns_proper_string_8(patched_which, device: HardwareA
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build',
         '--runner', 'openocd', '--', '--cmd-pre-init', 'hla_serial p_id'
     ]
 
@@ -138,7 +136,7 @@ def test_if_get_command_returns_proper_string_with_runner_params_1(patched_which
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build',
         '--runner', 'runner', '--', '--runner-param1', 'runner-param2'
     ]
 
@@ -158,7 +156,7 @@ def test_if_get_command_returns_proper_string_with_runner_params_2(patched_which
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build',
         '--runner', 'openocd', '--',
         '--cmd-pre-init', 'adapter serial FT1LRSRD',
         '--cmd-pre-init', 'source [find interface/ftdi/jtag-lock-pick_tiny_2.cfg]',
@@ -179,7 +177,7 @@ def test_if_get_command_returns_proper_string_with_west_flash_extra_args(
     device.generate_command()
     assert isinstance(device.command, list)
     assert device.command == [
-        'west', 'flash', '--no-rebuild', '--build-dir', 'build', '--runner', 'pyocd',
+        'west', 'flash', '--skip-rebuild', '--build-dir', 'build', '--runner', 'pyocd',
         '--', '--board-id=foobar', '--erase'
     ]
 
@@ -206,7 +204,7 @@ def test_device_log_correct_error_handle(patched_popen, device: HardwareAdapter,
     patched_popen.return_value = popen_mock
     device.device_config.build_dir = tmp_path
     device.command = [
-        'west', 'flash', '--no-rebuild', '--build-dir', str(tmp_path),
+        'west', 'flash', '--skip-rebuild', '--build-dir', str(tmp_path),
         '--runner', 'nrfjprog', '--', '--dev-id', 'p_id'
     ]
     with pytest.raises(expected_exception=TwisterHarnessException, match='Could not flash device p_id'):
@@ -216,28 +214,28 @@ def test_device_log_correct_error_handle(patched_popen, device: HardwareAdapter,
         assert 'flashing error' in file.readlines()
 
 
-@mock.patch('twister_harness.device.device_connection.subprocess.Popen')
-@mock.patch('twister_harness.device.device_connection.serial.Serial')
+@mock.patch('twister_harness.device.hardware_adapter.subprocess.Popen')
+@mock.patch('twister_harness.device.hardware_adapter.serial.Serial')
 def test_if_hardware_adapter_uses_serial_pty(
     patched_serial, patched_popen, device: HardwareAdapter, monkeypatch: pytest.MonkeyPatch
 ):
-    device.device_config.serial_configs[0].serial_pty = 'script.py'
+    device.device_config.serial_pty = 'script.py'
 
     popen_mock = mock.Mock()
     popen_mock.communicate.return_value = (b'output', b'error')
     patched_popen.return_value = popen_mock
 
-    monkeypatch.setattr('twister_harness.device.device_connection.pty.openpty', lambda: (123, 456))
-    monkeypatch.setattr('twister_harness.device.device_connection.os.ttyname', lambda x: f'/pty/ttytest/{x}')
+    monkeypatch.setattr('twister_harness.device.hardware_adapter.pty.openpty', lambda: (123, 456))
+    monkeypatch.setattr('twister_harness.device.hardware_adapter.os.ttyname', lambda x: f'/pty/ttytest/{x}')
 
     serial_mock = mock.Mock()
     serial_mock.port = '/pty/ttytest/456'
     patched_serial.return_value = serial_mock
 
-    device._reader_started.set()
+    device._device_run.set()
     device.connect()
-    assert device.connections[0]._serial_connection.port == '/pty/ttytest/456'  # type: ignore[union-attr]
-    assert device.connections[0]._serial_pty_proc
+    assert device._serial_connection.port == '/pty/ttytest/456'  # type: ignore[union-attr]
+    assert device._serial_pty_proc
     patched_popen.assert_called_with(
         ['script.py'],
         stdout=123,
@@ -246,7 +244,7 @@ def test_if_hardware_adapter_uses_serial_pty(
     )
 
     device.disconnect()
-    assert not device.connections[0]._serial_pty_proc
+    assert not device._serial_pty_proc
 
 
 def test_if_hardware_adapter_properly_send_data_to_subprocess(
@@ -257,7 +255,7 @@ def test_if_hardware_adapter_properly_send_data_to_subprocess(
     output. Flashing command is mocked by "dummy" echo command.
     """
     device.command = ['echo', 'TEST']  # only to mock flashing command
-    device.device_config.serial_configs[0].serial_pty = f'python3 {shell_simulator_path}'
+    device.device_config.serial_pty = f'python3 {shell_simulator_path}'
     device.launch()
     time.sleep(0.1)
     device.write(b'zen\n')

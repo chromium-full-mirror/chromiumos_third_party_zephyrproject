@@ -13,5 +13,4 @@ toolchain:
 supported:
   - watchdog
   - dma
-  - adc
 vendor: gd

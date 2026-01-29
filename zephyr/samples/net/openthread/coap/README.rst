@@ -76,7 +76,7 @@ Example building CoAP client for the cc1352p7 launchpad:
 Checking Thread network state
 *****************************
 
-Open a console on both server and client boards then check the state:
+Open a console on both server and client boards then check the sate:
 
 .. code-block:: console
 

@@ -150,7 +150,6 @@ static struct bt_uuid *uuid_deep_copy(const struct bt_uuid *uuid)
 		memcpy(copy, uuid, sizeof(struct bt_uuid_128));
 		break;
 	default:
-		copy = NULL;
 		zassert_unreachable("Unexpected uuid->type 0x%02x", uuid->type);
 	}
 

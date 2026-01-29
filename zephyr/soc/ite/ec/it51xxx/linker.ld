@@ -130,7 +130,10 @@ SECTIONS
     {
 
 #include <zephyr/linker/rel-sections.ld>
+
+#ifdef CONFIG_LLEXT
 #include <zephyr/linker/llext-sections.ld>
+#endif
 
     /*
      * The .plt and .iplt are here according to
@@ -374,7 +377,6 @@ SECTIONS
 
     __data_region_end = .;
 
-#ifdef CONFIG_ESPI_IT8XXX2
 	SECTION_DATA_PROLOGUE(.h2ram_pool,(NOLOAD),)
 	{
 		/*
@@ -387,7 +389,6 @@ SECTIONS
 		_h2ram_pool_end = .;
 	}  GROUP_DATA_LINK_IN(RAMABLE_REGION, RAMABLE_REGION)
 	_h2ram_pool_size = ABSOLUTE(_h2ram_pool_end - _h2ram_pool_start);
-#endif
 
 	__kernel_ram_end = .;
 	__kernel_ram_size = __kernel_ram_end - __kernel_ram_start;

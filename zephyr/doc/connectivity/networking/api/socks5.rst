@@ -17,7 +17,8 @@ See this
 `SOCKS5 Wikipedia article <https://en.wikipedia.org/wiki/SOCKS#SOCKS5>`_
 for a detailed overview of how SOCKS5 works.
 
-For more information about the protocol itself, see :rfc:`1928`.
+For more information about the protocol itself, see
+`IETF RFC1928 SOCKS Protocol Version 5 <https://tools.ietf.org/html/rfc1928>`_.
 
 SOCKS5 API
 **********

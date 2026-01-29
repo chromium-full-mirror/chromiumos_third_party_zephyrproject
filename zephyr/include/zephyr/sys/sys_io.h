@@ -285,8 +285,7 @@ typedef uintptr_t mem_addr_t;
  * @param addr the memory address from where to look for the bit
  * @param bit the designated bit to test (from 0 to 31)
  *
- * @return the bitwise AND result of @p addr content and (1 << @p bit).
- * Result is 0 only if the bit is cleared otherwise result is a non-0 value.
+ * @return 1 if it is set, 0 otherwise
  */
 
 /**
@@ -299,8 +298,7 @@ typedef uintptr_t mem_addr_t;
  * @param addr the memory address from where to look for the bit
  * @param bit the designated bit to test and set (from 0 to 31)
  *
- * @return the bitwise AND result of @p addr content and (1 << @p bit) before target bit
- * is set. Result is 0 only if the bit was cleared otherwise result is a non-0 value.
+ * @return 1 if it was set, 0 otherwise
  */
 
 /**
@@ -313,8 +311,7 @@ typedef uintptr_t mem_addr_t;
  * @param addr the memory address from where to look for the bit
  * @param bit the designated bit to test and clear (from 0 to 31)
  *
- * @return the bitwise AND result of @p addr content and (1 << @p bit) before target bit
- * is cleared. Result is 0 only if the bit was cleared otherwise result is a non-0 value.
+ * @return 0 if it was clear, 1 otherwise
  */
 
 /**
@@ -347,8 +344,7 @@ typedef uintptr_t mem_addr_t;
  * @param addr the memory address from where to look for the bit
  * @param bit the designated bit to test (arbitrary
  *
- * @return the bitwise AND result of @p addr content and (1 << @p bit). Result is 0
- * only if the bit is cleared otherwise result is a non-0 value.
+ * @return 1 if it is set, 0 otherwise
  */
 
 /**
@@ -361,8 +357,7 @@ typedef uintptr_t mem_addr_t;
  * @param addr the memory address from where to look for the bit
  * @param bit the designated bit to test and set (arbitrary)
  *
- * @return the bitwise AND result of @p addr content and (1 << @p bit) before target bit
- * is set. Result is 0 only if the bit was cleared otherwise result is a non-0 value.
+ * @return 1 if it was set, 0 otherwise
  */
 
 /**
@@ -375,8 +370,7 @@ typedef uintptr_t mem_addr_t;
  * @param addr the memory address from where to look for the bit
  * @param bit the designated bit to test and clear (arbitrary)
  *
- * @return the bitwise AND result of @p addr content and (1 << @p bit) before target bit
- * is cleared. Result is 0 only if the bit was cleared otherwise result is a non-0 value.
+ * @return 0 if it was clear, 1 otherwise
  */
 
 

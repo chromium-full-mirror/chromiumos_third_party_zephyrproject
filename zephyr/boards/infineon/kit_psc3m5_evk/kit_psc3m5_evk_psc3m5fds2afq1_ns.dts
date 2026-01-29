@@ -27,7 +27,7 @@
 };
 
 uart3: &scb3 {
-	compatible = "infineon,uart";
+	compatible = "infineon,cat1-uart-pdl";
 	status = "okay";
 	current-speed = <115200>;
 
@@ -39,9 +39,8 @@ uart3: &scb3 {
 
 &peri0_group4_8bit_0 {
 	status = "okay";
-	resource-type = <IFX_RSC_SCB>;
-	resource-instance = <3>;
-	clock-div = <109>;
+	scb-block = <3>;
+	div-value = <109>;
 };
 
 &path_mux0 {

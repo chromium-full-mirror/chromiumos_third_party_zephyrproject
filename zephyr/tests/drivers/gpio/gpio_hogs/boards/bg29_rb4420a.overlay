@@ -24,7 +24,6 @@
 		gpios = <1 GPIO_ACTIVE_HIGH>;
 		input;
 	};
-
 	hog3 {
 		gpio-hog;
 		gpios = <2 GPIO_ACTIVE_HIGH>;

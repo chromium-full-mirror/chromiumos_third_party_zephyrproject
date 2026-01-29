@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <stdio.h>
 #include <pmc.h>
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
@@ -26,7 +25,6 @@ struct clk_programmable {
 	uint8_t num_parents;
 	uint8_t parent;
 	const struct clk_programmable_layout *layout;
-	char name[8];
 };
 
 #define to_clk_programmable(ptr) CONTAINER_OF(ptr, struct clk_programmable, clk)
@@ -81,7 +79,7 @@ static DEVICE_API(clock_control, programmable_api) = {
 	.get_rate = clk_programmable_get_rate,
 };
 
-int clk_register_programmable(pmc_registers_t *const pmc,
+int clk_register_programmable(pmc_registers_t *const pmc, const char *name,
 			      const struct device **parents,
 			      uint8_t num_parents, uint8_t id,
 			      const struct clk_programmable_layout *layout,
@@ -104,10 +102,9 @@ int clk_register_programmable(pmc_registers_t *const pmc,
 	}
 
 	memcpy(prog->parents, parents, sizeof(struct device *) * num_parents);
-	snprintf(prog->name, sizeof(prog->name), "prog%d", id);
 
 	*clk = &prog->clk;
-	(*clk)->name = prog->name;
+	(*clk)->name = name;
 	(*clk)->api = &programmable_api;
 	prog->num_parents = num_parents;
 	prog->id = id;

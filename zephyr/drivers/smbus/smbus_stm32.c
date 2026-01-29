@@ -10,6 +10,7 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/smbus.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/byteorder.h>
 #include <soc.h>
 
 #include "smbus_utils.h"
@@ -96,6 +97,11 @@ static int smbus_stm32_configure(const struct device *dev, uint32_t config_value
 	const struct smbus_stm32_config *config = dev->config;
 	struct smbus_stm32_data *data = dev->data;
 
+	if (config_value & SMBUS_MODE_PEC) {
+		LOG_ERR("%s: not implemented", dev->name);
+		return -EINVAL;
+	}
+
 	if (config_value & SMBUS_MODE_HOST_NOTIFY) {
 		LOG_ERR("%s: not available", dev->name);
 		return -EINVAL;
@@ -146,396 +152,99 @@ static int smbus_stm32_quick(const struct device *dev, uint16_t periph_addr,
 
 static int smbus_stm32_byte_write(const struct device *dev, uint16_t periph_addr, uint8_t command)
 {
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &pec,
-			.len = sizeof(pec),
-			.flags = I2C_MSG_WRITE,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	smbus_write_prepare_pec(data->config, periph_addr, msgs, num_msgs);
-	return i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
+	return i2c_write(config->i2c_dev, &command, sizeof(command), periph_addr);
 }
 
 static int smbus_stm32_byte_read(const struct device *dev, uint16_t periph_addr, uint8_t *byte)
 {
-	int ret;
-	uint8_t pec = 0;
-	uint8_t num_msgs;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = byte,
-			.len = sizeof(*byte),
-			.flags = I2C_MSG_READ,
-		},
-		{
-			.buf = &pec,
-			.len = sizeof(pec),
-			.flags = I2C_MSG_READ,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	ret = i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = smbus_read_check_pec(data->config, periph_addr, msgs, num_msgs);
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
+	return i2c_read(config->i2c_dev, byte, sizeof(*byte), periph_addr);
 }
 
 static int smbus_stm32_byte_data_write(const struct device *dev, uint16_t periph_addr,
 				       uint8_t command, uint8_t byte)
 {
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &byte,
-			.len = sizeof(byte),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &pec,
-			.len = sizeof(pec),
-			.flags = I2C_MSG_WRITE,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
+	uint8_t buffer[] = {
+		command,
+		byte,
+	};
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	smbus_write_prepare_pec(data->config, periph_addr, msgs, num_msgs);
-	return i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
+	return i2c_write(config->i2c_dev, buffer, ARRAY_SIZE(buffer), periph_addr);
 }
 
 static int smbus_stm32_byte_data_read(const struct device *dev, uint16_t periph_addr,
 				      uint8_t command, uint8_t *byte)
 {
-	int ret;
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = byte,
-			.len = sizeof(*byte),
-			.flags = I2C_MSG_READ | I2C_MSG_RESTART,
-		},
-		{
-			.buf = &pec,
-			.len = sizeof(pec),
-			.flags = I2C_MSG_READ,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	ret = i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = smbus_read_check_pec(data->config, periph_addr, msgs, num_msgs);
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
+	return i2c_write_read(config->i2c_dev, periph_addr, &command, sizeof(command), byte,
+			      sizeof(*byte));
 }
 
 static int smbus_stm32_word_data_write(const struct device *dev, uint16_t periph_addr,
 				       uint8_t command, uint16_t word)
 {
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = (uint8_t *)&word,
-			.len = sizeof(word),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &pec,
-			.len = sizeof(pec),
-			.flags = I2C_MSG_WRITE,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
+	uint8_t buffer[sizeof(command) + sizeof(word)];
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	smbus_write_prepare_pec(data->config, periph_addr, msgs, num_msgs);
-	return i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
+	buffer[0] = command;
+	sys_put_le16(word, buffer + 1);
+
+	return i2c_write(config->i2c_dev, buffer, ARRAY_SIZE(buffer), periph_addr);
 }
 
 static int smbus_stm32_word_data_read(const struct device *dev, uint16_t periph_addr,
 				      uint8_t command, uint16_t *word)
 {
-	int ret;
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg messages[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = (uint8_t *)word,
-			.len = sizeof(*word),
-			.flags = I2C_MSG_READ | I2C_MSG_RESTART,
-		},
-		{
-			.buf = &pec,
-			.len = sizeof(pec),
-			.flags = I2C_MSG_READ,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
+	int result;
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(messages));
-	ret = i2c_transfer(config->i2c_dev, messages, num_msgs, periph_addr);
-	if (ret < 0) {
-		return ret;
-	}
+	result = i2c_write_read(config->i2c_dev, periph_addr, &command, sizeof(command), word,
+			      sizeof(*word));
+	*word = sys_le16_to_cpu(*word);
 
-	ret = smbus_read_check_pec(data->config, periph_addr, messages, num_msgs);
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
+	return result;
 }
 
 static int smbus_stm32_pcall(const struct device *dev, uint16_t periph_addr, uint8_t command,
 			     uint16_t send_word, uint16_t *recv_word)
 {
-	int ret;
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg messages[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = (uint8_t *)&send_word,
-			.len = sizeof(send_word),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = (uint8_t *)recv_word,
-			.len = sizeof(*recv_word),
-			.flags = I2C_MSG_READ | I2C_MSG_RESTART,
-		},
-		{
-			.buf = &pec,
-			.len = 1,
-			.flags = I2C_MSG_READ,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
 	const struct smbus_stm32_config *config = dev->config;
+	uint8_t buffer[sizeof(command) + sizeof(send_word)];
+	int result;
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(messages));
-	ret = i2c_transfer(config->i2c_dev, messages, num_msgs, periph_addr);
-	if (ret < 0) {
-		return ret;
-	}
+	buffer[0] = command;
+	sys_put_le16(send_word, buffer + 1);
 
-	ret = smbus_read_check_pec(data->config, periph_addr, messages, num_msgs);
-	if (ret < 0) {
-		return ret;
-	}
+	result = i2c_write_read(config->i2c_dev, periph_addr, buffer, ARRAY_SIZE(buffer), recv_word,
+			      sizeof(*recv_word));
+	*recv_word = sys_le16_to_cpu(*recv_word);
 
-	return 0;
+	return result;
 }
 
 static int smbus_stm32_block_write(const struct device *dev, uint16_t periph_addr, uint8_t command,
 				   uint8_t count, uint8_t *buf)
 {
-	uint8_t pec;
-	uint8_t num_msgs;
-	struct i2c_msg msgs[] = {
+	const struct smbus_stm32_config *config = dev->config;
+	struct i2c_msg messages[] = {
 		{
 			.buf = &command,
 			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &count,
-			.len = sizeof(count),
-			.flags = I2C_MSG_WRITE,
+			.flags = 0,
 		},
 		{
 			.buf = buf,
 			.len = count,
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &pec,
-			.len = 1,
-			.flags = I2C_MSG_WRITE,
+			.flags = 0,
 		},
 	};
-	struct smbus_stm32_data *data = dev->data;
-	const struct smbus_stm32_config *config = dev->config;
 
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	smbus_write_prepare_pec(data->config, periph_addr, msgs, ARRAY_SIZE(msgs));
-	return i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
-}
-
-static int smbus_stm32_block_read(const struct device *dev, uint16_t periph_addr, uint8_t command,
-				  uint8_t *count, uint8_t *buf)
-{
-	int ret;
-	uint8_t num_msgs;
-	uint8_t received_pec;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = &command,
-			.len = sizeof(command),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = NULL, /* will point to next message's len field */
-			.len = 1,
-			.flags = I2C_MSG_READ | I2C_MSG_RESTART,
-		},
-		{
-			.buf = buf,
-			.len = 0, /* written by previous message! */
-			.flags = I2C_MSG_READ,
-		},
-		{
-			.buf = &received_pec,
-			.len = 1,
-			.flags = I2C_MSG_READ,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
-	const struct smbus_stm32_config *config = dev->config;
-
-	/* Count is read in msg 1 and stored in the len of msg 2.
-	 * This works because the STM I2C driver processes each message serially.
-	 * The addressing math assumes little-endian.
-	 */
-	msgs[1].buf = (uint8_t *)&msgs[2].len;
-
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	ret = i2c_transfer(config->i2c_dev, msgs, num_msgs, periph_addr);
-	if (ret < 0) {
-		return ret;
-	}
-
-	*count = msgs[2].len;
-	ret = smbus_read_check_pec(data->config, periph_addr, msgs, num_msgs);
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
-}
-
-int smbus_stm32_block_pcall(const struct device *dev, uint16_t addr, uint8_t cmd,
-			    uint8_t send_count, uint8_t *send_buf, uint8_t *recv_count,
-			    uint8_t *recv_buf)
-{
-	int ret;
-	uint8_t num_msgs;
-	uint8_t received_pec;
-	struct i2c_msg msgs[] = {
-		{
-			.buf = &cmd,
-			.len = sizeof(cmd),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = &send_count,
-			.len = sizeof(send_count),
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = send_buf,
-			.len = send_count,
-			.flags = I2C_MSG_WRITE,
-		},
-		{
-			.buf = NULL, /* will point to next message's len field */
-			.len = 1,
-			.flags = I2C_MSG_READ | I2C_MSG_RESTART,
-		},
-		{
-			.buf = recv_buf,
-			.len = 0, /* written by previous message! */
-			.flags = I2C_MSG_READ,
-		},
-		{
-			.buf = &received_pec,
-			.len = 1,
-			.flags = I2C_MSG_READ,
-		},
-	};
-	struct smbus_stm32_data *data = dev->data;
-	const struct smbus_stm32_config *config = dev->config;
-
-	/* Count is read in msg 3 and stored in the len of msg 4.
-	 * This works because the STM I2C driver processes each message serially.
-	 * The addressing math assumes little-endian.
-	 */
-	msgs[3].buf = (uint8_t *)&msgs[4].len;
-
-	num_msgs = smbus_pec_num_msgs(data->config, ARRAY_SIZE(msgs));
-	ret = i2c_transfer(config->i2c_dev, msgs, num_msgs, addr);
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = smbus_read_check_pec(data->config, addr, msgs, num_msgs);
-	if (ret < 0) {
-		return ret;
-	}
-
-	*recv_count = msgs[4].len;
-
-	return 0;
+	return i2c_transfer(config->i2c_dev, messages, ARRAY_SIZE(messages), periph_addr);
 }
 
 static DEVICE_API(smbus, smbus_stm32_api) = {
@@ -550,7 +259,6 @@ static DEVICE_API(smbus, smbus_stm32_api) = {
 	.smbus_word_data_read = smbus_stm32_word_data_read,
 	.smbus_pcall = smbus_stm32_pcall,
 	.smbus_block_write = smbus_stm32_block_write,
-	.smbus_block_read = smbus_stm32_block_read,
 #ifdef CONFIG_SMBUS_STM32_SMBALERT
 	.smbus_smbalert_set_cb = smbus_stm32_smbalert_set_cb,
 	.smbus_smbalert_remove_cb = smbus_stm32_smbalert_remove_cb,
@@ -558,7 +266,8 @@ static DEVICE_API(smbus, smbus_stm32_api) = {
 	.smbus_smbalert_set_cb = NULL,
 	.smbus_smbalert_remove_cb = NULL,
 #endif /* CONFIG_SMBUS_STM32_SMBALERT */
-	.smbus_block_pcall = smbus_stm32_block_pcall,
+	.smbus_block_read = NULL,
+	.smbus_block_pcall = NULL,
 	.smbus_host_notify_set_cb = NULL,
 	.smbus_host_notify_remove_cb = NULL,
 };

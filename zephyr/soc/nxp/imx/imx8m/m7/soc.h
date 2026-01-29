@@ -15,7 +15,6 @@ extern "C" {
 
 
 #include <fsl_device_registers.h>
-#include <soc_common.h>
 
 #endif /* !_ASMLANGUAGE */
 

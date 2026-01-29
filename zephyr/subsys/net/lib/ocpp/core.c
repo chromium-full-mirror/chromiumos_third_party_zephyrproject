@@ -21,7 +21,7 @@ static struct {
 	FILL_METER_TABLE(OCPP_OMM_CURRENT_TO_EV,
 			 "Current.Import", "A"),
 	FILL_METER_TABLE(OCPP_OMM_CURRENT_MAX_OFFERED_TO_EV,
-			 "Current.Offered", "A"),
+			 "Current.OfferedMaximum", "A"),
 	FILL_METER_TABLE(OCPP_OMM_ACTIVE_ENERGY_FROM_EV,
 			 "Energy.Active.Export.Register", "Wh"),
 	FILL_METER_TABLE(OCPP_OMM_ACTIVE_ENERGY_TO_EV,
@@ -47,7 +47,7 @@ static struct {
 	FILL_METER_TABLE(OCPP_OMM_FAN_SPEED,
 			 "RPM", "rpm"),
 	FILL_METER_TABLE(OCPP_OMM_CHARGING_PERCENT,
-			 "SoC", "Percent"),
+			 "SoCState", "Percent"),
 	FILL_METER_TABLE(OCPP_OMM_TEMPERATURE,
 			 "Temperature", "Celsius"),
 	FILL_METER_TABLE(OCPP_OMM_VOLTAGE_AC_RMS,
@@ -66,10 +66,7 @@ int ocpp_boot_notification(ocpp_session_handle_t hndl,
 	struct ocpp_wamp_rpc_msg rmsg = {0};
 
 	fn = ctx->cfn[PDU_BOOTNOTIFICATION];
-	ret = fn(buf, sizeof(ctx->pdu_buf), sh, cpi);
-	if (ret < 0) {
-		return ret;
-	}
+	sh->uid = fn(buf, sizeof(ctx->pdu_buf), sh, cpi);
 
 	rmsg.ctx = ctx;
 	rmsg.msg = buf;
@@ -215,10 +212,7 @@ int ocpp_authorize(ocpp_session_handle_t hndl, char *idtag,
 	strncpy(sh->idtag, idtag, sizeof(sh->idtag));
 	ui = &ctx->ui;
 	fn = ctx->cfn[PDU_AUTHORIZE];
-	ret = fn(buf, sizeof(buf), sh);
-	if (ret < 0) {
-		return ret;
-	}
+	sh->uid = fn(buf, sizeof(buf), sh);
 
 	rmsg.ctx = ctx;
 	rmsg.msg = buf;
@@ -249,10 +243,7 @@ int ocpp_heartbeat(ocpp_session_handle_t hndl)
 	char *buf = ctx->pdu_buf;
 
 	fn = ctx->cfn[PDU_HEARTBEAT];
-	ret = fn(buf, sizeof(ctx->pdu_buf), sh);
-	if (ret < 0) {
-		return ret;
-	}
+	sh->uid = fn(buf, sizeof(ctx->pdu_buf), sh);
 
 	rmsg.ctx = ctx;
 	rmsg.msg = buf;
@@ -302,10 +293,7 @@ int ocpp_start_transaction(ocpp_session_handle_t hndl,
 
 	fn = ctx->cfn[PDU_START_TRANSACTION];
 	ocpp_get_utc_now(utc);
-	ret = fn(buf, sizeof(buf), sh, meter_val, -1, utc);
-	if (ret < 0) {
-		return ret;
-	}
+	sh->uid = fn(buf, sizeof(buf), sh, meter_val, -1, utc);
 
 	ui = &ctx->ui;
 	rmsg.ctx = ctx;
@@ -379,10 +367,7 @@ int ocpp_stop_transaction(ocpp_session_handle_t hndl,
 
 	fn = ctx->cfn[PDU_STOP_TRANSACTION];
 	ocpp_get_utc_now(utc);
-	ret = fn(buf, sizeof(buf), sh, meter_val, NULL, utc);
-	if (ret < 0) {
-		return ret;
-	}
+	sh->uid = fn(buf, sizeof(buf), sh, meter_val, NULL, utc);
 
 	ui = &ctx->ui;
 	rmsg.ctx = ctx;
@@ -509,12 +494,9 @@ int ocpp_meter_values(ocpp_session_handle_t hndl,
 
 	fn = ctx->cfn[PDU_METER_VALUES];
 	ocpp_get_utc_now(utc);
-	ret = fn(buf, sizeof(ctx->pdu_buf), sh, utc, sval,
-		 mtr_ref_table[mes].smes,
-		 mtr_ref_table[mes].unit);
-	if (ret < 0) {
-		return ret;
-	}
+	sh->uid = fn(buf, sizeof(ctx->pdu_buf), sh, utc, sval,
+			mtr_ref_table[mes].smes,
+			mtr_ref_table[mes].unit);
 
 	rmsg.ctx = ctx;
 	rmsg.msg = buf;

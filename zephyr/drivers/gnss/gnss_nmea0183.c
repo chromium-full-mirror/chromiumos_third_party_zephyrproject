@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include <stdarg.h>
+#include <stdarg.h>
 
 #include "gnss_nmea0183.h"
 #include "gnss_parse.h"

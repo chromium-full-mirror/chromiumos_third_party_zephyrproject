@@ -43,8 +43,7 @@ Hardware
 - DMA Controller
 
 More information about STM32F427VIT6 can be found here:
-
-- `STM32F427 on www.st.com`_
+       - `STM32F427 on www.st.com`_
 
 Supported Features
 ==================

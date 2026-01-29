@@ -1194,6 +1194,7 @@ preceeding||preceding
 preceed||precede
 precendence||precedence
 precission||precision
+preemptable||preemptible
 prefered||preferred
 prefferably||preferably
 prefitler||prefilter

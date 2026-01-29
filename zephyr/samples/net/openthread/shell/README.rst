@@ -46,19 +46,9 @@ Example building for NXP's RW612 FRDM (RCP host).
 .. zephyr-app-commands::
    :zephyr-app: samples/net/openthread/shell
    :board: frdm_rw612
-   :conf: "prj-ot-host.conf"
+   :conf: "prj.conf overlay-ot-rcp-host-nxp.conf"
    :goals: build
    :compact:
-
-Example building for NXP's MCXW72 FRDM (host).
-
-.. zephyr-app-commands::
-   :zephyr-app: samples/net/openthread/shell
-   :board: frdm_mcxw72
-   :conf: "prj-ot-host.conf"
-   :goals: build
-   :compact:
-
 
 Sample console interaction
 ==========================

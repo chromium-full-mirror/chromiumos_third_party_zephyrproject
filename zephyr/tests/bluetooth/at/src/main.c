@@ -15,6 +15,7 @@
 #include <zephyr/ztest.h>
 
 static struct at_client at;
+static char buffer[140];
 
 NET_BUF_POOL_DEFINE(at_pool, 1, 140, 0, NULL);
 
@@ -48,6 +49,9 @@ ZTEST(at_tests, test_at)
 {
 	struct net_buf *buf;
 	int len;
+
+	at.buf_max_len = 140U;
+	at.buf = buffer;
 
 	buf = net_buf_alloc(&at_pool, K_FOREVER);
 	zassert_not_null(buf, "Failed to get buffer");

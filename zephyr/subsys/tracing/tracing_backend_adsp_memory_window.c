@@ -29,12 +29,6 @@ static void tracing_backend_adsp_memory_window_output(
 		const struct tracing_backend *backend,
 		uint8_t *data, uint32_t length)
 {
-#ifdef CONFIG_INTEL_ADSP_DEBUG_SLOT_MANAGER
-	if (!mem_window) {
-		return;
-	}
-#endif
-
 	/* copy data to ring buffer,
 	 * to make FW part fast, there's no sync with the data reader
 	 * the reader MUST read data before they got overwritten
@@ -54,15 +48,6 @@ static void tracing_backend_adsp_memory_window_output(
 
 static void tracing_backend_adsp_memory_window_init(void)
 {
-#ifdef CONFIG_INTEL_ADSP_DEBUG_SLOT_MANAGER
-	struct adsp_dw_desc slot_desc = { .type = ADSP_DW_SLOT_TRACE, };
-
-	mem_window = (struct tracing_backend_adsp_memory_window *)adsp_dw_request_slot(&slot_desc,
-										       NULL);
-	if (mem_window) {
-		mem_window->head_offset = 0;
-	}
-#else
 	volatile struct adsp_debug_window *window = ADSP_DW;
 
 	window->descs[ADSP_DW_SLOT_NUM_TRACE].type = ADSP_DW_SLOT_TRACE;
@@ -71,7 +56,6 @@ static void tracing_backend_adsp_memory_window_init(void)
 			ADSP_DW->slots[ADSP_DW_SLOT_NUM_TRACE];
 
 	mem_window->head_offset = 0;
-#endif
 }
 
 const struct tracing_backend_api tracing_backend_adsp_memory_window_api = {

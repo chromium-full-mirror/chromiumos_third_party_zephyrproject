@@ -21,7 +21,7 @@ LOG_MODULE_REGISTER(i2c_shell, CONFIG_LOG_DEFAULT_LEVEL);
 #define ARGV_REG	3
 
 /* Maximum bytes we can write or read at once */
-#define MAX_I2C_BYTES	CONFIG_I2C_SHELL_BUFFER_SIZE
+#define MAX_I2C_BYTES	16
 
 static int get_bytes_count_for_hex(char *arg)
 {

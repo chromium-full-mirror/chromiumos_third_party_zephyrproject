@@ -32,8 +32,6 @@ static struct bt_gatt_cb cb = {
 
 static void test_peripheral_main(void)
 {
-	int err;
-
 	TEST_ASSERT(bk_sync_init() == 0, "Failed to open backchannel");
 
 	peripheral_setup_and_connect();
@@ -54,12 +52,6 @@ static void test_peripheral_main(void)
 	bk_sync_wait();
 
 	disconnect();
-
-	err = bt_gatt_cb_unregister(&cb);
-	if (err != 0) {
-		TEST_FAIL("Unregister GATT callbacks failed (%d)", err);
-		return;
-	}
 
 	TEST_PASS("EATT Peripheral tests Passed");
 }
@@ -92,12 +84,6 @@ static void test_central_main(void)
 	bk_sync_wait();
 
 	wait_for_disconnect();
-
-	err = bt_gatt_cb_unregister(&cb);
-	if (err != 0) {
-		TEST_FAIL("Unregister GATT callbacks failed (%d)", err);
-		return;
-	}
 
 	TEST_PASS("EATT Central tests Passed");
 }

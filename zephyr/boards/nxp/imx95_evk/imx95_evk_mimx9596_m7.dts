@@ -18,7 +18,6 @@
 		zephyr,flash = &itcm;
 		zephyr,sram = &dtcm;
 
-		zephyr,flash-controller = &mt35xu01gbba;
 		zephyr,console = &lpuart3;
 		zephyr,shell-uart = &lpuart3;
 	};

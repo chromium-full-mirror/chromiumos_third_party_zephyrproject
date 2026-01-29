@@ -11,9 +11,9 @@ supported:
   - ble
   - i2c
   - gpio
-  - usbd
+  - usb device
   - nvs
   - counter
-ram: 768
+ram: 640
 flash: 2048
 vendor: st

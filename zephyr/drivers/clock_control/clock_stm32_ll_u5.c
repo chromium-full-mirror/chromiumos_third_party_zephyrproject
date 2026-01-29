@@ -8,7 +8,6 @@
 
 
 #include <soc.h>
-#include <stm32_bitops.h>
 #include <stm32_ll_bus.h>
 #include <stm32_ll_pwr.h>
 #include <stm32_ll_rcc.h>
@@ -36,19 +35,6 @@
 #define PLL1_ID		1
 #define PLL2_ID		2
 #define PLL3_ID		3
-
-#define PLL_FRACN_DIVISOR 8192
-
-/* Shorthand for Power Controller node */
-#define PWR_NODE DT_NODELABEL(pwr)
-
-/* Dummy value to use automatic voltage scale selection */
-#define VOLTAGE_SCALE_AUTOMATIC 0xFFFFFFFFu
-
-#define SELECTED_VOLTAGE_SCALE								\
-	COND_CODE_1(DT_NODE_HAS_PROP(PWR_NODE, voltage_scale),				\
-		(CONCAT(LL_PWR_REGU_VOLTAGE_SCALE, DT_PROP(PWR_NODE, voltage_scale))),	\
-		(VOLTAGE_SCALE_AUTOMATIC))
 
 static uint32_t get_bus_clock(uint32_t clock, uint32_t prescaler)
 {
@@ -105,17 +91,13 @@ static uint32_t get_startup_frequency(void)
 
 __unused
 static uint32_t get_pllout_frequency(uint32_t pllsrc_freq,
-					    unsigned int pllm_div,
-					    unsigned int plln_mul,
-					    unsigned int plln_frac,
-					    unsigned int pllout_div)
+					    int pllm_div,
+					    int plln_mul,
+					    int pllout_div)
 {
 	__ASSERT_NO_MSG(pllm_div && pllout_div);
 
-	uint32_t f_vco = (pllsrc_freq / pllm_div) *
-			 ((uint64_t)plln_mul * PLL_FRACN_DIVISOR + plln_frac) / PLL_FRACN_DIVISOR;
-
-	return f_vco / pllout_div;
+	return (pllsrc_freq / pllm_div) * plln_mul / pllout_div;
 }
 
 static uint32_t get_sysclk_frequency(void)
@@ -124,7 +106,6 @@ static uint32_t get_sysclk_frequency(void)
 	return get_pllout_frequency(get_pllsrc_frequency(PLL1_ID),
 					STM32_PLL_M_DIVISOR,
 					STM32_PLL_N_MULTIPLIER,
-					STM32_PLL_FRACN_VALUE,
 					STM32_PLL_R_DIVISOR);
 #elif defined(STM32_SYSCLK_SRC_MSIS)
 	return get_msis_frequency();
@@ -164,8 +145,7 @@ int enabled_clock(uint32_t src_clk)
 	    ((src_clk == STM32_SRC_PLL2_R) && IS_ENABLED(STM32_PLL2_R_ENABLED)) ||
 	    ((src_clk == STM32_SRC_PLL3_P) && IS_ENABLED(STM32_PLL3_P_ENABLED)) ||
 	    ((src_clk == STM32_SRC_PLL3_Q) && IS_ENABLED(STM32_PLL3_Q_ENABLED)) ||
-	    ((src_clk == STM32_SRC_PLL3_R) && IS_ENABLED(STM32_PLL3_R_ENABLED)) ||
-	    (src_clk == STM32_SRC_DSIPHY)) {
+	    ((src_clk == STM32_SRC_PLL3_R) && IS_ENABLED(STM32_PLL3_R_ENABLED))) {
 		return 0;
 	}
 
@@ -325,21 +305,18 @@ static int stm32_clock_control_get_subsys_rate(const struct device *dev,
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL1_ID),
 					      STM32_PLL_M_DIVISOR,
 					      STM32_PLL_N_MULTIPLIER,
-					      STM32_PLL_FRACN_VALUE,
 					      STM32_PLL_P_DIVISOR);
 		break;
 	case STM32_SRC_PLL1_Q:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL1_ID),
 					      STM32_PLL_M_DIVISOR,
 					      STM32_PLL_N_MULTIPLIER,
-					      STM32_PLL_FRACN_VALUE,
 					      STM32_PLL_Q_DIVISOR);
 		break;
 	case STM32_SRC_PLL1_R:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL1_ID),
 					      STM32_PLL_M_DIVISOR,
 					      STM32_PLL_N_MULTIPLIER,
-					      STM32_PLL_FRACN_VALUE,
 					      STM32_PLL_R_DIVISOR);
 		break;
 #endif /* STM32_PLL_ENABLED */
@@ -348,21 +325,18 @@ static int stm32_clock_control_get_subsys_rate(const struct device *dev,
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL2_ID),
 					      STM32_PLL2_M_DIVISOR,
 					      STM32_PLL2_N_MULTIPLIER,
-					      STM32_PLL2_FRACN_VALUE,
 					      STM32_PLL2_P_DIVISOR);
 		break;
 	case STM32_SRC_PLL2_Q:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL2_ID),
 					      STM32_PLL2_M_DIVISOR,
 					      STM32_PLL2_N_MULTIPLIER,
-					      STM32_PLL2_FRACN_VALUE,
 					      STM32_PLL2_Q_DIVISOR);
 		break;
 	case STM32_SRC_PLL2_R:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL2_ID),
 					      STM32_PLL2_M_DIVISOR,
 					      STM32_PLL2_N_MULTIPLIER,
-					      STM32_PLL2_FRACN_VALUE,
 					      STM32_PLL2_R_DIVISOR);
 		break;
 #endif /* STM32_PLL2_ENABLED */
@@ -371,21 +345,18 @@ static int stm32_clock_control_get_subsys_rate(const struct device *dev,
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL3_ID),
 					      STM32_PLL3_M_DIVISOR,
 					      STM32_PLL3_N_MULTIPLIER,
-					      STM32_PLL3_FRACN_VALUE,
 					      STM32_PLL3_P_DIVISOR);
 		break;
 	case STM32_SRC_PLL3_Q:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL3_ID),
 					      STM32_PLL3_M_DIVISOR,
 					      STM32_PLL3_N_MULTIPLIER,
-					      STM32_PLL3_FRACN_VALUE,
 					      STM32_PLL3_Q_DIVISOR);
 		break;
 	case STM32_SRC_PLL3_R:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL3_ID),
 					      STM32_PLL3_M_DIVISOR,
 					      STM32_PLL3_N_MULTIPLIER,
-					      STM32_PLL3_FRACN_VALUE,
 					      STM32_PLL3_R_DIVISOR);
 		break;
 #endif /* STM32_PLL3_ENABLED */
@@ -457,35 +428,17 @@ static int get_vco_input_range(uint32_t m_div, uint32_t *range, size_t pll_id)
 	return 0;
 }
 
-static void set_regu_voltage(uint32_t hclk_freq, uint32_t wanted_scale)
+static void set_regu_voltage(uint32_t hclk_freq)
 {
-	uint32_t minimal_scale, scale_to_apply;
-
-	if (hclk_freq <= MHZ(25)) {
-		minimal_scale = LL_PWR_REGU_VOLTAGE_SCALE4;
-	} else if (hclk_freq <= MHZ(55)) {
-		minimal_scale = LL_PWR_REGU_VOLTAGE_SCALE3;
-	} else if (hclk_freq <= MHZ(110)) {
-		minimal_scale = LL_PWR_REGU_VOLTAGE_SCALE2;
+	if (hclk_freq < MHZ(25)) {
+		LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE4);
+	} else if (hclk_freq < MHZ(55)) {
+		LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE3);
+	} else if (hclk_freq < MHZ(110)) {
+		LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE2);
 	} else {
-		minimal_scale = LL_PWR_REGU_VOLTAGE_SCALE1;
+		LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE1);
 	}
-
-	if (wanted_scale == VOLTAGE_SCALE_AUTOMATIC) {
-		scale_to_apply = minimal_scale;
-	} else if (wanted_scale < minimal_scale) {
-		/*
-		 * This ought to never happen thanks to the
-		 * compile-time checks, but better safe than
-		 * sorry. Ideally, an error message should be
-		 * logged if this ever occurs...
-		 */
-		scale_to_apply = minimal_scale;
-	} else {
-		scale_to_apply = wanted_scale;
-	}
-
-	LL_PWR_SetRegulVoltageScaling(scale_to_apply);
 	while (LL_PWR_IsActiveFlag_VOS() == 0) {
 	}
 }
@@ -683,17 +636,17 @@ static int set_up_plls(void)
 
 	if (IS_ENABLED(STM32_PLL2_P_ENABLED)) {
 		LL_RCC_PLL2_SetP(STM32_PLL2_P_DIVISOR);
-		stm32_reg_set_bits(&RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2PEN);
+		SET_BIT(RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2PEN);
 	}
 
 	if (IS_ENABLED(STM32_PLL2_Q_ENABLED)) {
 		LL_RCC_PLL2_SetQ(STM32_PLL2_Q_DIVISOR);
-		stm32_reg_set_bits(&RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2QEN);
+		SET_BIT(RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2QEN);
 	}
 
 	if (IS_ENABLED(STM32_PLL2_R_ENABLED)) {
 		LL_RCC_PLL2_SetR(STM32_PLL2_R_DIVISOR);
-		stm32_reg_set_bits(&RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2REN);
+		SET_BIT(RCC->PLL2CFGR, RCC_PLL2CFGR_PLL2REN);
 	}
 
 	LL_RCC_PLL2_Enable();
@@ -735,17 +688,17 @@ static int set_up_plls(void)
 
 	if (IS_ENABLED(STM32_PLL3_P_ENABLED)) {
 		LL_RCC_PLL3_SetP(STM32_PLL3_P_DIVISOR);
-		stm32_reg_set_bits(&RCC->PLL3CFGR, RCC_PLL3CFGR_PLL3PEN);
+		SET_BIT(RCC->PLL3CFGR, RCC_PLL3CFGR_PLL3PEN);
 	}
 
 	if (IS_ENABLED(STM32_PLL3_Q_ENABLED)) {
 		LL_RCC_PLL3_SetQ(STM32_PLL3_Q_DIVISOR);
-		stm32_reg_set_bits(&RCC->PLL3CFGR, RCC_PLL3CFGR_PLL3QEN);
+		SET_BIT(RCC->PLL3CFGR, RCC_PLL3CFGR_PLL3QEN);
 	}
 
 	if (IS_ENABLED(STM32_PLL3_R_ENABLED)) {
 		LL_RCC_PLL3_SetR(STM32_PLL3_R_DIVISOR);
-		stm32_reg_set_bits(&RCC->PLL3CFGR, RCC_PLL3CFGR_PLL3REN);
+		SET_BIT(RCC->PLL3CFGR, RCC_PLL3CFGR_PLL3REN);
 	}
 
 	LL_RCC_PLL3_Enable();
@@ -900,7 +853,7 @@ int stm32_clock_control_init(const struct device *dev)
 	old_hclk_freq = __LL_RCC_CALC_HCLK_FREQ(get_startup_frequency(), LL_RCC_GetAHBPrescaler());
 
 	/* Set voltage regulator to comply with targeted system frequency */
-	set_regu_voltage(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC, SELECTED_VOLTAGE_SCALE);
+	set_regu_voltage(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC);
 
 	/* Set flash latency */
 	/* If freq increases, set flash latency before any clock setting */
@@ -951,12 +904,11 @@ int stm32_clock_control_init(const struct device *dev)
 	/* Disable unused clocks that are enabled (e.g. by bootloader or as wakeup source).
 	 * These will not be enabled, unless the MCU uses them for PM wakeup purposes.
 	 */
-	if (!IS_ENABLED(STM32_MSIS_ENABLED) &&
-	    (stm32_reg_read_bits(&RCC->CR, RCC_CR_MSISON) != 0U)) {
+	if (!IS_ENABLED(STM32_MSIS_ENABLED) && (READ_BIT(RCC->CR, RCC_CR_MSISON) != 0U)) {
 		LL_RCC_MSIS_Disable();
 	}
 
-	if (!IS_ENABLED(STM32_HSI_ENABLED) && (stm32_reg_read_bits(&RCC->CR, RCC_CR_HSION) != 0U)) {
+	if (!IS_ENABLED(STM32_HSI_ENABLED) && (READ_BIT(RCC->CR, RCC_CR_HSION) != 0U)) {
 		LL_RCC_HSI_Disable();
 	}
 #endif
@@ -972,18 +924,6 @@ int stm32_clock_control_init(const struct device *dev)
 
 	return 0;
 }
-
-/* Asserts fSYSCLK <= `freq_mhz` if `vos` is selected on PWR node */
-#define ASSERT_VALID_VOS(vos, freq_mhz)						\
-	BUILD_ASSERT(DT_PROP_OR(PWR_NODE, voltage_scale, 0) != (vos) ||		\
-		     CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC <= MHZ(freq_mhz),	\
-		     "Maximal system clock frequency in voltage scale " #vos	\
-		     " is " #freq_mhz " MHz.");
-
-ASSERT_VALID_VOS(4, 25);
-ASSERT_VALID_VOS(3, 55);
-ASSERT_VALID_VOS(2, 110);
-ASSERT_VALID_VOS(1, 160);
 
 /**
  * @brief RCC device, note that priority is intentionally set to 1 so

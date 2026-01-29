@@ -1,6 +1,6 @@
 .. zephyr:code-sample:: hawkbit-api
    :name: Eclipse hawkBit Direct Device Integration API
-   :relevant-api: hawkbit json
+   :relevant-api: hawkbit
 
    Update a device using Eclipse hawkBit DDI API.
 

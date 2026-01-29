@@ -5,6 +5,7 @@
  */
 
 / {
+
 	aliases {
 		light-sensor = &apds9306;
 	};

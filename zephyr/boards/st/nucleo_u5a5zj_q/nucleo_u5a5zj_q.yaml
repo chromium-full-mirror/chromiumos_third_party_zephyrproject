@@ -22,5 +22,5 @@ supported:
   - dma
   - rtc
   - usb_device
-ram: 2496
+ram: 2450
 flash: 4096

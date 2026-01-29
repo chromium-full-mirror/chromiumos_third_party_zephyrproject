@@ -20,8 +20,11 @@ endif # WIFI || BT
 
 if WIFI
 
+config WIFI_AIROC
+	default y
+
 # Enable L2 Ethernet
-configdefault NET_L2_ETHERNET
+config NET_L2_ETHERNET
 	default y
 
 endif # WIFI

@@ -7,7 +7,6 @@
 &timer0 {
 	status = "okay";
 	prescaler = <2>;
-
 	counter {
 		status = "okay";
 	};
@@ -16,7 +15,6 @@
 &timer1 {
 	status = "okay";
 	prescaler = <2>;
-
 	counter {
 		status = "okay";
 	};
@@ -25,7 +23,6 @@
 &timer2 {
 	status = "okay";
 	prescaler = <2>;
-
 	counter {
 		status = "okay";
 	};

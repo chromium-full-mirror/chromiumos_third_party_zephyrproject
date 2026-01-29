@@ -7,12 +7,13 @@
 # This merges a set of input hex files into a single output hex file.
 # Any conflicts will result in an error being reported.
 
+from intelhex import IntelHex
+from intelhex import AddressOverlapError
+
 import argparse
 
-from intelhex import AddressOverlapError, IntelHex
 
-
-def merge_hex_files(output, input_hex_files, overlap, output_bin):
+def merge_hex_files(output, input_hex_files, overlap):
     ih = IntelHex()
 
     for hex_file_path in input_hex_files:
@@ -25,31 +26,22 @@ def merge_hex_files(output, input_hex_files, overlap, output_bin):
 
         try:
             ih.merge(to_merge, overlap=overlap)
-        except AddressOverlapError as e:
-            raise AddressOverlapError(f"{hex_file_path} has merge issues") from e
+        except AddressOverlapError:
+            raise AddressOverlapError("{} has merge issues".format(hex_file_path))
 
-    output_format = "bin" if output_bin else "hex"
-    ih.tofile(output, format=output_format)
+    ih.write_hex_file(output)
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Merge hex files.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        allow_abbrev=False,
-    )
-    parser.add_argument(
-        "-o", "--output", required=False, default="merged.hex", help="Output file name."
-    )
-    parser.add_argument(
-        "--overlap",
-        default="error",
-        help="What to do when files overlap (error, ignore, replace). "
-        "See IntelHex.merge() for more info.",
-    )
-    parser.add_argument(
-        "--output-bin", action='store_true', help="Save the merged content as binary file."
-    )
+        formatter_class=argparse.RawDescriptionHelpFormatter, allow_abbrev=False)
+    parser.add_argument("-o", "--output", required=False, default="merged.hex",
+                        type=argparse.FileType('w', encoding='UTF-8'),
+                        help="Output file name.")
+    parser.add_argument("--overlap", default="error",
+                        help="What to do when files overlap (error, ignore, replace). "
+                             "See IntelHex.merge() for more info.")
     parser.add_argument("input_files", nargs='*')
     return parser.parse_args()
 
@@ -57,7 +49,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    merge_hex_files(args.output, args.input_files, args.overlap, args.output_bin)
+    merge_hex_files(args.output, args.input_files, args.overlap)
 
 
 if __name__ == "__main__":

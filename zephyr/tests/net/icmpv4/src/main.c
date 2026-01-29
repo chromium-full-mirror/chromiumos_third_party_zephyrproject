@@ -113,7 +113,7 @@ static const unsigned char icmpv4_echo_req_opt_bad[] = {
 #define TEST_ICMPV4_ECHO_REQ_OPTS 2
 
 static uint8_t current = TEST_ICMPV4_UNKNOWN;
-static struct net_in_addr my_addr  = { { { 192, 0, 2, 1 } } };
+static struct in_addr my_addr  = { { { 192, 0, 2, 1 } } };
 static struct net_if *net_iface;
 
 static int handle_reply_msg(struct net_icmp_ctx *ctx,
@@ -141,7 +141,9 @@ struct net_icmpv4_context {
 
 static int net_icmpv4_dev_init(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	struct net_icmpv4_context *net_icmpv4_context = dev->data;
+
+	net_icmpv4_context = net_icmpv4_context;
 
 	return 0;
 }
@@ -316,7 +318,7 @@ static struct net_pkt *prepare_echo_request(struct net_if *iface)
 	struct net_pkt *pkt;
 
 	pkt = net_pkt_alloc_with_buffer(iface, sizeof(icmpv4_echo_req),
-					NET_AF_INET, NET_IPPROTO_ICMP, K_FOREVER);
+					AF_INET, IPPROTO_ICMP, K_FOREVER);
 	if (!pkt) {
 		return NULL;
 	}
@@ -341,7 +343,7 @@ static struct net_pkt *prepare_echo_reply(struct net_if *iface)
 	struct net_pkt *pkt;
 
 	pkt = net_pkt_alloc_with_buffer(iface, sizeof(icmpv4_echo_rep),
-					NET_AF_INET, NET_IPPROTO_ICMP, K_FOREVER);
+					AF_INET, IPPROTO_ICMP, K_FOREVER);
 	if (!pkt) {
 		return NULL;
 	}
@@ -366,7 +368,7 @@ static struct net_pkt *prepare_echo_request_with_options(struct net_if *iface)
 	struct net_pkt *pkt;
 
 	pkt = net_pkt_alloc_with_buffer(iface, sizeof(icmpv4_echo_req_opt),
-					NET_AF_INET, NET_IPPROTO_ICMP, K_FOREVER);
+					AF_INET, IPPROTO_ICMP, K_FOREVER);
 	if (!pkt) {
 		return NULL;
 	}
@@ -393,7 +395,7 @@ static struct net_pkt *prepare_echo_request_with_bad_options(
 	struct net_pkt *pkt;
 
 	pkt = net_pkt_alloc_with_buffer(iface, sizeof(icmpv4_echo_req_opt_bad),
-					NET_AF_INET, NET_IPPROTO_ICMP, K_FOREVER);
+					AF_INET, IPPROTO_ICMP, K_FOREVER);
 	if (!pkt) {
 		return NULL;
 	}
@@ -462,7 +464,7 @@ static void icmpv4_send_echo_rep(void)
 	struct net_pkt *pkt;
 	int ret;
 
-	ret = net_icmp_init_ctx(&ctx, NET_AF_INET, NET_ICMPV4_ECHO_REPLY,
+	ret = net_icmp_init_ctx(&ctx, NET_ICMPV4_ECHO_REPLY,
 				0, handle_reply_msg);
 	zassert_equal(ret, 0, "Cannot register %s handler (%d)",
 		      STRINGIFY(NET_ICMPV4_ECHO_REPLY), ret);

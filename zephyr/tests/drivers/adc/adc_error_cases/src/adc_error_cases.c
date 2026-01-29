@@ -24,7 +24,11 @@ static const struct adc_channel_cfg valid_channel_cfg = {
 	#endif
 };
 
-#define VALID_RESOLUTION CONFIG_TEST_ADC_ERROR_CASES_RESOLUTION
+#if defined(CONFIG_SOC_FAMILY_SILABS_S2)
+#define VALID_RESOLUTION 12
+#else
+#define VALID_RESOLUTION 10
+#endif
 
 static const struct adc_sequence valid_seq = {
 	.buffer = m_sample_buffer,

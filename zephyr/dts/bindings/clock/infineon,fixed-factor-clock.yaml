@@ -7,25 +7,30 @@ description: Generic fixed-rate clock provider
 
 compatible: "infineon,fixed-factor-clock"
 
-include: fixed-factor-clock.yaml
+include: [base.yaml, clock-controller.yaml]
 
 properties:
-  system-clock:
-    type: int
-    required: true
-    description: |
-      The type of clock (refer to include/.../dt-bindings/clock/ifx_clock_source_common.h):
-      path_mux5 : system-clock = <IFX_PATHMUX>
-      clk_hf0   : system-clock = <IFX_HF>
+  clocks:
+    type: phandle-array
+    description: input clock source
 
-  instance:
+  clock-block:
     type: int
+    description: Clock HW block number (refer to ifx_cat1_clock_block in clock_control_ifx_cat1.h)
     required: true
-    description: |
-      Instance of a given clock type.
-      path_mux5 : instance = <5>
-      clk_hf0   : instance = <0>
+
+  clock-instance:
+    type: int
+    description: TEMP
+    required: true
+
+  clock-divider:
+    type: int
+    description: TEMP
 
   source-path:
     type: int
-    description: Path that indicates source clock.
+    description: TEMP
+
+  "#clock-cells":
+    const: 0

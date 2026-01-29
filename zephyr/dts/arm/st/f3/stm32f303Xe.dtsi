@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <mem.h>
 #include <st/f3/stm32f303.dtsi>
 
 / {
 	ccm0: memory@10000000 {
 		compatible = "zephyr,memory-region", "st,stm32-ccm";
 		reg = <0x10000000 DT_SIZE_K(16)>;
-		zephyr,memory-region = "DTCM";
+		zephyr,memory-region = "CCM";
 	};
 
 	sram0: memory@20000000 {
@@ -50,17 +51,6 @@
 				status = "disabled";
 				#pwm-cells = <3>;
 			};
-
-			counter {
-				compatible = "st,stm32-counter";
-				status = "disabled";
-			};
-
-			qdec {
-				compatible = "st,stm32-qdec";
-				st,input-filter-level = <NO_FILTER>;
-				status = "disabled";
-			};
 		};
 
 		timers8: timers@40013400 {
@@ -78,17 +68,6 @@
 				compatible = "st,stm32-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
-			};
-
-			counter {
-				compatible = "st,stm32-counter";
-				status = "disabled";
-			};
-
-			qdec {
-				compatible = "st,stm32-qdec";
-				st,input-filter-level = <NO_FILTER>;
-				status = "disabled";
 			};
 		};
 
@@ -122,17 +101,6 @@
 				compatible = "st,stm32-pwm";
 				status = "disabled";
 				#pwm-cells = <3>;
-			};
-
-			counter {
-				compatible = "st,stm32-counter";
-				status = "disabled";
-			};
-
-			qdec {
-				compatible = "st,stm32-qdec";
-				st,input-filter-level = <NO_FILTER>;
-				status = "disabled";
 			};
 		};
 

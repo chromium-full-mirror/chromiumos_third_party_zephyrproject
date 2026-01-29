@@ -15,7 +15,6 @@
 			drive-push-pull;
 			output-high;
 		};
-
 		group1 {
 			pins = <USART0_RX_PC3>; /* WPK EXP6 (PC3) */
 			input-enable;

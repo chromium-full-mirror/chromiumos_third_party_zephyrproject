@@ -43,6 +43,11 @@ def is_ip(ip):
 def is_tunnel(tunnel):
     return tunnel.startswith("tunnel:") if tunnel else False
 
+class ToggleAction(argparse.Action):
+
+    def __call__(self, parser, args, ignored, option):
+        setattr(args, self.dest, not option.startswith('--no-'))
+
 class JLinkBinaryRunner(ZephyrBinaryRunner):
     '''Runner front-end for the J-Link GDB server.'''
 
@@ -55,7 +60,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
                  gdb_host='',
                  gdb_port=DEFAULT_JLINK_GDB_PORT,
                  rtt_port=DEFAULT_JLINK_RTT_PORT,
-                 tui=False, tool_opt=None, dev_id_type=None, batch=False):
+                 tui=False, tool_opt=None, dev_id_type=None):
         super().__init__(cfg)
         self.file = cfg.file
         self.file_type = cfg.file_type
@@ -81,7 +86,6 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
         self.loader = loader
         self.rtt_port = rtt_port
         self.dev_id_type = dev_id_type
-        self.is_batch = batch
 
         self.tool_opt = []
         if tool_opt is not None:
@@ -121,7 +125,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
     def capabilities(cls):
         return RunnerCaps(commands={'flash', 'debug', 'debugserver', 'attach', 'rtt'},
                           dev_id=True, flash_addr=True, erase=True, reset=True,
-                          tool_opt=True, file=True, rtt=True, batch_debug=True)
+                          tool_opt=True, file=True, rtt=True)
 
     @classmethod
     def dev_id_help(cls) -> str:
@@ -190,8 +194,10 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
         parser.add_argument('--commander', default=DEFAULT_JLINK_EXE,
                             help=f'''J-Link Commander, default is
                             {DEFAULT_JLINK_EXE}''')
-        parser.add_argument('--reset-after-load', action=argparse.BooleanOptionalAction,
-                            dest='reset', help='obsolete synonym for --reset/--no-reset')
+        parser.add_argument('--reset-after-load', '--no-reset-after-load',
+                            dest='reset', nargs=0,
+                            action=ToggleAction,
+                            help='obsolete synonym for --reset/--no-reset')
         parser.add_argument('--rtt-client', default='JLinkRTTClient',
                             help='RTT client, default is JLinkRTTClient')
         parser.add_argument('--rtt-port', default=DEFAULT_JLINK_RTT_PORT,
@@ -222,8 +228,7 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
                                  gdb_port=args.gdb_port,
                                  rtt_port=args.rtt_port,
                                  tui=args.tui, tool_opt=args.tool_opt,
-                                 dev_id_type=args.dev_id_type,
-                                 batch=args.batch)
+                                 dev_id_type=args.dev_id_type)
 
     def print_gdbserver_message(self):
         if not self.thread_info_enabled:
@@ -400,21 +405,16 @@ class JLinkBinaryRunner(ZephyrBinaryRunner):
                 raise ValueError('Cannot debug; elf is missing')
             else:
                 elf_name = self.elf_name
-
             client_cmd = (self.gdb_cmd +
                           self.tui_arg +
                           [elf_name] +
-                          ['-batch' if self.is_batch else ''] +
                           ['-ex', f'target remote {self.gdb_host}:{self.gdb_port}'])
             if command == 'debug':
                 client_cmd += ['-ex', 'monitor halt',
                                '-ex', 'monitor reset',
                                '-ex', 'load']
-                if self.is_batch:
-                    client_cmd += ['-ex', 'monitor go', '-ex', 'disconnect', '-ex', 'quit']
-                elif self.reset:
+                if self.reset:
                     client_cmd += ['-ex', 'monitor reset']
-
             if not self.gdb_host:
                 self.require(self.gdbserver)
                 self.print_gdbserver_message()

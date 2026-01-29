@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 DT_CHOSEN_STDBY_TIMER := st,lptim-stdby-timer
-DT_STM32_LPTIM_PATH := $(dt_nodelabel_path,stm32_lp_tick_source)
 
 menuconfig STM32_LPTIM_TIMER
 	bool "STM32 Low Power Timer [EXPERIMENTAL]"
@@ -19,18 +18,23 @@ menuconfig STM32_LPTIM_TIMER
 
 if STM32_LPTIM_TIMER
 
-# Invisible symbols exposing the selected LPTIM source to Kconfig
-# NOTE: the values 2/3 correspond too STM32_SRC_LSE/STM32_SRC_LSI
-# defined in include/zephyr/dt-bindings/clock/stm32_common_clocks.h
-config STM32_LPTIM_CLOCK_LSI
-	def_bool "$(dt_node_ph_array_prop_int,$(DT_STM32_LPTIM_PATH),clocks,1,bus)" = 3
+choice STM32_LPTIM_CLOCK
+	prompt "LPTIM clock value configuration"
 	help
-	  LSI used as LPTIM clock source
+	  This option is deprecated and configuration of LPTIM domain clock
+	  using devicetree should be preferred.
+
+config STM32_LPTIM_CLOCK_LSI
+	bool "LSI"
+	help
+	  Use LSI as LPTIM clock
 
 config STM32_LPTIM_CLOCK_LSE
-	def_bool "$(dt_node_ph_array_prop_int,$(DT_STM32_LPTIM_PATH),clocks,1,bus)" = 2
+	bool "LSE"
 	help
-	  LSE used as LPTIM clock source
+	  Use LSE as LPTIM clock
+
+endchoice
 
 config STM32_LPTIM_CLOCK
 	int

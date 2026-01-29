@@ -81,9 +81,9 @@ def kconfig_load(app: Sphinx) -> tuple[kconfiglib.Kconfig, kconfiglib.Kconfig, d
         kconfig = ""
         sysbuild_kconfig = ""
         for module in modules:
-            kconfig_module_dirs += zephyr_module.process_kconfig_module_dir(
-                module.project, module.meta, False
-            )
+            kconfig_module_dirs += zephyr_module.process_kconfig_module_dir(module.project,
+                                                                            module.meta,
+                                                                            False)
             kconfig += zephyr_module.process_kconfig(module.project, module.meta)
             sysbuild_kconfig += zephyr_module.process_sysbuildkconfig(module.project, module.meta)
 
@@ -128,14 +128,9 @@ def kconfig_load(app: Sphinx) -> tuple[kconfiglib.Kconfig, kconfiglib.Kconfig, d
             f.write(kconfig)
 
         (Path(td) / 'boards').mkdir(exist_ok=True)
-        root_args = argparse.Namespace(
-            **{
-                'board_roots': [Path(ZEPHYR_BASE)],
-                'soc_roots': [Path(ZEPHYR_BASE)],
-                'board': None,
-                'board_dir': [],
-            }
-        )
+        root_args = argparse.Namespace(**{'board_roots': [Path(ZEPHYR_BASE)],
+                                          'soc_roots': [Path(ZEPHYR_BASE)], 'board': None,
+                                          'board_dir': []})
         v2_boards = list_boards.find_v2_boards(root_args).values()
 
         with open(Path(td) / "boards" / "Kconfig.boards", "w") as f:
@@ -224,7 +219,9 @@ class KconfigSearch(SphinxDirective):
 
     def run(self):
         if not self.config.kconfig_generate_db:
-            raise ExtensionError("Kconfig search directive can not be used without database")
+            raise ExtensionError(
+                "Kconfig search directive can not be used without database"
+            )
 
         if "kconfig_search_inserted" in self.env.temp_data:
             raise ExtensionError("Kconfig search directive can only be used once")
@@ -260,14 +257,8 @@ class _FindKconfigSearchDirectiveVisitor(nodes.NodeVisitor):
 class KconfigRegexRole(XRefRole):
     """Role for creating links to Kconfig regex searches."""
 
-    def process_link(
-        self,
-        env: BuildEnvironment,
-        refnode: nodes.Element,
-        has_explicit_title: bool,
-        title: str,
-        target: str,
-    ) -> tuple[str, str]:
+    def process_link(self, env: BuildEnvironment, refnode: nodes.Element, has_explicit_title: bool,
+                     title: str, target: str) -> tuple[str, str]:
         # render as "normal" text when explicit title is provided, literal otherwise
         if has_explicit_title:
             self.innernodeclass = nodes.inline
@@ -325,7 +316,9 @@ class KconfigDomain(Domain):
             if match:
                 todocname, anchor = match[0]
 
-                return make_refnode(builder, fromdocname, todocname, anchor, contnode, anchor)
+                return make_refnode(
+                    builder, fromdocname, todocname, anchor, contnode, anchor
+                )
             else:
                 return None
 
@@ -354,7 +347,9 @@ class KconfigDomain(Domain):
     def add_option(self, option):
         """Register a new Kconfig option to the domain."""
 
-        self.data["options"].add((option, option, "option", self.env.docname, option, 1))
+        self.data["options"].add(
+            (option, option, "option", self.env.docname, option, 1)
+        )
 
 
 def sc_fmt(sc):
@@ -540,7 +535,11 @@ def kconfig_install(
     doctree: nodes.Node | None,
 ) -> None:
     """Install the Kconfig library files on pages that require it."""
-    if not app.config.kconfig_generate_db or app.builder.format != "html" or not doctree:
+    if (
+        not app.config.kconfig_generate_db
+        or app.builder.format != "html"
+        or not doctree
+    ):
         return
 
     visitor = _FindKconfigSearchDirectiveVisitor(doctree)

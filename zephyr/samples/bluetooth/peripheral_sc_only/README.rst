@@ -21,4 +21,7 @@ Requirements
 Building and Running
 ********************
 
+This sample can be found under :zephyr_file:`samples/bluetooth/peripheral_sc_only`
+in the Zephyr tree.
+
 See :zephyr:code-sample-category:`bluetooth` samples for details.

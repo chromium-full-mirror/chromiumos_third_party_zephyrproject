@@ -8,10 +8,6 @@ if(CONFIG_WIFI_ESWIFI)
   ${ZEPHYR_BASE}/subsys/net/lib/sockets
   )
 
-  zephyr_library_include_directories_ifdef(CONFIG_TLS_CREDENTIALS
-    ${ZEPHYR_BASE}/subsys/net/lib/tls_credentials
-  )
-
   zephyr_library_sources(
     eswifi_core.c
     eswifi_offload.c

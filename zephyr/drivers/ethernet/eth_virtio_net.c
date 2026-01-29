@@ -11,6 +11,7 @@
 #include <zephyr/drivers/virtio/virtqueue.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/random/random.h>
 #include "eth.h"
 
 #define DT_DRV_COMPAT virtio_net
@@ -94,7 +95,7 @@ enum _virtio_net_hdr_gso_types {
 
 struct virtnet_config {
 	const struct device *vdev;
-	struct net_eth_mac_config mcfg;
+	bool random_mac;
 	unsigned int inst;
 };
 
@@ -162,7 +163,7 @@ void virtnet_rx_cb(void *priv, uint32_t len)
 
 	len -= sizeof(struct _virtio_net_hdr);
 	struct net_pkt *pkt =
-		net_pkt_rx_alloc_with_buffer(data->iface, len, NET_AF_UNSPEC, 0, K_FOREVER);
+		net_pkt_rx_alloc_with_buffer(data->iface, len, AF_UNSPEC, 0, K_FOREVER);
 
 	if (pkt == NULL) {
 		LOG_ERR("received packet, but could not pass it to the operating system");
@@ -188,6 +189,10 @@ static void virtnet_if_init(struct net_if *iface)
 	struct virtnet_data *data = dev->data;
 	const struct virtnet_config *config = dev->config;
 
+	if (dev == NULL) {
+		LOG_ERR("could not access device structure!");
+		return;
+	}
 	data->iface = iface;
 	net_if_set_link_addr(iface, data->mac, sizeof(data->virtio_devcfg->mac), NET_LINK_ETHERNET);
 	struct virtq *vq = virtio_get_virtqueue(config->vdev, VIRTQ_RX(1));
@@ -210,7 +215,13 @@ static int virtnet_dev_init(const struct device *dev)
 	const struct virtnet_config *config = dev->config;
 	struct virtnet_data *data = dev->data;
 
-	(void)net_eth_mac_load(&config->mcfg, data->mac);
+	if (config->random_mac) {
+		sys_rand_get(data->mac, sizeof(data->mac));
+		/* make it a locally administered, unicast address */
+		/* (2nd hex digit of 1st byte is 2) */
+		data->mac[0] &= ~(BIT(0) | BIT(2) | BIT(3));
+		data->mac[0] |= BIT(1);
+	}
 
 	data->virtio_devcfg = virtio_get_device_specific_config(config->vdev);
 	if (data->virtio_devcfg == NULL) {
@@ -237,10 +248,11 @@ static struct ethernet_api virtnet_api = {
 #define VIRTIO_NET_DEFINE(inst)                                                                    \
 	static struct virtnet_data virtnet_data_##inst = {                                         \
 		.dev = DEVICE_DT_INST_GET(inst),                                                   \
+		.mac = DT_INST_PROP_OR(inst, local_mac_address, {0}),                              \
 	};                                                                                         \
 	static const struct virtnet_config virtnet_config_##inst = {                               \
 		.vdev = DEVICE_DT_GET(DT_INST_PARENT(inst)),                                       \
-		.mcfg = NET_ETH_MAC_DT_INST_CONFIG_INIT(inst),                                     \
+		.random_mac = DT_INST_PROP(inst, zephyr_random_mac_address),                       \
 	};                                                                                         \
 	ETH_NET_DEVICE_DT_INST_DEFINE(inst, virtnet_dev_init, NULL, &virtnet_data_##inst,          \
 				      &virtnet_config_##inst, CONFIG_ETH_INIT_PRIORITY,            \

@@ -43,4 +43,4 @@ convenience sake at
 For further information consult the official `TF-M documentation`_
 
 .. _TF-M documentation:
-   https://tf-m.docs.trustedfirmware.org/en/latest/
+   https://tf-m-user-guide.trustedfirmware.org/

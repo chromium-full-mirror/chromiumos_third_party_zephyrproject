@@ -19,6 +19,7 @@ LOG_MODULE_REGISTER(gdbstub);
 #include <string.h>
 #include <zephyr/toolchain.h>
 #include <sys/types.h>
+#include <zephyr/sys/util.h>
 
 #include <zephyr/debug/gdbstub.h>
 #include "gdbstub_backend.h"

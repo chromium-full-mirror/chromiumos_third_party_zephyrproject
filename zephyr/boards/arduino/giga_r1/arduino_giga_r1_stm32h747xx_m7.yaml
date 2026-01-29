@@ -13,5 +13,5 @@ supported:
   - arduino_spi
   - spi
   - memc
-  - usbd
+  - usb_device
 vendor: arduino

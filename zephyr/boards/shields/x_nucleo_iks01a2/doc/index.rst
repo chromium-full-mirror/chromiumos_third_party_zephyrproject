@@ -40,8 +40,7 @@ X-NUCLEO-IKS01A2 provides the following key features:
 
 
 More information about X-NUCLEO-IKS01A2 can be found here:
-
-- `X-NUCLEO-IKS01A2 databrief`_
+       - `X-NUCLEO-IKS01A2 databrief`_
 
 Hardware Configuration
 **********************

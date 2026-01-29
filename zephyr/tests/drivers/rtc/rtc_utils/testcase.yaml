@@ -1,5 +1,4 @@
 # Copyright (c) 2024 Andrew Featherstone
-# Copyright 2025 NXP
 # SPDX-License-Identifier: Apache-2.0
 
 tests:
@@ -7,5 +6,4 @@ tests:
     tags:
       - drivers
       - rtc
-    filter: not dt_compat_enabled("zephyr,rtc-counter")
     depends_on: rtc

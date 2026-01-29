@@ -5,6 +5,9 @@
 
 if DISK_DRIVERS
 
+config DISK_DRIVER_SDMMC
+	default y
+
 config SPI
 	default y
 

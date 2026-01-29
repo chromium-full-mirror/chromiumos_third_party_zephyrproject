@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
-#include <zephyr/dt-bindings/usb-c/pd.h>
+#include <dt-bindings/usb-c/pd.h>
 
 / {
 	aliases {
@@ -29,7 +29,6 @@
 			pinmux = <PA12MFP_GPIO>;
 			digital-path-disable;
 		};
-
 		group1 {
 			pinmux = <PC0MFP_UTCPD0_CC1>,
 				 <PC1MFP_UTCPD0_CC2>,
@@ -92,7 +91,6 @@
 &gpioa {
 	status = "okay";
 };
-
 &gpiob {
 	status = "okay";
 };

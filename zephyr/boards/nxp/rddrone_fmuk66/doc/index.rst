@@ -128,7 +128,8 @@ should see the following message in the terminal:
    ***** Booting Zephyr OS v2.7.0 *****
    Hello World! rddrone-fmuk66
 
-.. include:: ../../common/board-footer.rst.inc
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 .. _RDDRONE-FMUK66 Website:
 

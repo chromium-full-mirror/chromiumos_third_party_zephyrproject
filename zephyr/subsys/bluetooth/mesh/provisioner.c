@@ -172,12 +172,8 @@ static bool prov_check_method(struct bt_mesh_dev_capabilities *caps)
 				return false;
 			}
 		} else {
-#if defined CONFIG_BT_MESH_PROV_OOB_API_LEGACY
 			if (!bt_mesh_prov->output_number) {
-#else
-			if (!bt_mesh_prov->output_numeric) {
-#endif
-				LOG_WRN("Not support output numeric");
+				LOG_WRN("Not support output number");
 				return false;
 			}
 		}
@@ -581,9 +577,10 @@ static void prov_complete(const uint8_t *data)
 		bt_hex(&provisionee.new_dev_key, 16), node->net_idx,
 		node->num_elem, node->addr);
 
+	bt_mesh_prov_link.expect = PROV_NO_PDU;
 	atomic_set_bit(bt_mesh_prov_link.flags, COMPLETE);
 
-	prov_link_close(PROV_BEARER_LINK_STATUS_SUCCESS);
+	bt_mesh_prov_link.bearer->link_close(PROV_BEARER_LINK_STATUS_SUCCESS);
 }
 
 static void prov_node_add(void)
@@ -688,7 +685,7 @@ static void prov_confirm(const uint8_t *data)
 static void prov_failed(const uint8_t *data)
 {
 	LOG_WRN("Error: 0x%02x", data[0]);
-	prov_link_close(PROV_BEARER_LINK_STATUS_FAIL);
+	reset_state();
 }
 
 static void local_input_complete(void)

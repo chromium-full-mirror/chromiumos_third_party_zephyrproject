@@ -188,12 +188,12 @@ static int it8xxx2_hash_begin_session(const struct device *dev,
 {
 	if (algo != CRYPTO_HASH_ALGO_SHA256) {
 		LOG_ERR("Unsupported algo");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (ctx->flags & ~(it8xxx2_query_hw_caps(dev))) {
 		LOG_ERR("Unsupported flag");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	it8xxx2_sha256_init(false);

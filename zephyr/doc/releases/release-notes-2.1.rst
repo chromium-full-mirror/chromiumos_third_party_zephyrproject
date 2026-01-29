@@ -412,7 +412,7 @@ Build and Infrastructure
   :zephyr_file:`scripts/kconfig/kconfigfunctions.py`.  See
   :ref:`kconfig-functions` for usage details.  For sanitycheck yaml usage
   we should utilize functions from
-  ``scripts/sanity_chk/expr_parser.py``.  Its possible that a
+  :zephyr_file:`scripts/sanity_chk/expr_parser.py`.  Its possible that a
   new function might be required for a particular use pattern that isn't
   currently supported.
 

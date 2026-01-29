@@ -52,7 +52,6 @@
 		irqsteer: interrupt-controller@30a80000 {
 			compatible = "nxp,irqsteer-intc";
 			reg = <0x30a80000 DT_SIZE_K(64)>;
-			nxp,num-irqs = <160>;
 
 			#size-cells = <0>;
 			#address-cells = <1>;
@@ -61,7 +60,7 @@
 				compatible = "nxp,irqsteer-master";
 				reg = <0>;
 				interrupt-controller;
-				#interrupt-cells = <2>;
+				#interrupt-cells = <1>;
 				interrupts-extended = <&clic 19 0 0>;
 			};
 
@@ -69,7 +68,7 @@
 				compatible = "nxp,irqsteer-master";
 				reg = <1>;
 				interrupt-controller;
-				#interrupt-cells = <2>;
+				#interrupt-cells = <1>;
 				interrupts-extended = <&clic 20 0 0>;
 			};
 
@@ -77,7 +76,7 @@
 				compatible = "nxp,irqsteer-master";
 				reg = <2>;
 				interrupt-controller;
-				#interrupt-cells = <2>;
+				#interrupt-cells = <1>;
 				interrupts-extended = <&clic 21 0 0>;
 			};
 		};
@@ -92,7 +91,7 @@
 			compatible = "nxp,sdma";
 			reg = <0x30e00000 DT_SIZE_K(64)>;
 			interrupt-parent = <&master1>;
-			interrupts = <2 0>;
+			interrupts = <2 0 0>;
 			#dma-cells = <2>;
 			status = "disabled";
 		};
@@ -106,7 +105,7 @@
 			clock-names = "mclk1";
 
 			interrupt-parent = <&master1>;
-			interrupts = <18 0>;
+			interrupts = <18>;
 			dai-index = <3>;
 			/* DMA event source, peripheral type */
 			dmas = <&sdma3 5 5>, <&sdma3 4 5>;
@@ -145,7 +144,7 @@
 			 * until we can support UART interrupts
 			 */
 			interrupt-parent = <&master0>;
-			interrupts = <29 0>;
+			interrupts = <29 0 0>;
 			clocks = <&ccm IMX_CCM_UART4_CLK 0x6c 24>;
 			status = "disabled";
 		};

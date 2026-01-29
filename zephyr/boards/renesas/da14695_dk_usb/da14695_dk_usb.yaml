@@ -12,12 +12,5 @@ supported:
   - watchdog
   - i2c
   - spi
-  - rtc
-  - crypto
-  - dma
-  - mipi_dbi
-  - display
-  - memc
-  - counter
+  - usb_device
   - usbd
-vendor: renesas

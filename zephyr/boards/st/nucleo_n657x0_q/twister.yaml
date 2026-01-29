@@ -12,7 +12,6 @@ supported:
   - dma
   - i2c
   - gpio
-  - netif:eth
   - spi
   - uart
   - usb_device

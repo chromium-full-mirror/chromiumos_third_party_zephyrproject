@@ -176,7 +176,7 @@ To program the board, there are two options:
   and executed from there.
 - Optionally, it can also be taken advantage from the serial boot interface provided
   by the boot ROM. In that case, firmware is directly loaded in RAM and executed from
-  there. It is not retained in persistent memory.
+  there. It is not retained.
 
 Programming an application to NUCLEO-N657X0-Q
 ---------------------------------------------
@@ -199,38 +199,33 @@ First, connect the NUCLEO-N657X0-Q to your host computer using the ST-Link USB p
          .. note::
             For flashing, before powering the board, set the boot pins in the following configuration:
 
-            * BOOT0: 0 (jumper JP1 in position 1, printed on PCB)
-            * BOOT1: 1 (jumper JP2 in position 2, not-printed on PCB)
+            * BOOT0: 0
+            * BOOT1: 1
 
             After flashing, to run the application, set the boot pins in the following configuration:
 
-            * BOOT0: 0 (jumper JP1 in position 1, printed on PCB)
-            * BOOT1: 0 (jumper JP2 in position 1, printed on PCB)
+            * BOOT1: 0
 
-            Power off and on the board again.
+	    Power off and on the board again.
 
       .. group-tab:: Serial Boot Loader (USB)
 
-         Additionally to the USB/ST-Link, connect the NUCLEO-N657X0-Q to your
-         host computer using the USB port (USB/CN8).
-
-         In this configuration, ST-Link (USB connector CN10) is used to power
-         the board and for serial communication over the Virtual COM Port,
-         while USB/CN8 is used to send the Zephyr image to Boot ROM for loading
-         it in RAM and executing it.
+         Additionally, connect the NUCLEO-N657X0-Q to your host computer using the USB port.
+         In this configuration, ST-Link is used to power the board and for serial communication
+         over the Virtual COM Port.
 
          .. note::
             Before powering the board, set the boot pins in the following configuration:
 
-            * BOOT0: 1 (jumper JP1 in position 2, not-printed on PCB)
-            * BOOT1: 0 (jumper JP2 in position 1, printed on PCB)
+            * BOOT0: 1
+            * BOOT1: 0
 
          Build and load an application using ``nucleo_n657x0_q/stm32n657xx/sb`` target (you
          can also use the shortened form: ``nucleo_n657x0_q//sb``)
 
          .. zephyr-app-commands::
             :zephyr-app: samples/hello_world
-            :board: nucleo_n657x0_q//sb
+            :board: nucleo_n657x0_q
             :goals: build flash
 
 
@@ -293,7 +288,6 @@ To do so, it is advised to use Twister's hardware map feature with the following
 
 .. _NUCLEO-N657X0-Q User Manual:
    https://www.st.com/resource/en/user_manual/um3417-stm32n6-nucleo144-board-mb1940-stmicroelectronics.pdf
-
 .. _STM32N657X0 on www.st.com:
    https://www.st.com/en/microcontrollers-microprocessors/stm32n657x0.html
 

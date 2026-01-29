@@ -19,6 +19,7 @@ LOG_MODULE_REGISTER(dw1000, LOG_LEVEL_INF);
 #include <zephyr/sys/byteorder.h>
 #include <string.h>
 #include <zephyr/random/random.h>
+#include <zephyr/debug/stack.h>
 #include <math.h>
 
 #include <zephyr/drivers/gpio.h>
@@ -116,7 +117,7 @@ struct dwt_context {
 };
 
 static const struct dwt_hi_cfg dw1000_0_config = {
-	.bus = SPI_DT_SPEC_INST_GET(0, SPI_WORD_SET(8)),
+	.bus = SPI_DT_SPEC_INST_GET(0, SPI_WORD_SET(8), 0),
 	.irq_gpio = GPIO_DT_SPEC_INST_GET(0, int_gpios),
 	.rst_gpio = GPIO_DT_SPEC_INST_GET(0, reset_gpios),
 };
@@ -410,7 +411,7 @@ static inline void dwt_irq_handle_rx(const struct device *dev, uint32_t sys_stat
 	}
 
 	pkt = net_pkt_rx_alloc_with_buffer(ctx->iface, pkt_len,
-					   NET_AF_UNSPEC, 0, K_NO_WAIT);
+					   AF_UNSPEC, 0, K_NO_WAIT);
 	if (!pkt) {
 		LOG_ERR("No buf available");
 		goto rx_out_enable_rx;

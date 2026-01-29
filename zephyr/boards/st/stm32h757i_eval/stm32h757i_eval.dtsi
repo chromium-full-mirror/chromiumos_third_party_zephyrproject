@@ -8,7 +8,6 @@
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
-	/* NOTE: shared peripherals, enabled selectively by each core's DTS */
 	leds {
 		compatible = "gpio-leds";
 
@@ -39,7 +38,6 @@
 
 	gpio_keys {
 		compatible = "gpio-keys";
-		/* NOTE: buttons are assigned per core in the CM7/CM4 DTS files */
 
 		wake_up: button_1 {
 			label = "Wakeup";
@@ -117,10 +115,6 @@
 	d2ppre1 = <2>;
 	d2ppre2 = <2>;
 	d3ppre = <2>;
-};
-
-&pwr {
-	power-supply = "smps-direct";
 };
 
 &usart1 {

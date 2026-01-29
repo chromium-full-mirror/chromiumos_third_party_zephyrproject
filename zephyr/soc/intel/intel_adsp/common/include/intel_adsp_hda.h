@@ -11,6 +11,7 @@
 #include <zephyr/sys/util.h>
 #include <adsp_shim.h>
 #include <adsp_memory.h>
+#include <adsp_shim.h>
 
 /**
  * @brief HDA stream functionality for Intel ADSP

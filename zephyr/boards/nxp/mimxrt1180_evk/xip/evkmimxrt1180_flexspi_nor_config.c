@@ -7,13 +7,23 @@
 
 #include "evkmimxrt1180_flexspi_nor_config.h"
 
+/* Component ID definition, used by tools. */
+#ifndef FSL_COMPONENT_ID
+#define FSL_COMPONENT_ID "platform.drivers.xip_board"
+#endif
+
 /* clang-format off */
-#if defined(XIP_EXTERNAL_FLASH) && (XIP_EXTERNAL_FLASH == 1) && \
-	defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && defined(CONFIG_BOOT_FLEXSPI_NOR)
+#if defined(XIP_EXTERNAL_FLASH) && (XIP_EXTERNAL_FLASH == 1) &&		\
+	defined(XIP_BOOT_HEADER_ENABLE) && (XIP_BOOT_HEADER_ENABLE == 1)
 /* clang-format on */
 
 #if defined(USE_HYPERRAM)
+
+#if defined(__CC_ARM) || defined(__ARMCC_VERSION) || defined(__GNUC__)
 __attribute__((section(".boot_hdr.xmcd_data"), used))
+#elif defined(__ICCARM__)
+#pragma location = ".boot_hdr.xmcd_data"
+#endif
 
 const uint32_t xmcd_data[] = {
 	0xC002000C, /* FlexSPI instance 2 */
@@ -24,7 +34,12 @@ const uint32_t xmcd_data[] = {
 #endif
 
 #if defined(USE_SDRAM)
+
+#if defined(__CC_ARM) || defined(__ARMCC_VERSION) || defined(__GNUC__)
 __attribute__((section(".boot_hdr.xmcd_data"), used))
+#elif defined(__ICCARM__)
+#pragma location = ".boot_hdr.xmcd_data"
+#endif
 
 const uint32_t xmcd_data[] = {
 	0xC010000D, /* SEMC -> SDRAM */
@@ -35,7 +50,11 @@ const uint32_t xmcd_data[] = {
 
 #endif
 
+#if defined(__CC_ARM) || defined(__ARMCC_VERSION) || defined(__GNUC__)
 __attribute__((section(".boot_hdr.conf"), used))
+#elif defined(__ICCARM__)
+#pragma location = ".boot_hdr.conf"
+#endif
 
 /*
  * FlexSPI nor flash configuration block
@@ -49,24 +68,24 @@ __attribute__((section(".boot_hdr.conf"), used))
 #define FLASH_DUMMY_CYCLES 0x06
 
 const flexspi_nor_config_t qspi_flash_nor_config = {
-	.mem_config = {
+	.memConfig = {
 		.tag		  = FLEXSPI_CFG_BLK_TAG,
 		.version          = FLEXSPI_CFG_BLK_VERSION,
-		.read_sample_clk_src = FLEXSPI_READ_SAMPLE_CLK_LOOPBACK_FROM_DQS_PAD,
-		.cs_hold_time       = 3u,
-		.cs_setup_time      = 3u,
+		.readSampleClkSrc = kFlexSPIReadSampleClk_LoopbackFromDqsPad,
+		.csHoldTime       = 3u,
+		.csSetupTime      = 3u,
 		/* Enable DDR mode, Wordaddassable, Safe configuration,
 		 * Differential clock
 		 */
-		.controller_misc_option = 0x10,
-		.device_type           = FLEXSPI_DEVICE_TYPE_SERIAL_NOR,
-		.sflash_pad_type        = SERIAL_FLASH_4_PADS,
-		.serial_clk_freq        = FLEXSPI_SERIAL_CLK_133MHZ,
-		.sflash_a1_size         = 16u * 1024u * 1024u,
+		.controllerMiscOption = 0x10,
+		.deviceType           = kFlexSpiDeviceType_SerialNOR,
+		.sflashPadType        = kSerialFlash_4Pads,
+		.serialClkFreq        = kFlexSpiSerialClk_133MHz,
+		.sflashA1Size         = 16u * 1024u * 1024u,
 
-		.config_mode_type[0] = DEVICE_CONFIG_CMD_TYPE_GENERIC,
+		.configModeType[0] = kDeviceConfigCmdType_Generic,
 
-		.lookup_table = {
+		.lookupTable = {
 			/* Read LUTs */
 			[0] = FLEXSPI_LUT_SEQ(CMD_SDR, FLEXSPI_1PAD, 0xEB,
 				RADDR_SDR, FLEXSPI_4PAD, 0x18),
@@ -100,11 +119,11 @@ const flexspi_nor_config_t qspi_flash_nor_config = {
 			 0x60, STOP, FLEXSPI_1PAD, 0x0),
 		},
 	},
-	.page_size           = 256u,
-	.sector_size         = 4u * 1024u,
-	.ipcmd_serial_clk_freq = 0x1,
-	.block_size          = 64u * 1024u,
-	.is_uniform_block_size = false,
+	.pageSize           = 256u,
+	.sectorSize         = 4u * 1024u,
+	.ipcmdSerialClkFreq = 0x1,
+	.blockSize          = 64u * 1024u,
+	.isUniformBlockSize = false,
 };
 /* clang-format on */
 

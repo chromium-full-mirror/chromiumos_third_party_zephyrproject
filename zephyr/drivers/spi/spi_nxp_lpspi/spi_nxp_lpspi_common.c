@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2024-2026 NXP
+ * Copyright 2018, 2024-2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -158,32 +158,16 @@ static uint8_t lpspi_calc_delay_scaler(uint32_t desired_delay_ns,
 }
 
 /* returns CCR mask of the bits 8-31 */
-static inline uint32_t lpspi_set_delays(const struct device *dev,
-					const struct spi_config *spi_cfg,
-					uint32_t prescaled_clock)
+static inline uint32_t lpspi_set_delays(const struct device *dev, uint32_t prescaled_clock)
 {
 	const struct lpspi_config *config = dev->config;
-	uint32_t val = 0;
 
-	if (!spi_cs_is_gpio(spi_cfg)) {
-		uint32_t lead_time_ns = config->pcs_sck_delay > 0 ?
-					config->pcs_sck_delay : spi_cfg->cs.setup_ns;
-		uint32_t lag_time_ns = config->sck_pcs_delay > 0 ?
-					config->sck_pcs_delay : spi_cfg->cs.hold_ns;
-
-		val |= LPSPI_CCR_PCSSCK(lpspi_calc_delay_scaler(lead_time_ns,
-								prescaled_clock, 1)) |
-		       LPSPI_CCR_SCKPCS(lpspi_calc_delay_scaler(lag_time_ns,
-								prescaled_clock, 1));
-	}
-
-	uint16_t word_delay = config->transfer_delay > 0 ?
-				(uint16_t)(config->transfer_delay & 0xFFFF) :
-				spi_get_word_delay(spi_cfg);
-
-	val |= LPSPI_CCR_DBT(lpspi_calc_delay_scaler(word_delay, prescaled_clock, 2));
-
-	return val;
+	return LPSPI_CCR_PCSSCK(lpspi_calc_delay_scaler(config->pcs_sck_delay,
+							prescaled_clock, 1)) |
+	       LPSPI_CCR_SCKPCS(lpspi_calc_delay_scaler(config->sck_pcs_delay,
+							prescaled_clock, 1)) |
+	       LPSPI_CCR_DBT(lpspi_calc_delay_scaler(config->transfer_delay,
+							prescaled_clock, 2));
 }
 
 /* This is the equation for the sck frequency given a div and prescaler. */
@@ -340,7 +324,7 @@ int lpspi_configure(const struct device *dev, const struct spi_config *spi_cfg)
 
 		/* sckdiv algorithm must run *before* delays are set in order to know prescaler */
 		ccr |= lpspi_set_sckdiv(spi_cfg->frequency, clock_freq, &prescaler);
-		ccr |= lpspi_set_delays(dev, spi_cfg, clock_freq / TWO_EXP(prescaler));
+		ccr |= lpspi_set_delays(dev, clock_freq / TWO_EXP(prescaler));
 
 		/* note that not all bits of the register are readable on some platform,
 		 * that's why we update it on one write
@@ -382,16 +366,6 @@ int spi_nxp_init_common(const struct device *dev)
 	if (!device_is_ready(config->clock_dev)) {
 		LOG_ERR("clock control device not ready");
 		return -ENODEV;
-	}
-
-	err = clock_control_configure(config->clock_dev, config->clock_subsys, NULL);
-	if (err != 0) {
-		/* Check if error is due to lack of support */
-		if (err != -ENOSYS) {
-			/* Real error occurred */
-			LOG_ERR("Failed to configure clock: %d", err);
-			return err;
-		}
 	}
 
 	lpspi_module_system_init(base);

@@ -144,9 +144,11 @@ Two images must be written to the board: one for the host (CM33 core0) and one f
 Troubleshooting
 ===============
 
-.. include:: ../../common/segger-ecc-systemview.rst.inc
+.. include:: ../../common/segger-ecc-systemview.rst
+   :start-after: segger-ecc-systemview
 
-.. include:: ../../common/board-footer.rst.inc
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 References
 **********

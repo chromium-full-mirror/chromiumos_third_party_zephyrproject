@@ -3,8 +3,12 @@
 
 if BOARD_W5500_EVB_PICO2
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 config USB_SELF_POWERED
 	default n

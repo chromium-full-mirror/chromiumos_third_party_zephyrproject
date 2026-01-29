@@ -10,9 +10,9 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
 
-#include <platform.h>
+#include <weplatform.h>
 
-#include <WSEN_HIDS_2525020210002.h>
+#include "WSEN_HIDS_2525020210002_hal.h"
 
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/sensor/wsen_hids_2525020210002.h>

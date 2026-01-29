@@ -13,11 +13,6 @@
 #include <OsIf.h>
 
 #ifdef CONFIG_XIP
-/*
- * Emit IVT only for standalone XIP or MCUboot itself
- * But not for the cases where Zephyr Image is loaded by MCUboot
- */
-#if !defined(CONFIG_BOOTLOADER_MCUBOOT) || defined(CONFIG_MCUBOOT)
 /* Image Vector Table structure definition for S32K3XX */
 struct ivt {
 	uint32_t header;
@@ -38,15 +33,13 @@ struct ivt {
 extern char _vector_start[];
 
 /*
- * Attribute 'used' forces the compiler to emit ivt_header
- * even if nothing references it.
  * IVT for SoC S32K344, the minimal boot configuration is:
  * - Watchdog (SWT0) is disabled (default value).
  * - Non-Secure Boot is used (default value).
  * - Ungate clock for Cortex-M7_0 after boot.
  * - Application start address of Cortex-M7_0 is application's vector table.
  */
-const struct ivt ivt_header __attribute__((section(".ivt_header"), used)) = {
+const struct ivt ivt_header __attribute__((section(".ivt_header"))) = {
 	.header = IVT_MAGIC_MARKER,
 	.boot_configure = 1,
 	.cm7_0_start_address = (const void *)_vector_start,
@@ -54,7 +47,6 @@ const struct ivt ivt_header __attribute__((section(".ivt_header"), used)) = {
 	.cm7_2_start_address = NULL,
 	.lc_configure = NULL,
 };
-#endif
 #endif /* CONFIG_XIP */
 
 void soc_early_init_hook(void)

@@ -11,14 +11,13 @@
 	compatible = "beagle,pocketbeagle_2_a53";
 
 	chosen {
-		zephyr,console = &main_uart6;
-		zephyr,shell-uart = &main_uart6;
+		zephyr,console = &uart6;
+		zephyr,shell-uart = &uart6;
 		zephyr,sram = &a53_ddr_section;
 	};
 
 	aliases {
 		led0 = &led1;
-		watchdog0 = &main_rti0;
 	};
 
 	ddr0: memory@80000000 {
@@ -63,19 +62,7 @@
 	};
 };
 
-&main_uart0 {
-	pinctrl-0 = <&P1_30_uart0_tx &P1_32_uart0_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&main_uart5 {
-	pinctrl-0 = <&P2_07_E15_uart5_tx &P2_05_C15_uart5_rx>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&main_uart6 {
+&uart6 {
 	pinctrl-0 = <&main_uart6_rx_default &main_uart6_tx_default>;
 	pinctrl-names = "default";
 	status = "okay";
@@ -87,46 +74,8 @@
 	status = "okay";
 };
 
-&main_i2c3 {
-	pinctrl-0 = <&P2_09_A15_i2c3_scl &P2_11_B15_i2c3_sda>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&main_gpio0_0 {
+&main_gpio0 {
 	pinctrl-0 = <&led_pins_default>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&main_gpio0_1 {
-	status = "okay";
-};
-
-&main_gpio0_2 {
-	status = "okay";
-};
-
-&main_gpio1_0 {
-	status = "okay";
-};
-
-&main_gpio1_1 {
-	status = "okay";
-};
-
-&main_rti0 {
-	status = "okay";
-};
-
-&main_spi0 {
-	pinctrl-0 = <&main_spi0_default>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&main_spi2 {
-	pinctrl-0 = <&main_spi2_default>;
 	pinctrl-names = "default";
 	status = "okay";
 };

@@ -11,7 +11,6 @@
 LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #include <zephyr/net/tftp.h>
-#include <zephyr/posix/netdb.h>
 
 #define APP_BANNER		"Run TFTP client"
 #define TFTP_SAMPLE_DATA	"Lorem ipsum dolor sit amet, consectetur adipiscing elit"

@@ -6,8 +6,7 @@
 
 /**
  * @file
- * @ingroup scmi_transport
- * @brief Header file for the SCMI Transport Layer.
+ * @brief Public APIs for the SCMI transport layer drivers
  */
 
 #ifndef _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_TRANSPORT_H_
@@ -15,13 +14,6 @@
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
-
-/**
- * @brief SCMI Transport Layer abstraction and definitions
- * @defgroup scmi_transport Transport
- * @ingroup scmi_interface
- * @{
- */
 
 struct scmi_message;
 struct scmi_channel;
@@ -278,9 +270,5 @@ static inline bool scmi_transport_channel_is_free(const struct device *transport
  * @retval negative errno code if failure
  */
 int scmi_core_transport_init(const struct device *transport);
-
-/**
- * @}
- */
 
 #endif /* _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_TRANSPORT_H_ */

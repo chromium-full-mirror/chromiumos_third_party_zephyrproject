@@ -17,7 +17,4 @@ supported:
   - pwm
   - dma
   - input
-  - video
-  - crypto
-  - retained_mem
 vendor: espressif

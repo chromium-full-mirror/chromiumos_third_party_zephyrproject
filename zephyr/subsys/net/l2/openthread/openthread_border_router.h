@@ -94,8 +94,6 @@ struct otbr_msg_ctx {
 	/** Actual length of incoming data */
 	uint16_t length;
 
-	/** A pointer to user data */
-	void *user_data;
 	union {
 		/** Generic OpenThread message info structure */
 		otMessageInfo message_info;
@@ -106,7 +104,6 @@ struct otbr_msg_ctx {
 		/** Generic OpenThread IPv6 address structure */
 		otIp6Address addr;
 
-		/** OpenThread IPv6 socket address structure */
 		otSockAddr sock_addr;
 	};
 };
@@ -131,14 +128,6 @@ void openthread_border_router_deallocate_message(void *msg);
  * @param msg_context Pointer to contained message.
  */
 void openthread_border_router_post_message(struct otbr_msg_ctx *msg_context);
-
-/**
- * @brief Verifies if a packet respects the imposed OpenThread forwarding rules
- * between Backbone and Thread interface.
- *
- * @param pkt Pointer to packet that will be checked.
- */
-bool openthread_border_router_check_packet_forwarding_rules(struct net_pkt *pkt);
 
 #ifdef __cplusplus
 }

@@ -120,10 +120,10 @@
 	pinctrl-names = "default";
 
 	phy: phy@0 {
-		compatible = "ethernet-phy-fixed-link";
+		compatible = "ethernet-phy";
 		reg = <0>;
 		status = "okay";
-		default-speeds = "100BASE Full-Duplex";
+		fixed-link = "100BASE-T Full-Duplex";
 	};
 };
 

@@ -49,10 +49,6 @@
 	d3ppre = <2>;
 };
 
-&pwr {
-	power-supply = "smps-direct";
-};
-
 &mailbox {
 	status = "okay";
 };

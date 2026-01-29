@@ -11,7 +11,6 @@ Do not use it directly. The generated bindings documentation puts these
 in the right places.
 """
 
-
 def setup(app):
     app.add_crossref_type('dtcompatible', 'dtcompatible')
 

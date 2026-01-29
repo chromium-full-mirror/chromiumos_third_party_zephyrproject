@@ -16,6 +16,4 @@ supported:
   - gpio
   - pinctrl
   - uart
-  - dma
-  - flash
 vendor: doiting

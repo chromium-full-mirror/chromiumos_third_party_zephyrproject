@@ -8,7 +8,6 @@
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/spi.h>
-#include <zephyr/net/phy.h>
 
 #ifndef _W5500_
 #define _W5500_
@@ -27,13 +26,6 @@
 #define W5500_IR		0x0015 /* Interrupt Register */
 #define W5500_COMMON_REGS_LEN	0x0040
 #define W5500_PHYCFGR		0x002E /* PHY Configuration register */
-
-#define W5500_PHYCFGR_LNK_BIT	0 /* Link status */
-#define W5500_PHYCFGR_SPD_BIT	1 /* Speed status */
-#define W5500_PHYCFGR_DPX_BIT	2 /* Duplex status */
-#define W5500_PHYCFGR_LNK	BIT(W5500_PHYCFGR_LNK_BIT) /* Link status */
-#define W5500_PHYCFGR_SPD	BIT(W5500_PHYCFGR_SPD_BIT) /* Speed status */
-#define W5500_PHYCFGR_DPX	BIT(W5500_PHYCFGR_DPX_BIT) /* Duplex status */
 
 #define W5500_Sn_MR		0x0000 /* Sn Mode Register */
 #define W5500_Sn_CR		0x0001 /* Sn Command Register */
@@ -91,8 +83,7 @@ struct w5500_config {
 	struct spi_dt_spec spi;
 	struct gpio_dt_spec interrupt;
 	struct gpio_dt_spec reset;
-	struct net_eth_mac_config mac_cfg;
-	const struct device *phy_dev;
+	int32_t timeout;
 };
 
 struct w5500_runtime {
@@ -105,7 +96,7 @@ struct w5500_runtime {
 	struct gpio_callback gpio_cb;
 	struct k_sem tx_sem;
 	struct k_sem int_sem;
-	struct phy_link_state state;
+	bool link_up;
 	uint8_t buf[NET_ETH_MAX_FRAME_SIZE];
 };
 

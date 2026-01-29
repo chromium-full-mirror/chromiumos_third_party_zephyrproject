@@ -3,10 +3,14 @@
 
 if BOARD_EK_RA6M4
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
 
-configdefault OUTPUT_RPD
-	default y if NETWORKING
+config OUTPUT_RPD
+	default y
+
+endif # NETWORKING
 
 endif # BOARD_EK_RA6M4

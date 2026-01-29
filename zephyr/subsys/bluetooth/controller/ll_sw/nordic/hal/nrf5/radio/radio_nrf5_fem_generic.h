@@ -7,7 +7,7 @@
 /*
  * This file contains helper macros for dealing with the devicetree
  * radio node's fem property, in the case that it has compatible
- * "radio-fem-two-ctrl-pins".
+ * "generic-fem-two-ctrl-pins".
  *
  * Do not include it directly.
  *

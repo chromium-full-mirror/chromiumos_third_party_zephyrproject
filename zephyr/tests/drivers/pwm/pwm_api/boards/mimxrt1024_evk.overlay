@@ -1,6 +1,6 @@
 / {
 	aliases {
-		pwm-test = &flexpwm1_pwm2;
+		pwm-0 = &flexpwm1_pwm2;
 	};
 };
 

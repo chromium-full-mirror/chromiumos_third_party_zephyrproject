@@ -136,39 +136,16 @@ Keeping Zephyr updated
 To update the Zephyr project source code, you need to get the latest
 changes via ``git``. Afterwards, run ``west update`` as mentioned in
 the previous paragraph.
-Additionally, check for updated or added Python dependencies.
+Additionally, in the case of updated or added Python dependencies, running
+``west packages pip --install`` will make sure these are up-to-date.
 
-.. tabs::
+.. code-block:: console
 
-   .. group-tab:: Linux/macOS
-
-      .. code-block:: console
-
-         # replace zephyrproject with the path you gave west init
-         cd zephyrproject/zephyr
-         git pull
-         west update
-         west packages pip --install
-
-   .. group-tab:: Windows
-
-      .. tabs::
-
-         .. code-tab:: bat
-
-            :: replace zephyrproject with the path you gave west init
-            cd zephyrproject\zephyr
-            git pull
-            west update
-            cmd /c scripts\utils\west-packages-pip-install.cmd
-
-         .. code-tab:: powershell
-
-            # replace zephyrproject with the path you gave west init
-            cd zephyrproject\zephyr
-            git pull
-            west update
-            python -m pip install @((west packages pip) -split ' ')
+   # replace zephyrproject with the path you gave west init
+   cd zephyrproject/zephyr
+   git pull
+   west update
+   west packages pip --install
 
 Export Zephyr CMake package
 ***************************

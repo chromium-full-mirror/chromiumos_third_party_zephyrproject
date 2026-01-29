@@ -11,7 +11,7 @@
 #include <soc.h>
 #endif
 
-#define STACK_SIZE	1024 + CONFIG_TEST_EXTRA_STACK_SIZE
+#define STACK_SIZE	1024
 #define NUM_WORK	4
 
 static struct k_work offload_work[NUM_WORK];

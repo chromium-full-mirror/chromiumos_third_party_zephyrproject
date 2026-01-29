@@ -130,7 +130,7 @@
 	status = "okay";
 
 	ssd1306: ssd1306@3d {
-		compatible = "solomon,ssd1306";
+		compatible = "solomon,ssd1306fb";
 		reg = <0x3d>;
 		width = <128>;
 		height = <32>;

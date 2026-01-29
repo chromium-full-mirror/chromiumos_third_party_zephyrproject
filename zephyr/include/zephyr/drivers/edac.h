@@ -24,10 +24,6 @@
  * @version 0.8.0
  * @ingroup io_interfaces
  * @{
- *
- * @defgroup edac_interface_ext Device-specific EDAC API extensions
- * @{
- * @}
  */
 
 /**

@@ -19,7 +19,6 @@
 		reg = <0>;
 		spi-max-frequency = <500000>;
 	};
-
 	fast@0 {
 		compatible = "test-spi-loopback-fast";
 		reg = <0>;
@@ -38,7 +37,6 @@
 		reg = <0>;
 		spi-max-frequency = <500000>;
 	};
-
 	fast@0 {
 		compatible = "test-spi-loopback-fast";
 		reg = <0>;

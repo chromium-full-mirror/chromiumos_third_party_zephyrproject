@@ -8,7 +8,6 @@
 #include <zephyr/ztest.h>
 #include <zephyr/device.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/util.h>
 
 LOG_MODULE_DECLARE(display_api, CONFIG_DISPLAY_LOG_LEVEL);
 
@@ -26,15 +25,6 @@ static uint8_t bpp;
 static bool is_vtiled;
 static bool is_htiled;
 
-static inline size_t buffer_size(size_t width, size_t height)
-{
-	if (is_vtiled || is_htiled) {
-		return DIV_ROUND_UP(width * height, 8U);
-	}
-
-	return width * height * bpp;
-}
-
 static inline uint8_t bytes_per_pixel(enum display_pixel_format pixel_format)
 {
 	switch (pixel_format) {
@@ -43,7 +33,7 @@ static inline uint8_t bytes_per_pixel(enum display_pixel_format pixel_format)
 	case PIXEL_FORMAT_RGB_888:
 		return 3;
 	case PIXEL_FORMAT_RGB_565:
-	case PIXEL_FORMAT_RGB_565X:
+	case PIXEL_FORMAT_BGR_565:
 	case PIXEL_FORMAT_AL_88:
 		return 2;
 	case PIXEL_FORMAT_L_8:
@@ -62,19 +52,23 @@ static void verify_bytes_of_area(uint8_t *data, int cmp_x, int cmp_y, size_t wid
 		.height = height,
 		.pitch = width,
 		.width = width,
-		.buf_size = buffer_size(width, height),
+		.buf_size = height * width * bpp,
 	};
 
 	int err = display_read(dev, cmp_x, cmp_y, &desc, disp_buffer);
 
 	zassert_ok(err, "display_read failed");
 
-	zassert_mem_equal(data, disp_buffer, buffer_size(width, height));
+	if (is_vtiled || is_htiled) {
+		zassert_mem_equal(data, disp_buffer, width * height / 8);
+	} else {
+		zassert_mem_equal(data, disp_buffer, width * height * bpp);
+	}
 }
 
 static void verify_background_color(int x, int y, size_t width, size_t height, uint32_t color)
 {
-	size_t buf_size = buffer_size(width, height);
+	size_t buf_size = height * width * bpp / ((is_vtiled || is_htiled) ? 8 : 1);
 	struct display_buffer_descriptor desc = {
 		.height = height,
 		.pitch = width,
@@ -197,7 +191,7 @@ ZTEST(display_read_write, test_write_to_buffer_tail)
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = buffer_size(display_width, display_height),
+		.buf_size = display_height * display_width * bpp / height,
 	};
 	int err;
 
@@ -209,11 +203,15 @@ ZTEST(display_read_write, test_write_to_buffer_tail)
 	zassert_ok(err, "display_read failed");
 
 	/* check write data and read data are same */
-	size_t total_bytes = buffer_size(display_width, display_height);
-	size_t area_bytes = buffer_size(width, height);
-	uint8_t *compare = disp_buffer + (total_bytes - area_bytes);
-
-	zassert_mem_equal(data, compare, area_bytes);
+	if (is_vtiled || is_htiled) {
+		zassert_mem_equal(data,
+				  disp_buffer + (display_width * display_height / 8 - buf_size),
+				  buf_size);
+	} else {
+		zassert_mem_equal(data,
+				  disp_buffer + (display_width * display_height * bpp - buf_size),
+				  buf_size);
+	}
 
 	/* check remaining region still black */
 	verify_background_color(0, 0, display_width, display_height - height, 0);
@@ -239,7 +237,7 @@ ZTEST(display_read_write, test_read_does_not_clear_existing_buffer)
 		.height = display_height,
 		.pitch = display_width,
 		.width = display_width,
-		.buf_size = buffer_size(display_width, display_height),
+		.buf_size = display_height * display_width * bpp / height,
 	};
 	int err;
 
@@ -261,11 +259,15 @@ ZTEST(display_read_write, test_read_does_not_clear_existing_buffer)
 	zassert_ok(err, "display_read failed");
 
 	/* checking correctly write to the tail of buffer */
-	size_t total_bytes = buffer_size(display_width, display_height);
-	size_t area_bytes = buffer_size(width, height);
-	uint8_t *compare = disp_buffer + (total_bytes - area_bytes);
-
-	zassert_mem_equal(data, compare, area_bytes);
+	if (is_vtiled || is_htiled) {
+		zassert_mem_equal(data,
+				  disp_buffer + (display_width * display_height / 8 - buf_size),
+				  buf_size);
+	} else {
+		zassert_mem_equal(data,
+				  disp_buffer + (display_width * display_height * bpp - buf_size),
+				  buf_size);
+	}
 
 	/* checking if the content written before reading is kept */
 	verify_bytes_of_area(data, 0, 0, width, height);

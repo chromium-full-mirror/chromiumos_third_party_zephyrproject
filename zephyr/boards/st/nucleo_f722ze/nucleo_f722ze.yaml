@@ -20,6 +20,6 @@ supported:
   - spi
   - usb_device
   - rtc
-ram: 192
+ram: 256
 flash: 512
 vendor: st

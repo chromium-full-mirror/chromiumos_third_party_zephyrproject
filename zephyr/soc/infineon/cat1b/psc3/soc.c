@@ -5,9 +5,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <ifx_cycfg_init.h>
+#include <zephyr/device.h>
+#include <zephyr/init.h>
+#include <zephyr/kernel.h>
+
+#include <cy_sysint.h>
+#include <system_cat1b.h>
+#include "cy_pdl.h"
 
 void soc_early_init_hook(void)
 {
-	ifx_cycfg_init();
+	/* Initializes the system */
+	SystemInit();
 }

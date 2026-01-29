@@ -11,6 +11,7 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/pm/pm.h>
+#include <zephyr/device.h>
 #include <zephyr/cache.h>
 #include <cpu_init.h>
 

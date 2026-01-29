@@ -57,16 +57,13 @@ osEventFlagsId_t osEventFlagsNew(const osEventFlagsAttr_t *attr)
 uint32_t osEventFlagsSet(osEventFlagsId_t ef_id, uint32_t flags)
 {
 	struct cmsis_rtos_event_cb *events = (struct cmsis_rtos_event_cb *)ef_id;
-	uint32_t rv;
-
 	if ((ef_id == NULL) || (flags & osFlagsError)) {
 		return osFlagsErrorParameter;
 	}
 
-	rv = k_event_test(&events->z_event, 0xFFFFFFFF);
-	k_event_post(&events->z_event, flags & ~rv);
+	k_event_post(&events->z_event, flags);
 
-	return flags & ~rv;
+	return k_event_test(&events->z_event, 0xFFFFFFFF);
 }
 
 /**
@@ -82,7 +79,7 @@ uint32_t osEventFlagsClear(osEventFlagsId_t ef_id, uint32_t flags)
 	}
 
 	rv = k_event_test(&events->z_event, 0xFFFFFFFF);
-	k_event_clear(&events->z_event, flags & rv);
+	k_event_clear(&events->z_event, flags);
 
 	return rv;
 }
@@ -94,7 +91,6 @@ uint32_t osEventFlagsWait(osEventFlagsId_t ef_id, uint32_t flags, uint32_t optio
 			  uint32_t timeout)
 {
 	struct cmsis_rtos_event_cb *events = (struct cmsis_rtos_event_cb *)ef_id;
-	uint32_t sub_opt = options & (osFlagsWaitAll | osFlagsNoClear);
 	uint32_t rv;
 	k_timeout_t event_timeout;
 
@@ -118,21 +114,14 @@ uint32_t osEventFlagsWait(osEventFlagsId_t ef_id, uint32_t flags, uint32_t optio
 		event_timeout = K_TICKS(timeout);
 	}
 
-	switch (sub_opt) {
-	case osFlagsWaitAll | osFlagsNoClear:
+	if ((options & osFlagsWaitAll) != 0) {
 		rv = k_event_wait_all(&events->z_event, flags, false, event_timeout);
-		break;
-	case osFlagsWaitAll:
-		rv = k_event_wait_all_safe(&events->z_event, flags, false, event_timeout);
-		break;
-	case osFlagsNoClear:
+	} else {
 		rv = k_event_wait(&events->z_event, flags, false, event_timeout);
-		break;
-	case 0:
-		rv = k_event_wait_safe(&events->z_event, flags, false, event_timeout);
-		break;
-	default:
-		__ASSERT_NO_MSG(0);
+	}
+
+	if ((options & osFlagsNoClear) == 0) {
+		k_event_clear(&events->z_event, flags);
 	}
 
 	if (rv != 0U) {

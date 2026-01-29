@@ -11,8 +11,12 @@ config DEVICE_CONFIGURATION_DATA
 config NXP_IMX_EXTERNAL_SDRAM
 	default y
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 
 endif # BOARD_MIMXRT1062_FMURT6

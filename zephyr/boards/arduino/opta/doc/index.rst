@@ -84,9 +84,11 @@ External flash
 ==============
 
 External flash (16MB on QSPI) access can be enabled by the ``CONFIG_FLASH``
-option. The default partition table tracks the one used by the latest Arduino
-IoT Cloud library. If you have any issues, re-run the ``QSPIFormat.ino``
-sketch to update the Flash contents.
+option. The ``partitions`` entry provided in the default device tree is meant
+as an example and is valid only if the Opta is fresh from the factory and the
+flash has not been repartitioned. As a second example, the partitioning scheme
+created by the new ``QSPIFormat.ino`` sketch from Arduino is available as a
+DTSI in ``arduino_opta-external-flash-partitioning.dtsi``.
 
 Resources sharing
 =================

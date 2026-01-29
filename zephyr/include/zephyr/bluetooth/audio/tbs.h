@@ -199,14 +199,7 @@ extern "C" {
  * whenever the client should perform on action on the GTBS instance of the
  * server, rather than any of the specific Telephone Bearer Service instances.
  */
-#define BT_TBS_GTBS_INDEX 0xFF
-
-/** Maximum size of bearer uniform caller identifier (UCI)
- *
- * Includes the NULL terminator.
- * Allowed values are defined by Bluetooth Assigned Numbers.
- */
-#define BT_TBS_MAX_UCI_SIZE 6
+#define BT_TBS_GTBS_INDEX                               0xFF
 
 /** @brief Opaque Telephone Bearer Service instance. */
 struct bt_tbs_instance;

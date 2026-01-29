@@ -151,13 +151,7 @@
 				   <&test_gpio 0 0>,
 				   <&test_gpio 0 0>,
 				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>,
-				   <&test_gpio 0 0>;	/* 0x3A */
+				   <&test_gpio 0 0>;	/* 0x34 */
 			#include "spi.dtsi"
 		};
 

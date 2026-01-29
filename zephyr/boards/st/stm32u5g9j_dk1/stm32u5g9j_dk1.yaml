@@ -21,6 +21,6 @@ supported:
   - timer
   - rng
   - rtc
-ram: 3008
+ram: 3072
 flash: 4096
 vendor: st

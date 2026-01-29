@@ -9,7 +9,11 @@
 / {
 	chosen {
 		zephyr,display = &zephyr_lcdif;
-		zephyr,touch = &gt911_rtkmipilcdb00000be;
+	};
+
+	lvgl_pointer {
+		compatible = "zephyr,lvgl-pointer-input";
+		input = <&gt911_rtkmipilcdb00000be>;
 	};
 };
 
@@ -42,7 +46,7 @@
 	status = "okay";
 	width = <480>;
 	height = <854>;
-	input-pixel-format = <PANEL_PIXEL_FORMAT_RGB_565>;
+	input-pixel-format = <PANEL_PIXEL_FORMAT_RGB_888>;
 	output-pixel-format = <PANEL_PIXEL_FORMAT_RGB_888>;
 
 	display-timings {
@@ -58,6 +62,5 @@
 		hfront-porch = <72>;
 		vfront-porch = <17>;
 	};
-
 	backlight-gpios = <&renesas_mipi_connector 15 GPIO_ACTIVE_HIGH>;
 };

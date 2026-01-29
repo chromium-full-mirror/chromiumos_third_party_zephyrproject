@@ -14,7 +14,6 @@
 #include <zephyr/dt-bindings/sensor/icm42688.h>
 #include <zephyr/dt-bindings/sensor/icm42686.h>
 #include <stdlib.h>
-#include "icm4268x_bus.h"
 
 struct alignment {
 	int8_t index;
@@ -342,7 +341,6 @@ struct icm4268x_cfg {
 
 	bool fifo_en;
 	int32_t batch_ticks;
-	uint16_t fifo_wm;
 	bool fifo_hires;
 	/* TODO additional FIFO options */
 
@@ -360,12 +358,6 @@ struct icm4268x_trigger_entry {
 	sensor_trigger_handler_t handler;
 };
 
-enum icm4268x_stream_state {
-	ICM4268X_STREAM_OFF = 0,
-	ICM4268X_STREAM_ON = 1,
-	ICM4268X_STREAM_BUSY = 2,
-};
-
 /**
  * @brief Device data (struct device)
  */
@@ -381,11 +373,12 @@ struct icm4268x_dev_data {
 #endif
 #ifdef CONFIG_ICM4268X_STREAM
 	struct rtio_iodev_sqe *streaming_sqe;
-	struct icm4268x_bus bus;
+	struct rtio *r;
+	struct rtio_iodev *spi_iodev;
 	uint8_t int_status;
 	uint16_t fifo_count;
 	uint64_t timestamp;
-	atomic_t state;
+	atomic_t reading_fifo;
 #endif /* CONFIG_ICM4268X_STREAM */
 	const struct device *dev;
 	struct gpio_callback gpio_cb;

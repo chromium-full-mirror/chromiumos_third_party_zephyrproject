@@ -39,7 +39,6 @@
 			disk-name = "SD";
 			status = "okay";
 		};
-
 		spi-max-frequency = <DT_FREQ_M(8)>;
 	};
 };

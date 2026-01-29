@@ -9,7 +9,6 @@
 		io-channels = <&adc0 0>, <&adc0 3>, <&adc0 4>, <&adc0 5>;
 	};
 };
-
 &adc0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -21,7 +20,6 @@
 		zephyr,acquisition-time = <0>;
 		zephyr,resolution = <12>;
 	};
-
 	channel@3 {
 		reg = <3>;
 		zephyr,gain = "ADC_GAIN_1";
@@ -29,7 +27,6 @@
 		zephyr,acquisition-time = <0>;
 		zephyr,resolution = <12>;
 	};
-
 	channel@4 {
 		reg = <4>;
 		zephyr,gain = "ADC_GAIN_1";
@@ -37,7 +34,6 @@
 		zephyr,acquisition-time = <0>;
 		zephyr,resolution = <12>;
 	};
-
 	channel@5 {
 		reg = <5>;
 		zephyr,gain = "ADC_GAIN_1";

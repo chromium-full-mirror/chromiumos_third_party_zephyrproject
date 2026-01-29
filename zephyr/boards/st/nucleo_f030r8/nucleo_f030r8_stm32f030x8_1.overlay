@@ -5,7 +5,6 @@
  */
 
 &clk_hse {
-	/* NOTE: Variant switches to internal HSI, so leave HSE off */
 	status = "disabled";
 };
 

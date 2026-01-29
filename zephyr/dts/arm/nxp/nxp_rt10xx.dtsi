@@ -1,5 +1,5 @@
 /*
- * Copyright 2017, 2023-2025 NXP
+ * Copyright 2017,2023,2024 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -345,12 +345,6 @@
 				compatible = "nxp,imx-snvs-rtc";
 				interrupts = <46 0>;
 				wakeup-source;
-
-				counter_rtc: counter_rtc {
-					compatible = "zephyr,rtc-counter";
-					alarms-count = <2>;
-					status = "disabled";
-				};
 			};
 		};
 
@@ -969,7 +963,7 @@
 			interrupts = <36 0>;
 			interrupt-names = "common";
 			clocks = <&ccm IMX_CCM_CAN_CLK 0x68 14>;
-			number-of-mb = <64>;
+			clk-source = <2>;
 			status = "disabled";
 		};
 
@@ -979,7 +973,7 @@
 			interrupts = <37 0>;
 			interrupt-names = "common";
 			clocks = <&ccm IMX_CCM_CAN_CLK 0x68 18>;
-			number-of-mb = <64>;
+			clk-source = <2>;
 			status = "disabled";
 		};
 
@@ -989,8 +983,7 @@
 			interrupts = <154 0>;
 			interrupt-names = "common";
 			clocks = <&ccm IMX_CCM_CAN_CLK 0x84 6>;
-			number-of-mb = <64>;
-			number-of-mb-fd = <14>;
+			clk-source = <2>;
 			status = "disabled";
 		};
 

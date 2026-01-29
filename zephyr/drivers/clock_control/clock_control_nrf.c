@@ -14,6 +14,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/shell/shell.h>
 #include <zephyr/irq.h>
+#include <nrf_erratas.h>
 
 LOG_MODULE_REGISTER(clock_control, CONFIG_CLOCK_CONTROL_LOG_LEVEL);
 
@@ -252,7 +253,7 @@ static void clkstarted_handle(const struct device *dev,
 			      enum clock_control_nrf_type type)
 {
 #if CONFIG_CLOCK_CONTROL_NRF_HFINT_CALIBRATION
-	if (NRF_ERRATA_DYNAMIC_CHECK(54L, 30) && (type == CLOCK_CONTROL_NRF_TYPE_HFCLK)) {
+	if (nrf54l_errata_30() && (type == CLOCK_CONTROL_NRF_TYPE_HFCLK)) {
 		nrf54l_errata_30_workaround();
 	}
 #endif
@@ -316,7 +317,7 @@ static void hfclk_start(void)
 		hf_start_tstamp = k_uptime_get();
 	}
 
-	nrfx_clock_start(NRF_CLOCK_DOMAIN_HFCLK);
+	nrfx_clock_hfclk_start();
 }
 
 static void hfclk_stop(void)
@@ -325,7 +326,7 @@ static void hfclk_stop(void)
 		hf_stop_tstamp = k_uptime_get();
 	}
 
-	nrfx_clock_stop(NRF_CLOCK_DOMAIN_HFCLK);
+	nrfx_clock_hfclk_stop();
 }
 
 #if NRF_CLOCK_HAS_HFCLK24M
@@ -441,6 +442,13 @@ void z_nrf_clock_bt_ctlr_hf_release(void)
 	hfclk_users &= ~HF_USER_BT;
 	/* Skip stopping if generic is still requesting the clock. */
 	if (!(hfclk_users & HF_USER_GENERIC)) {
+		struct nrf_clock_control_sub_data *sub_data =
+			get_sub_data(CLOCK_DEVICE, CLOCK_CONTROL_NRF_TYPE_HFCLK);
+
+		/* State needs to be set to OFF as BT API does not call stop API which
+		 * normally setting this state.
+		 */
+		sub_data->flags = CLOCK_CONTROL_STATUS_OFF;
 		hfclk_stop();
 	}
 
@@ -493,7 +501,7 @@ static int async_start(const struct device *dev, clock_control_subsys_t subsys,
 	subdata->cb = cb;
 	subdata->user_data = user_data;
 
-	get_sub_config(dev, type)->start();
+	 get_sub_config(dev, type)->start();
 
 	return 0;
 }
@@ -694,20 +702,6 @@ void z_nrf_clock_control_lf_on(enum nrf_lfclk_start_mode start_mode)
 	}
 }
 
-static void hfclkstarted_handle(const struct device *dev)
-{
-	struct nrf_clock_control_sub_data *data =
-			get_sub_data(dev, CLOCK_CONTROL_NRF_TYPE_HFCLK);
-
-	if (GET_STATUS(data->flags) == CLOCK_CONTROL_STATUS_STARTING) {
-		/* Handler is called only if state is set. BT specific API
-		 * does not set this state and does not require handler to
-		 * be called.
-		 */
-		clkstarted_handle(dev, CLOCK_CONTROL_NRF_TYPE_HFCLK);
-	}
-}
-
 static void clock_event_handler(nrfx_clock_evt_type_t event)
 {
 	const struct device *dev = CLOCK_DEVICE;
@@ -715,7 +709,7 @@ static void clock_event_handler(nrfx_clock_evt_type_t event)
 	switch (event) {
 #if NRF_CLOCK_HAS_XO_TUNE
 	case NRFX_CLOCK_EVT_XO_TUNED:
-		hfclkstarted_handle(dev);
+		clkstarted_handle(dev, CLOCK_CONTROL_NRF_TYPE_HFCLK);
 		break;
 	case NRFX_CLOCK_EVT_XO_TUNE_ERROR:
 	case NRFX_CLOCK_EVT_XO_TUNE_FAILED:
@@ -729,8 +723,19 @@ static void clock_event_handler(nrfx_clock_evt_type_t event)
 #else
 	/* HFCLK started should be used only if tune operation is done implicitly. */
 	case NRFX_CLOCK_EVT_HFCLK_STARTED:
-		hfclkstarted_handle(dev);
+	{
+		struct nrf_clock_control_sub_data *data =
+				get_sub_data(dev, CLOCK_CONTROL_NRF_TYPE_HFCLK);
+
+		/* Check needed due to anomaly 201:
+		 * HFCLKSTARTED may be generated twice.
+		 */
+		if (GET_STATUS(data->flags) == CLOCK_CONTROL_STATUS_STARTING) {
+			clkstarted_handle(dev, CLOCK_CONTROL_NRF_TYPE_HFCLK);
+		}
+
 		break;
+	}
 #endif
 #if NRF_CLOCK_HAS_HFCLK24M
 	case NRFX_CLOCK_EVT_HFCLK24M_STARTED:
@@ -796,6 +801,7 @@ static void hfclkaudio_init(void)
 
 static int clk_init(const struct device *dev)
 {
+	nrfx_err_t nrfx_err;
 	int err;
 	static const struct onoff_transitions transitions = {
 		.start = onoff_start,
@@ -809,7 +815,8 @@ static int clk_init(const struct device *dev)
 	IRQ_CONNECT(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
 		    nrfx_isr, nrfx_power_clock_irq_handler, 0);
 
-	if (nrfx_clock_init(clock_event_handler) != 0) {
+	nrfx_err = nrfx_clock_init(clock_event_handler);
+	if (nrfx_err != NRFX_SUCCESS) {
 		return -EIO;
 	}
 

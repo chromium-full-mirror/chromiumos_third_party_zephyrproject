@@ -15,6 +15,7 @@ LOG_MODULE_REGISTER(modem_ublox_sara_r4, CONFIG_MODEM_LOG_LEVEL);
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/device.h>
 #include <zephyr/init.h>
+#include <zephyr/posix/fcntl.h>
 
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/net_offload.h>
@@ -103,7 +104,7 @@ static struct k_work_q modem_workq;
 struct socket_read_data {
 	char *recv_buf;
 	size_t recv_buf_len;
-	struct net_sockaddr *recv_addr;
+	struct sockaddr *recv_addr;
 	uint16_t recv_read_len;
 };
 
@@ -164,7 +165,7 @@ static struct modem_context mctx;
 
 #if defined(CONFIG_DNS_RESOLVER)
 static struct zsock_addrinfo result;
-static struct net_sockaddr result_addr;
+static struct sockaddr result_addr;
 static char result_canonname[DNS_MAX_NAME_SIZE + 1];
 #endif
 
@@ -286,12 +287,12 @@ MODEM_CMD_DEFINE(on_cmd_sockwrite);
 
 /* send binary data via the +USO[ST/WR] commands */
 static ssize_t send_socket_data(void *obj,
-				const struct net_msghdr *msg,
+				const struct msghdr *msg,
 				k_timeout_t timeout)
 {
 	int ret;
 	char send_buf[sizeof("AT+USO**=###,"
-			     "!####:####:####:####:####:####:xxx.xxx.xxx.xxx!,"
+			     "!####.####.####.####.####.####.####.####!,"
 			     "#####,#########\r\n")];
 	uint16_t dst_port = 0U;
 	struct modem_socket *sock = (struct modem_socket *)obj;
@@ -299,7 +300,7 @@ static ssize_t send_socket_data(void *obj,
 		MODEM_CMD("+USOST: ", on_cmd_sockwrite, 2U, ","),
 		MODEM_CMD("+USOWR: ", on_cmd_sockwrite, 2U, ","),
 	};
-	struct net_sockaddr *dst_addr = msg->msg_name;
+	struct sockaddr *dst_addr = msg->msg_name;
 	size_t buf_len = 0;
 
 	if (!sock) {
@@ -314,12 +315,12 @@ static ssize_t send_socket_data(void *obj,
 		buf_len += msg->msg_iov[i].iov_len;
 	}
 
-	if (!sock->is_connected && sock->ip_proto != NET_IPPROTO_UDP) {
+	if (!sock->is_connected && sock->ip_proto != IPPROTO_UDP) {
 		errno = ENOTCONN;
 		return -1;
 	}
 
-	if (!dst_addr && sock->ip_proto == NET_IPPROTO_UDP) {
+	if (!dst_addr && sock->ip_proto == IPPROTO_UDP) {
 		dst_addr = &sock->dst;
 	}
 
@@ -328,7 +329,7 @@ static ssize_t send_socket_data(void *obj,
 	 * the socket in one command
 	 */
 	if (buf_len > MDM_MAX_DATA_LENGTH) {
-		if (sock->type == NET_SOCK_DGRAM) {
+		if (sock->type == SOCK_DGRAM) {
 			errno = EMSGSIZE;
 			return -1;
 		}
@@ -339,7 +340,7 @@ static ssize_t send_socket_data(void *obj,
 	/* The number of bytes written will be reported by the modem */
 	mdata.sock_written = 0;
 
-	if (sock->ip_proto == NET_IPPROTO_UDP) {
+	if (sock->ip_proto == IPPROTO_UDP) {
 		char ip_str[NET_IPV6_ADDR_LEN];
 
 		ret = modem_context_sprint_ip_addr(dst_addr, ip_str, sizeof(ip_str));
@@ -397,7 +398,7 @@ static ssize_t send_socket_data(void *obj,
 	 * if using AT+USOST. This if condition is matched with
 	 * the command selection above.
 	 */
-	if (sock->ip_proto != NET_IPPROTO_UDP) {
+	if (sock->ip_proto != IPPROTO_UDP) {
 		k_sleep(MDM_PROMPT_CMD_DELAY);
 	}
 
@@ -867,10 +868,10 @@ MODEM_CMD_DEFINE(on_cmd_dns)
 	argv[0][strlen(argv[0]) - 1] = '\0';
 
 	/* FIXME: Hard-code DNS on SARA-R4 to return IPv4 */
-	result_addr.sa_family = NET_AF_INET;
+	result_addr.sa_family = AF_INET;
 	/* skip beginning quote when parsing */
 	(void)net_addr_pton(result.ai_family, &argv[0][1],
-			    &((struct net_sockaddr_in *)&result_addr)->sin_addr);
+			    &((struct sockaddr_in *)&result_addr)->sin_addr);
 	return 0;
 }
 #endif
@@ -1375,7 +1376,7 @@ error:
  * generic socket creation function
  * which can be called in bind() or connect()
  */
-static int create_socket(struct modem_socket *sock, const struct net_sockaddr *addr)
+static int create_socket(struct modem_socket *sock, const struct sockaddr *addr)
 {
 	int ret;
 	static const struct modem_cmd cmd =
@@ -1384,14 +1385,14 @@ static int create_socket(struct modem_socket *sock, const struct net_sockaddr *a
 	uint16_t local_port = 0U, proto = 6U;
 
 	if (addr) {
-		if (addr->sa_family == NET_AF_INET6) {
-			local_port = net_ntohs(net_sin6(addr)->sin6_port);
-		} else if (addr->sa_family == NET_AF_INET) {
-			local_port = net_ntohs(net_sin(addr)->sin_port);
+		if (addr->sa_family == AF_INET6) {
+			local_port = ntohs(net_sin6(addr)->sin6_port);
+		} else if (addr->sa_family == AF_INET) {
+			local_port = ntohs(net_sin(addr)->sin_port);
 		}
 	}
 
-	if (sock->ip_proto == NET_IPPROTO_UDP) {
+	if (sock->ip_proto == IPPROTO_UDP) {
 		proto = 17U;
 	}
 
@@ -1409,7 +1410,7 @@ static int create_socket(struct modem_socket *sock, const struct net_sockaddr *a
 		goto error;
 	}
 
-	if (sock->ip_proto == NET_IPPROTO_TLS_1_2) {
+	if (sock->ip_proto == IPPROTO_TLS_1_2) {
 		char atbuf[sizeof("AT+USECPRF=#,#,#######\r")];
 
 		/* Enable socket security */
@@ -1491,7 +1492,7 @@ static int offload_close(void *obj)
 		return 0;
 	}
 
-	if (sock->is_connected || sock->ip_proto == NET_IPPROTO_UDP) {
+	if (sock->is_connected || sock->ip_proto == IPPROTO_UDP) {
 		snprintk(buf, sizeof(buf), "AT+USOCL=%d", sock->id);
 
 		ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler,
@@ -1506,8 +1507,8 @@ static int offload_close(void *obj)
 	return 0;
 }
 
-static int offload_bind(void *obj, const struct net_sockaddr *addr,
-			net_socklen_t addrlen)
+static int offload_bind(void *obj, const struct sockaddr *addr,
+			socklen_t addrlen)
 {
 	struct modem_socket *sock = (struct modem_socket *)obj;
 
@@ -1524,13 +1525,12 @@ static int offload_bind(void *obj, const struct net_sockaddr *addr,
 	return 0;
 }
 
-static int offload_connect(void *obj, const struct net_sockaddr *addr,
-			   net_socklen_t addrlen)
+static int offload_connect(void *obj, const struct sockaddr *addr,
+			   socklen_t addrlen)
 {
 	struct modem_socket *sock = (struct modem_socket *)obj;
 	int ret;
-	char buf[sizeof("AT+USOCO=###,"
-			"!####:####:####:####:####:####:xxx.xxx.xxx.xxx!,#####,#\r")];
+	char buf[sizeof("AT+USOCO=###,!####.####.####.####.####.####.####.####!,#####,#\r")];
 	uint16_t dst_port = 0U;
 	char ip_str[NET_IPV6_ADDR_LEN];
 
@@ -1555,17 +1555,17 @@ static int offload_connect(void *obj, const struct net_sockaddr *addr,
 	}
 
 	memcpy(&sock->dst, addr, sizeof(*addr));
-	if (addr->sa_family == NET_AF_INET6) {
-		dst_port = net_ntohs(net_sin6(addr)->sin6_port);
-	} else if (addr->sa_family == NET_AF_INET) {
-		dst_port = net_ntohs(net_sin(addr)->sin_port);
+	if (addr->sa_family == AF_INET6) {
+		dst_port = ntohs(net_sin6(addr)->sin6_port);
+	} else if (addr->sa_family == AF_INET) {
+		dst_port = ntohs(net_sin(addr)->sin_port);
 	} else {
 		errno = EAFNOSUPPORT;
 		return -1;
 	}
 
 	/* skip socket connect if UDP */
-	if (sock->ip_proto == NET_IPPROTO_UDP) {
+	if (sock->ip_proto == IPPROTO_UDP) {
 		errno = 0;
 		return 0;
 	}
@@ -1594,8 +1594,8 @@ static int offload_connect(void *obj, const struct net_sockaddr *addr,
 }
 
 static ssize_t offload_recvfrom(void *obj, void *buf, size_t len,
-				int flags, struct net_sockaddr *from,
-				net_socklen_t *fromlen)
+				int flags, struct sockaddr *from,
+				socklen_t *fromlen)
 {
 	struct modem_socket *sock = (struct modem_socket *)obj;
 	int ret, next_packet_size;
@@ -1624,7 +1624,7 @@ static ssize_t offload_recvfrom(void *obj, void *buf, size_t len,
 			return -1;
 		}
 
-		if (!sock->is_connected && sock->ip_proto != NET_IPPROTO_UDP) {
+		if (!sock->is_connected && sock->ip_proto != IPPROTO_UDP) {
 			errno = 0;
 			return 0;
 		}
@@ -1643,7 +1643,7 @@ static ssize_t offload_recvfrom(void *obj, void *buf, size_t len,
 	}
 
 	snprintk(sendbuf, sizeof(sendbuf), "AT+USO%s=%d,%zd",
-		 sock->ip_proto == NET_IPPROTO_UDP ? "RF" : "RD", sock->id,
+		 sock->ip_proto == IPPROTO_UDP ? "RF" : "RD", sock->id,
 		 len < next_packet_size ? len : next_packet_size);
 
 	/* socket read settings */
@@ -1679,16 +1679,16 @@ exit:
 }
 
 static ssize_t offload_sendto(void *obj, const void *buf, size_t len,
-			      int flags, const struct net_sockaddr *to,
-			      net_socklen_t tolen)
+			      int flags, const struct sockaddr *to,
+			      socklen_t tolen)
 {
-	struct net_iovec msg_iov = {
+	struct iovec msg_iov = {
 		.iov_base = (void *)buf,
 		.iov_len = len,
 	};
-	struct net_msghdr msg = {
+	struct msghdr msg = {
 		.msg_iovlen = 1,
-		.msg_name = (struct net_sockaddr *)to,
+		.msg_name = (struct sockaddr *)to,
 		.msg_namelen = tolen,
 		.msg_iov = &msg_iov,
 	};
@@ -1727,7 +1727,7 @@ static int offload_ioctl(void *obj, unsigned int request, va_list args)
 		return modem_socket_poll_update(obj, pfd, pev);
 	}
 
-	case ZVFS_F_GETFL:
+	case F_GETFL:
 		return 0;
 
 	default:
@@ -1746,12 +1746,12 @@ static ssize_t offload_write(void *obj, const void *buffer, size_t count)
 	return offload_sendto(obj, buffer, count, 0, NULL, 0);
 }
 
-static ssize_t offload_sendmsg(void *obj, const struct net_msghdr *msg, int flags)
+static ssize_t offload_sendmsg(void *obj, const struct msghdr *msg, int flags)
 {
 	ssize_t sent = 0;
 	int bkp_iovec_idx;
-	struct net_iovec bkp_iovec = {0};
-	struct net_msghdr crafted_msg = {
+	struct iovec bkp_iovec = {0};
+	struct msghdr crafted_msg = {
 		.msg_name = msg->msg_name,
 		.msg_namelen = msg->msg_namelen,
 	};
@@ -1828,7 +1828,7 @@ static ssize_t offload_sendmsg(void *obj, const struct net_msghdr *msg, int flag
 }
 
 #if defined(CONFIG_NET_SOCKETS_SOCKOPT_TLS)
-static int map_credentials(struct modem_socket *sock, const void *optval, net_socklen_t optlen)
+static int map_credentials(struct modem_socket *sock, const void *optval, socklen_t optlen)
 {
 	sec_tag_t *sec_tags = (sec_tag_t *)optval;
 	int ret = 0;
@@ -1849,12 +1849,12 @@ static int map_credentials(struct modem_socket *sock, const void *optval, net_so
 		cert = credential_next_get(tag, NULL);
 		while (cert != NULL) {
 			switch (cert->type) {
-			case ZSOCK_TLS_CREDENTIAL_CA_CERTIFICATE:
+			case TLS_CREDENTIAL_CA_CERTIFICATE:
 				id = 0;
 				break;
-			case ZSOCK_TLS_CREDENTIAL_NONE:
-			case ZSOCK_TLS_CREDENTIAL_PSK:
-			case ZSOCK_TLS_CREDENTIAL_PSK_ID:
+			case TLS_CREDENTIAL_NONE:
+			case TLS_CREDENTIAL_PSK:
+			case TLS_CREDENTIAL_PSK_ID:
 			default:
 				/* Not handled */
 				return -EINVAL;
@@ -1874,29 +1874,29 @@ static int map_credentials(struct modem_socket *sock, const void *optval, net_so
 	return 0;
 }
 #else
-static int map_credentials(struct modem_socket *sock, const void *optval, net_socklen_t optlen)
+static int map_credentials(struct modem_socket *sock, const void *optval, socklen_t optlen)
 {
 	return -EINVAL;
 }
 #endif
 
 static int offload_setsockopt(void *obj, int level, int optname,
-			      const void *optval, net_socklen_t optlen)
+			      const void *optval, socklen_t optlen)
 {
 	struct modem_socket *sock = (struct modem_socket *)obj;
 
 	int ret;
 
-	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS) && level == ZSOCK_SOL_TLS) {
+	if (IS_ENABLED(CONFIG_NET_SOCKETS_SOCKOPT_TLS) && level == SOL_TLS) {
 		switch (optname) {
-		case ZSOCK_TLS_SEC_TAG_LIST:
+		case TLS_SEC_TAG_LIST:
 			ret = map_credentials(sock, optval, optlen);
 			break;
-		case ZSOCK_TLS_HOSTNAME:
+		case TLS_HOSTNAME:
 			LOG_WRN("TLS_HOSTNAME option is not supported");
 			return -EINVAL;
-		case ZSOCK_TLS_PEER_VERIFY:
-			if (*(uint32_t *)optval != ZSOCK_TLS_PEER_VERIFY_REQUIRED) {
+		case TLS_PEER_VERIFY:
+			if (*(uint32_t *)optval != TLS_PEER_VERIFY_REQUIRED) {
 				LOG_WRN("Disabling peer verification is not supported");
 				return -EINVAL;
 			}
@@ -1933,19 +1933,19 @@ static const struct socket_op_vtable offload_socket_fd_op_vtable = {
 
 static bool offload_is_supported(int family, int type, int proto)
 {
-	if (family != NET_AF_INET &&
-	    family != NET_AF_INET6) {
+	if (family != AF_INET &&
+	    family != AF_INET6) {
 		return false;
 	}
 
-	if (type != NET_SOCK_DGRAM &&
-	    type != NET_SOCK_STREAM) {
+	if (type != SOCK_DGRAM &&
+	    type != SOCK_STREAM) {
 		return false;
 	}
 
-	if (proto != NET_IPPROTO_TCP &&
-	    proto != NET_IPPROTO_UDP &&
-	    proto != NET_IPPROTO_TLS_1_2) {
+	if (proto != IPPROTO_TCP &&
+	    proto != IPPROTO_UDP &&
+	    proto != IPPROTO_TLS_1_2) {
 		return false;
 	}
 
@@ -1953,7 +1953,7 @@ static bool offload_is_supported(int family, int type, int proto)
 }
 
 NET_SOCKET_OFFLOAD_REGISTER(ublox_sara_r4, CONFIG_NET_SOCKETS_OFFLOAD_PRIORITY,
-			    NET_AF_UNSPEC, offload_is_supported, offload_socket);
+			    AF_UNSPEC, offload_is_supported, offload_socket);
 
 #if defined(CONFIG_DNS_RESOLVER)
 /* TODO: This is a bare-bones implementation of DNS handling
@@ -1975,8 +1975,8 @@ static int offload_getaddrinfo(const char *node, const char *service,
 	(void)memset(&result, 0, sizeof(result));
 	(void)memset(&result_addr, 0, sizeof(result_addr));
 	/* FIXME: Hard-code DNS to return only IPv4 */
-	result.ai_family = NET_AF_INET;
-	result_addr.sa_family = NET_AF_INET;
+	result.ai_family = AF_INET;
+	result_addr.sa_family = AF_INET;
 	result.ai_addr = &result_addr;
 	result.ai_addrlen = sizeof(result_addr);
 	result.ai_canonname = result_canonname;
@@ -1991,21 +1991,21 @@ static int offload_getaddrinfo(const char *node, const char *service,
 
 	if (port > 0U) {
 		/* FIXME: DNS is hard-coded to return only IPv4 */
-		if (result.ai_family == NET_AF_INET) {
-			net_sin(&result_addr)->sin_port = net_htons(port);
+		if (result.ai_family == AF_INET) {
+			net_sin(&result_addr)->sin_port = htons(port);
 		}
 	}
 
 	/* check to see if node is an IP address */
 	if (net_addr_pton(result.ai_family, node,
-			  &((struct net_sockaddr_in *)&result_addr)->sin_addr)
+			  &((struct sockaddr_in *)&result_addr)->sin_addr)
 	    == 0) {
 		*res = &result;
 		return 0;
 	}
 
 	/* user flagged node as numeric host, but we failed net_addr_pton */
-	if (hints && hints->ai_flags & ZSOCK_AI_NUMERICHOST) {
+	if (hints && hints->ai_flags & AI_NUMERICHOST) {
 		return DNS_EAI_NONAME;
 	}
 
@@ -2038,7 +2038,7 @@ static const struct socket_dns_offload offload_dns_ops = {
 };
 #endif
 
-static int net_offload_dummy_get(net_sa_family_t family,
+static int net_offload_dummy_get(sa_family_t family,
 				 enum net_sock_type type,
 				 enum net_ip_protocol ip_proto,
 				 struct net_context **context)

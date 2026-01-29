@@ -173,7 +173,6 @@ arduino_spi: &spi0 {
 			disk-name = "SD";
 			status = "okay";
 		};
-
 		spi-max-frequency = <DT_FREQ_M(24)>;
 	};
 };

@@ -985,24 +985,24 @@ static int crypto_cc23x0_session_setup(const struct device *dev,
 {
 	if (ctx->flags & ~(CRYPTO_CC23_CAP)) {
 		LOG_ERR("Unsupported feature");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (algo != CRYPTO_CIPHER_ALGO_AES) {
 		LOG_ERR("Unsupported algo");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (mode != CRYPTO_CIPHER_MODE_ECB &&
 	    mode != CRYPTO_CIPHER_MODE_CTR &&
 	    mode != CRYPTO_CIPHER_MODE_CCM) {
 		LOG_ERR("Unsupported mode");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (ctx->keylen != 16U) {
 		LOG_ERR("%u key size is not supported", ctx->keylen);
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (!ctx->key.bit_stream) {
@@ -1022,13 +1022,13 @@ static int crypto_cc23x0_session_setup(const struct device *dev,
 			ctx->ops.ccm_crypt_hndlr = crypto_cc23x0_ccm_encrypt;
 			break;
 		default:
-			return -ENOTSUP;
+			return -EINVAL;
 		}
 	} else {
 		switch (mode) {
 		case CRYPTO_CIPHER_MODE_ECB:
 			LOG_ERR("ECB decryption not supported by the hardware");
-			return -ENOTSUP;
+			return -EINVAL;
 		case CRYPTO_CIPHER_MODE_CTR:
 			ctx->ops.ctr_crypt_hndlr = crypto_cc23x0_ctr;
 			break;
@@ -1036,7 +1036,7 @@ static int crypto_cc23x0_session_setup(const struct device *dev,
 			ctx->ops.ccm_crypt_hndlr = crypto_cc23x0_ccm_decrypt;
 			break;
 		default:
-			return -ENOTSUP;
+			return -EINVAL;
 		}
 	}
 

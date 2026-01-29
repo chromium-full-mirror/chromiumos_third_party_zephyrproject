@@ -68,7 +68,6 @@ struct clk_pll_characteristics {
 	uint16_t *icpll;
 	uint8_t *out;
 	uint8_t upll : 1;
-	uint32_t acr;
 };
 
 struct clk_programmable_layout {
@@ -169,7 +168,7 @@ int sam9x60_clk_register_frac_pll(pmc_registers_t *const pmc, struct k_spinlock 
 				  const struct clk_pll_characteristics *characteristics,
 				  const struct clk_pll_layout *layout, struct device **clk);
 
-int clk_register_programmable(pmc_registers_t *const pmc,
+int clk_register_programmable(pmc_registers_t *const pmc, const char *name,
 			      const struct device **parents,
 			      uint8_t num_parents, uint8_t id,
 			      const struct clk_programmable_layout *layout,

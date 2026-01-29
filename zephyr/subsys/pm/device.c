@@ -338,7 +338,6 @@ bool pm_device_on_power_domain(const struct device *dev)
 #endif
 }
 
-__boot_func
 bool pm_device_is_powered(const struct device *dev)
 {
 #ifdef CONFIG_PM_DEVICE_POWER_DOMAIN
@@ -356,7 +355,6 @@ bool pm_device_is_powered(const struct device *dev)
 #endif
 }
 
-__boot_func
 int pm_device_driver_init(const struct device *dev,
 			  pm_device_action_cb_t action_cb)
 {
@@ -390,8 +388,7 @@ int pm_device_driver_init(const struct device *dev,
 
 	/* If device will have PM device runtime enabled */
 	if (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME) &&
-	    (IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME_DEFAULT_ENABLE) ||
-	     atomic_test_bit(&pm->flags, PM_DEVICE_FLAG_RUNTIME_AUTO))) {
+	    atomic_test_bit(&pm->flags, PM_DEVICE_FLAG_RUNTIME_AUTO)) {
 		return 0;
 	}
 
@@ -408,8 +405,6 @@ int pm_device_driver_init(const struct device *dev,
 int pm_device_driver_deinit(const struct device *dev,
 			    pm_device_action_cb_t action_cb)
 {
-	ARG_UNUSED(action_cb);
-
 	struct pm_device_base *pm = dev->pm_base;
 
 	return pm->state == PM_DEVICE_STATE_SUSPENDED ||

@@ -5,7 +5,11 @@
 
 if BOARD_NUCLEO_F439ZI
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 endif # BOARD_NUCLEO_F439ZI

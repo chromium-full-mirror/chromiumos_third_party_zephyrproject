@@ -333,6 +333,12 @@ int16_t adc_siwx91x_read_data(const struct device *dev)
 		adc_temp = 0;
 	}
 
+	if (adc_temp >= 2048) {
+		adc_temp = adc_temp - 2048;
+	} else {
+		adc_temp = adc_temp + 2048;
+	}
+
 	return adc_temp;
 }
 
@@ -372,16 +378,13 @@ static void adc_siwx91x_isr(const struct device *dev)
 	}
 }
 
-#define ADC_SIWX91X_DRIVER_API(inst)                                                               \
-	static DEVICE_API(adc, adc_siwx91x_driver_api_##inst) = {                                  \
-		.channel_setup = adc_siwx91x_channel_setup,                                        \
-		.read = adc_siwx91x_read,                                                          \
-		.ref_internal = DT_INST_PROP(inst, silabs_adc_ref_voltage),                        \
-	};
+static DEVICE_API(adc, adc_siwx91x_driver_api) = {
+	.channel_setup = adc_siwx91x_channel_setup,
+	.read = adc_siwx91x_read,
+};
 
 #define SIWX91X_ADC_INIT(inst)                                                                     \
 	PINCTRL_DT_INST_DEFINE(inst);                                                              \
-	ADC_SIWX91X_DRIVER_API(inst);                                                              \
                                                                                                    \
 	static struct adc_siwx91x_chan_data adc_chan_data_##inst[DT_CHILD_NUM(DT_DRV_INST(inst))]; \
                                                                                                    \
@@ -411,7 +414,6 @@ static void adc_siwx91x_isr(const struct device *dev)
 	};                                                                                         \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(inst, adc_siwx91x_init, NULL, &adc_data_##inst, &adc_cfg_##inst,     \
-			      PRE_KERNEL_1, CONFIG_ADC_INIT_PRIORITY,                              \
-			      &adc_siwx91x_driver_api_##inst);
+			      PRE_KERNEL_1, CONFIG_ADC_INIT_PRIORITY, &adc_siwx91x_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(SIWX91X_ADC_INIT)

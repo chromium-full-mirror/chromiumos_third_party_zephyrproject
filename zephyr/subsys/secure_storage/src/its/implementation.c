@@ -56,8 +56,9 @@ static psa_status_t get_stored_data(
 		if (ret != PSA_ERROR_DOES_NOT_EXIST) {
 			log_failed_operation("retrieve", "from", ret);
 		}
+		return ret;
 	}
-	return ret;
+	return PSA_SUCCESS;
 }
 
 static psa_status_t transform_stored_data(
@@ -72,7 +73,7 @@ static psa_status_t transform_stored_data(
 						      data_size, data, data_len, create_flags);
 	if (ret != PSA_SUCCESS) {
 		log_failed_operation("transform", "from", ret);
-		return PSA_ERROR_GENERIC_ERROR;
+		return PSA_ERROR_STORAGE_FAILURE;
 	}
 	return PSA_SUCCESS;
 }
@@ -140,7 +141,7 @@ static psa_status_t store_entry(secure_storage_its_uid_t uid, size_t data_length
 						    stored_data, &stored_data_len);
 	if (ret != PSA_SUCCESS) {
 		log_failed_operation("transform", "for", ret);
-		return PSA_ERROR_GENERIC_ERROR;
+		return PSA_ERROR_STORAGE_FAILURE;
 	}
 
 	ret = secure_storage_its_store_set(uid, stored_data_len, stored_data);
@@ -160,13 +161,16 @@ psa_status_t secure_storage_its_set(secure_storage_its_caller_id_t caller_id, ps
 	if (make_its_uid(caller_id, uid, &its_uid) != PSA_SUCCESS) {
 		return PSA_ERROR_INVALID_ARGUMENT;
 	}
+	if (p_data == NULL && data_length != 0) {
+		return PSA_ERROR_INVALID_ARGUMENT;
+	}
 	if (create_flags & ~SECURE_STORAGE_ALL_CREATE_FLAGS) {
 		return PSA_ERROR_NOT_SUPPORTED;
 	}
 	if (data_length > CONFIG_SECURE_STORAGE_ITS_MAX_DATA_SIZE) {
 		LOG_DBG("Passed data length (%zu) exceeds maximum allowed (%u).",
 			data_length, CONFIG_SECURE_STORAGE_ITS_MAX_DATA_SIZE);
-		return PSA_ERROR_INVALID_ARGUMENT;
+		return PSA_ERROR_INSUFFICIENT_STORAGE;
 	}
 
 	if (keep_stored_entry(its_uid, data_length, p_data, create_flags, &ret)) {
@@ -189,10 +193,14 @@ psa_status_t secure_storage_its_get(secure_storage_its_caller_id_t caller_id, ps
 	if (make_its_uid(caller_id, uid, &its_uid) != PSA_SUCCESS) {
 		return PSA_ERROR_INVALID_ARGUMENT;
 	}
+	if ((p_data == NULL && data_size != 0) || p_data_length == NULL) {
+		return PSA_ERROR_INVALID_ARGUMENT;
+	}
 	if (data_size == 0) {
 		*p_data_length = 0;
 		return PSA_SUCCESS;
 	}
+
 
 	ret = get_stored_data(its_uid, stored_data, &stored_data_len);
 	if (ret != PSA_SUCCESS) {
@@ -231,6 +239,9 @@ psa_status_t secure_storage_its_get_info(secure_storage_its_caller_id_t caller_i
 	if (make_its_uid(caller_id, uid, &its_uid) != PSA_SUCCESS) {
 		return PSA_ERROR_INVALID_ARGUMENT;
 	}
+	if (p_info == NULL) {
+		return PSA_ERROR_INVALID_ARGUMENT;
+	}
 
 	ret = get_entry(its_uid, sizeof(data), data, &p_info->size, &p_info->flags);
 	if (ret == PSA_SUCCESS) {
@@ -257,9 +268,7 @@ psa_status_t secure_storage_its_remove(secure_storage_its_caller_id_t caller_id,
 		return PSA_ERROR_NOT_PERMITTED;
 	}
 	/* Allow overwriting corrupted entries as well to not be stuck with them forever. */
-	if (ret == PSA_SUCCESS ||
-	    ret == PSA_ERROR_STORAGE_FAILURE ||
-	    ret == PSA_ERROR_GENERIC_ERROR) {
+	if (ret == PSA_SUCCESS || ret == PSA_ERROR_STORAGE_FAILURE) {
 		ret = secure_storage_its_store_remove(its_uid);
 		if (ret != PSA_SUCCESS) {
 			log_failed_operation("remove", "from", ret);

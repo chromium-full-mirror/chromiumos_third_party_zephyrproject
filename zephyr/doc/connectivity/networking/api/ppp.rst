@@ -25,13 +25,13 @@ PPP support must be enabled at compile time by setting option
 The PPP implementation supports only these protocols:
 
 * LCP (Link Control Protocol,
-  :rfc:`1661`)
+  `RFC1661 <https://tools.ietf.org/html/rfc1661>`__)
 * HDLC (High-level data link control,
-  :rfc:`1662`)
+  `RFC1662 <https://tools.ietf.org/html/rfc1662>`__)
 * IPCP (IP Control Protocol,
-  :rfc:`1332`)
+  `RFC1332 <https://tools.ietf.org/html/rfc1332>`__)
 * IPV6CP (IPv6 Control Protocol,
-  :rfc:`5072`)
+  `RFC5072 <https://tools.ietf.org/html/rfc5072>`__)
 
 For using PPP with a cellular modem, see :zephyr:code-sample:`cellular-modem` sample
 for additional information.

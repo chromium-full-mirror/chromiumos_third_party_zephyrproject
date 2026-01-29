@@ -11,7 +11,6 @@
 				compatible = "zephyr,power-state";
 				power-state-name = "suspend-to-idle";
 			};
-
 			state1: state1 {
 				compatible = "zephyr,power-state";
 				power-state-name = "standby";

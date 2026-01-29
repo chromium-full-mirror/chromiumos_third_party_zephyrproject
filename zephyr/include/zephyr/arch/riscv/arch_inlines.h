@@ -11,6 +11,7 @@
 
 #include <zephyr/kernel_structs.h>
 #include "csr.h"
+#include "reg.h"
 
 static ALWAYS_INLINE uint32_t arch_proc_id(void)
 {

@@ -23,6 +23,9 @@
 
 LOG_MODULE_DECLARE(INA2XX, CONFIG_SENSOR_LOG_LEVEL);
 
+/** @brief Calibration scaling value (scaled by 10^-5) */
+#define INA226_CAL_SCALING		512ULL
+
 INA2XX_REG_DEFINE(ina226_config, INA226_REG_CONFIG, 16);
 INA2XX_REG_DEFINE(ina226_cal, INA226_REG_CALIB, 16);
 INA2XX_REG_DEFINE(ina226_id, INA226_REG_MANUFACTURER_ID, 16);
@@ -52,15 +55,9 @@ static DEVICE_API(sensor, ina226_driver_api) = {
 		(DT_INST_ENUM_IDX(inst, vshunt_conversion_time_us) << 3) | \
 		(DT_INST_ENUM_IDX(inst, operating_mode))
 
-/** @brief
- * Formula according to https://www.ti.com/lit/ds/sbos743b/sbos743b.pdf, p.15:
- * CAL = 0.00512 / (Current_LSB × RSHUNT)
- * 0.00512 scaled by 10^12, countering the micro ohm (10^6) and micro ampere (10^6)
- * value scaling in the denominator
- */
-#define INA226_DT_CAL_DENOMINATOR(inst) \
-	(DT_INST_PROP(inst, current_lsb_microamps) * DT_INST_PROP(inst, rshunt_micro_ohms))
-#define INA226_DT_CAL(inst) DIV_ROUND_CLOSEST(5120000000ULL, INA226_DT_CAL_DENOMINATOR(inst))
+#define INA226_DT_CAL(inst)                                          \
+	INA226_CAL_SCALING * DT_INST_PROP(inst, current_lsb_microamps) * \
+	DT_INST_PROP(inst, rshunt_micro_ohms) / 10000000ULL
 
 #define INA226_DRIVER_INIT(inst)                                  \
 	static struct ina2xx_data ina226_data_##inst;                 \

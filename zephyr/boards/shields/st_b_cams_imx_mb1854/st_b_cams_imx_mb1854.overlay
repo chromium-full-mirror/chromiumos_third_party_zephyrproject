@@ -47,8 +47,11 @@
 	};
 };
 
-/* Power the camera module */
-&csi_gpio1_hog {
-	status = "okay";
-	output-high;
+&csi_connector {
+	/* Power the camera module */
+	en-module-gpios {
+		gpio-hog;
+		gpios = <CSI_IO1 GPIO_ACTIVE_HIGH>;
+		output-high;
+	};
 };

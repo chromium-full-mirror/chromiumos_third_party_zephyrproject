@@ -41,5 +41,4 @@ function(zephyr_nanopb_sources target)
 
   add_custom_target(${gen_target_name} DEPENDS ${proto_hdrs})
   add_dependencies(nanopb_generated_headers ${gen_target_name})
-  add_dependencies(${target} nanopb_generated_headers)
 endfunction()

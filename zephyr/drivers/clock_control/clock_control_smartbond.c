@@ -36,9 +36,7 @@ struct lpc_clock_state {
 	.rc32k_freq = DT_PROP(DT_NODELABEL(rc32k), clock_frequency),
 };
 
-#define CALIBRATION_INTERVAL(clk) DT_PROP(DT_NODELABEL(clk), calibration_interval)
-#define RCX_CALIBRATION_INTERVAL CALIBRATION_INTERVAL(rcx)
-#define RC32K_CALIBRATION_INTERVAL CALIBRATION_INTERVAL(rc32k)
+#define CALIBRATION_INTERVAL CONFIG_SMARTBOND_LP_OSC_CALIBRATION_INTERVAL
 
 #ifdef CONFIG_TIMER_READS_ITS_FREQUENCY_AT_RUNTIME
 extern unsigned int z_clock_hw_cycles_per_sec;
@@ -61,8 +59,6 @@ static uint8_t pll_requests;
 
 static void calibration_work_cb(struct k_work *work)
 {
-	uint32_t interval;
-
 	if (lpc_clock_state.rcx_started) {
 		da1469x_clock_lp_rcx_calibrate();
 		lpc_clock_state.rcx_ready = true;
@@ -85,14 +81,8 @@ static void calibration_work_cb(struct k_work *work)
 		LOG_DBG("RC32K calibration done, RC32K freq: %d",
 			(int)lpc_clock_state.rc32k_freq);
 	}
-	if (RCX_CALIBRATION_INTERVAL != 0 && RC32K_CALIBRATION_INTERVAL != 0) {
-		interval = MIN(RCX_CALIBRATION_INTERVAL, RC32K_CALIBRATION_INTERVAL);
-	} else if (RCX_CALIBRATION_INTERVAL != 0) {
-		interval = RCX_CALIBRATION_INTERVAL;
-	} else {
-		interval = RC32K_CALIBRATION_INTERVAL;
-	}
-	k_work_schedule(&calibration_work, K_MSEC(interval));
+	k_work_schedule(&calibration_work,
+			K_MSEC(1000 * CALIBRATION_INTERVAL));
 #ifdef CONFIG_TIMER_READS_ITS_FREQUENCY_AT_RUNTIME
 	switch (smartbond_source_clock(SMARTBOND_CLK_LP_CLK)) {
 	case SMARTBOND_CLK_RCX:
@@ -129,13 +119,10 @@ static void smartbond_start_rc32k(void)
 		CRG_TOP->CLK_RC32K_REG |= CRG_TOP_CLK_RC32K_REG_RC32K_ENABLE_Msk;
 	}
 	lpc_clock_state.rc32k_started = true;
-	if (RC32K_CALIBRATION_INTERVAL == 0) {
-		lpc_clock_state.rc32k_ready = true;
-	}
 	if (!lpc_clock_state.rc32k_ready) {
 		if (!k_work_is_pending(&calibration_work.work)) {
 			k_work_schedule(&calibration_work,
-					K_MSEC(RC32K_CALIBRATION_INTERVAL));
+					K_MSEC(1000 * CALIBRATION_INTERVAL));
 		}
 	}
 }
@@ -143,14 +130,14 @@ static void smartbond_start_rc32k(void)
 static void smartbond_start_rcx(void)
 {
 	if (!lpc_clock_state.rcx_started) {
-		lpc_clock_state.rcx_ready = RCX_CALIBRATION_INTERVAL == 0;
+		lpc_clock_state.rcx_ready = false;
 		da1469x_clock_lp_rcx_enable();
 		lpc_clock_state.rcx_started = true;
 	}
 	if (!lpc_clock_state.rcx_ready) {
 		if (!k_work_is_pending(&calibration_work.work)) {
 			k_work_schedule(&calibration_work,
-					K_MSEC(RCX_CALIBRATION_INTERVAL));
+					K_MSEC(1000 * CALIBRATION_INTERVAL));
 		}
 	}
 }

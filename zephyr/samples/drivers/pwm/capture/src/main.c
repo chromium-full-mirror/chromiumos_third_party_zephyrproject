@@ -47,8 +47,8 @@ int main(void)
 			width);
 
 		printk("{period: %f Hz duty: %f}\n",
-			(double)tim_clk_cycles / (double)period,
-			(double)(width * 100) / (double)period);
+			(float)tim_clk_cycles / (float)period,
+			(float)(width * 100) / (float)period);
 	}
 
 	return 0;

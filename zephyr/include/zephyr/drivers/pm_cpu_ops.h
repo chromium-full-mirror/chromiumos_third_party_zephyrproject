@@ -35,7 +35,7 @@ extern "C" {
  * This call is intended for use in hotplug. A core that is powered down by
  * cpu_off can only be powered up again in response to a cpu_on
  *
- * @return The call does not return when successful
+ * @retval The call does not return when successful
  * @retval -ENOTSUP If the operation is not supported
  */
 int pm_cpu_off(void);
@@ -50,7 +50,7 @@ int pm_cpu_off(void);
  * @param cpuid CPU id to power on
  * @param entry_point Address at which the core must commence execution
  *
- * @return 0 on success, a negative errno otherwise
+ * @retval 0 on success, a negative errno otherwise
  * @retval -ENOTSUP If the operation is not supported
  */
 int pm_cpu_on(unsigned long cpuid, uintptr_t entry_point);
@@ -62,7 +62,7 @@ int pm_cpu_on(unsigned long cpuid, uintptr_t entry_point);
  *
  * @param reset system reset type, cold or warm.
  *
- * @return 0 on success, a negative errno otherwise
+ * @retval 0 on success, a negative errno otherwise
  */
 int pm_system_reset(unsigned char reset);
 

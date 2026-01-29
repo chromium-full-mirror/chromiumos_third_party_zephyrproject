@@ -1,5 +1,4 @@
-# Copyright (c) 2025, Intel Corporation
-# SPDX-License-Identifier: Apache-2.0
+# Copyright: (c)  2025, Intel Corporation
 # Author: Arkadiusz Cholewinski <arkadiuszx.cholewinski@intel.com>
 
 import csv
@@ -304,7 +303,7 @@ class PowerShield(PowerMonitor):
         while True:
             # Read the first byte
             first_byte = self.handler.read_bytes(1)
-            if len(first_byte) < 1 or self.acqComplete:
+            if len(first_byte) < 1 or self.acqComplete:  # Exit conditions
                 logging.info("Stopping data acquisition...")
                 return
 
@@ -409,6 +408,7 @@ class PowerShield(PowerMonitor):
         :return: None
         """
         command = "start"
+        self.acqComplete = False
         self.__send_command(command)
 
         raw_to_file_Thread = threading.Thread(
@@ -420,10 +420,11 @@ class PowerShield(PowerMonitor):
         raw_to_file_Thread.join()
 
     def __raw_to_file(self, outputFilePath: str):
+        # Open a CSV file for writing
         with open(outputFilePath, 'w', newline='') as outputFile:
             writer = csv.writer(outputFile)
             while True:
-                if self.dataQueue.empty() and self.acqComplete:
+                if self.dataQueue.empty() and bool(self.acqComplete):
                     outputFile.close()
                     break
                 if not self.dataQueue.empty():
@@ -456,6 +457,7 @@ class PowerShield(PowerMonitor):
 
     def get_data(self, unit: str = PowerShieldConf.MeasureUnit.RAW_DATA):
         if self.acqComplete:
+            # Open the CSV file
             with open(self.power_shield_conf.output_file) as file:
                 csv_reader = csv.reader(file)
                 for row in csv_reader:

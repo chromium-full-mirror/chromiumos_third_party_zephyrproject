@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, 2023, 2025 NXP
+ * Copyright 2019,2023 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,7 +19,6 @@
 		led0 = &green_led;
 		sw0 = &user_button;
 		mcuboot-button0 = &user_button;
-		rtc = &counter_rtc;
 	};
 
 	chosen {
@@ -186,9 +185,5 @@ zephyr_udc0: &usb1 {
 };
 
 &systick {
-	status = "okay";
-};
-
-&counter_rtc {
 	status = "okay";
 };

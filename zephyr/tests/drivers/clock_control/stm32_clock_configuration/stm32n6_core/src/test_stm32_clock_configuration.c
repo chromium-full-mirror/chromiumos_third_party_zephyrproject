@@ -5,7 +5,6 @@
  */
 
 #include <soc.h>
-#include <stm32_bitops.h>
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 #include <zephyr/ztest.h>
 
@@ -107,8 +106,7 @@ ZTEST(stm32n6_clock_core_config, test_pll_src)
 ZTEST(stm32n6_clock_core_config, test_hse_css)
 {
 	/* there is no function to read CSS status, so read directly from the SoC register */
-	bool css_enabled = stm32_reg_read_bits(&RCC->HSECFGR, RCC_HSECFGR_HSECSSON) ==
-			   RCC_HSECFGR_HSECSSON;
+	bool css_enabled = (READ_BIT(RCC->HSECFGR, RCC_HSECFGR_HSECSSON) == 1U);
 
 	if (IS_ENABLED(STM32_HSE_CSS)) {
 		zassert_true(css_enabled, "HSE CSS is not enabled");
@@ -122,8 +120,7 @@ ZTEST(stm32n6_clock_core_config, test_hse_css)
 ZTEST(stm32n6_clock_core_config, test_lse_css)
 {
 	/* there is no function to read CSS status, so read directly from the SoC register */
-	bool css_enabled = stm32_reg_read_bits(&RCC->LSECFGR, RCC_LSECFGR_LSECSSON) ==
-			   RCC_LSECFGR_LSECSSON;
+	bool css_enabled = (READ_BIT(RCC->LSECFGR, RCC_LSECFGR_LSECSSON) == 1U);
 
 	if (IS_ENABLED(STM32_LSE_CSS)) {
 		zassert_true(css_enabled, "LSE CSS is not enabled");

@@ -6,7 +6,6 @@ toolchain:
 supported:
   - scsi
   - ufs
-  - mbox
 testing:
   ignore_tags:
     - net

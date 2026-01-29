@@ -2,9 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from west.commands import WestCommand
-
 from run_common import add_parser_common, do_run_common
+from west.commands import WestCommand
 
 EXPORT_DESCRIPTION = '''\
 Run RobotFramework test suites with a runner of choice.

@@ -4,7 +4,7 @@ type: mcu
 arch: arm
 toolchain:
   - zephyr
-ram: 256
+ram: 640
 flash: 2048
 supported:
   - arduino_gpio

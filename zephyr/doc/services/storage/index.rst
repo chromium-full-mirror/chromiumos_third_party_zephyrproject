@@ -6,14 +6,11 @@ Storage
 .. toctree::
    :maxdepth: 1
 
-   disk/access.rst
-   fcb/fcb.rst
-   file_system/index.rst
-   flash_map/flash_map.rst
-   nvmem/index.rst
    nvs/nvs.rst
-   retention/index.rst
+   zms/zms.rst
+   disk/access.rst
+   flash_map/flash_map.rst
+   fcb/fcb.rst
+   stream/stream_flash.rst
    secure_storage/index.rst
    settings/index.rst
-   stream/stream_flash.rst
-   zms/zms.rst

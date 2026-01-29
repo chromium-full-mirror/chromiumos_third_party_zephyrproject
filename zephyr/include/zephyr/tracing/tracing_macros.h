@@ -6,12 +6,6 @@
 #ifndef ZEPHYR_INCLUDE_TRACING_TRACING_MACROS_H_
 #define ZEPHYR_INCLUDE_TRACING_TRACING_MACROS_H_
 
-/**
- * @file
- * @ingroup subsys_tracing_macros
- * @brief Header file for tracing macros.
- */
-
 #include <zephyr/sys/util_macro.h>
 
 #if !defined(CONFIG_TRACING) && !defined(__DOXYGEN__)
@@ -31,12 +25,9 @@
 #else
 
 /**
- * @brief Compile-time helpers to emit tracing events.
+ * @brief Tracing utility macros
  * @defgroup subsys_tracing_macros Tracing utility macros
  * @ingroup subsys_tracing
- *
- * @note When @kconfig{CONFIG_TRACING} is disabled, all macros compile to no-ops, preserving call
- *       sites with zero runtime cost.
  * @{
  */
 

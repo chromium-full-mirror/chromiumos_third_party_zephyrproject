@@ -1,5 +1,5 @@
 #
-# Copyright 2019, 2025 NXP
+# Copyright (c) 2019, NXP
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -24,5 +24,4 @@ supported:
   - i2c
   - spi
   - usb_device
-  - rtc
 vendor: nxp

@@ -26,12 +26,15 @@ import sys
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-mypy = ['mypy', '--package=runners']
-pytest = ['pytest'] + sys.argv[1:]
+mypy = [sys.executable, '-m', 'mypy', f'--config-file={here}/mypy.ini',
+        '--package', 'runners']
+pytest = [sys.executable, '-m', 'pytest'] + sys.argv[1:]
 
-for cmd in [mypy, pytest]:
-    command = [sys.executable, '-m'] + cmd
-    print(f"Running {cmd[0]} in cwd '{here}':\n\t" +
-          ' '.join(shlex.quote(s) for s in command),
-          flush=True)
-    subprocess.run(command, check=True, cwd=here)
+print(f'Running mypy from {here}:\n\t' +
+      ' '.join(shlex.quote(s) for s in mypy),
+      flush=True)
+subprocess.run(mypy, check=True, cwd=here)
+print(f'Running pytest from {here}:\n\t' +
+      ' '.join(shlex.quote(s) for s in pytest),
+      flush=True)
+subprocess.run(pytest, check=True, cwd=here)

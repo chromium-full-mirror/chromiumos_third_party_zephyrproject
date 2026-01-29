@@ -31,7 +31,8 @@ struct mctp_i2c_gpio_controller_cb {
 	uint8_t index;
 };
 
-/** INTERNAL_HIDDEN @endcond */
+/** @endcond INTERNAL_HIDDEN */
+
 
 /**
  * @brief An MCTP binding for Zephyr's I2C interface using GPIO
@@ -64,7 +65,7 @@ struct mctp_binding_i2c_gpio_controller {
 	struct mpsc rx_q;
 	struct mctp_i2c_gpio_controller_cb *inflight_rx;
 
-	/** INTERNAL_HIDDEN @endcond */
+	/** @endcond INTERNAL_HIDDEN */
 };
 
 /** @cond INTERNAL_HIDDEN */
@@ -100,7 +101,7 @@ int mctp_i2c_gpio_controller_tx(struct mctp_binding *binding, struct mctp_pktbuf
 				(,), _name)                                                        \
 	}
 
-/** INTERNAL_HIDDEN @endcond */
+/** @endcond INTERNAL_HIDDEN */
 
 /**
  * @brief Define a MCTP bus binding for I2C controller with GPIO

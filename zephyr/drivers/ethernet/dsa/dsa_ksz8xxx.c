@@ -1190,7 +1190,8 @@ static struct dsa_api dsa_api_f = {
 #if defined(CONFIG_DSA_SPI)
 #define DSA_SPI_BUS_CONFIGURATION(n)					\
 	.spi = SPI_DT_SPEC_INST_GET(n,					\
-			SPI_WORD_SET(8))
+			SPI_WORD_SET(8),				\
+			0U)
 #else
 #define DSA_SPI_BUS_CONFIGURATION(n)
 #endif

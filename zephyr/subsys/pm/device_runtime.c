@@ -2,7 +2,6 @@
  * Copyright (c) 2018 Intel Corporation.
  * Copyright (c) 2021 Nordic Semiconductor ASA.
  * Copyright (c) 2025 HubbleNetwork.
- * Copyright (c) 2025 NXP.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -160,20 +159,16 @@ static int get_sync_locked(const struct device *dev)
 	uint32_t flags = pm->base.flags;
 
 	if (pm->base.usage == 0) {
-		if ((flags & BIT(PM_DEVICE_FLAG_PD_CLAIMED)) == 0) {
+		if (flags & BIT(PM_DEVICE_FLAG_PD_CLAIMED)) {
 			const struct device *domain = PM_DOMAIN(&pm->base);
 
-			if (domain != NULL) {
-				if ((domain->pm_base->flags & BIT(PM_DEVICE_FLAG_ISR_SAFE)) != 0) {
-					ret = pm_device_runtime_get(domain);
-					if (ret < 0) {
-						return ret;
-					}
-					/* Power domain successfully claimed */
-					pm->base.flags |= BIT(PM_DEVICE_FLAG_PD_CLAIMED);
-				} else {
-					return -EWOULDBLOCK;
+			if (domain->pm_base->flags & BIT(PM_DEVICE_FLAG_ISR_SAFE)) {
+				ret = pm_device_runtime_get(domain);
+				if (ret < 0) {
+					return ret;
 				}
+			} else {
+				return -EWOULDBLOCK;
 			}
 		}
 
@@ -290,7 +285,6 @@ int pm_device_runtime_get(const struct device *dev)
 		pm->base.usage--;
 		if (domain != NULL) {
 			(void)pm_device_runtime_put(domain);
-			atomic_clear_bit(&dev->pm_base->flags, PM_DEVICE_FLAG_PD_CLAIMED);
 		}
 		goto unlock;
 	}
@@ -337,7 +331,6 @@ static int put_sync_locked(const struct device *dev)
 
 			if (domain->pm_base->flags & BIT(PM_DEVICE_FLAG_ISR_SAFE)) {
 				ret = put_sync_locked(domain);
-				pm->base.flags &= ~BIT(PM_DEVICE_FLAG_PD_CLAIMED);
 			} else {
 				ret = -EWOULDBLOCK;
 			}
@@ -408,15 +401,10 @@ int pm_device_runtime_auto_enable(const struct device *dev)
 {
 	struct pm_device_base *pm = dev->pm_base;
 
-	if (!pm) {
+	/* No action needed if PM_DEVICE_FLAG_RUNTIME_AUTO is not enabled */
+	if (!pm || !atomic_test_bit(&pm->flags, PM_DEVICE_FLAG_RUNTIME_AUTO)) {
 		return 0;
 	}
-
-	if (!IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME_DEFAULT_ENABLE) &&
-	    !atomic_test_bit(&pm->flags, PM_DEVICE_FLAG_RUNTIME_AUTO)) {
-		return 0;
-	}
-
 	return pm_device_runtime_enable(dev);
 }
 

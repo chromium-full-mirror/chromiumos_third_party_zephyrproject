@@ -7,7 +7,6 @@
 / {
 	fstab {
 		compatible = "zephyr,fstab";
-
 		ext2fs1: ext2fs1 {
 			compatible = "zephyr,fstab,ext2";
 			automount;

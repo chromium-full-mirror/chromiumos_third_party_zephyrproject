@@ -20,7 +20,7 @@
 #warning "Missing clock 48MHz"
 #endif
 
-#ifndef STM32_PLLI2S_ENABLED
+#if !DT_HAS_COMPAT_STATUS_OKAY(st_stm32f411_plli2s_clock)
 #warning "Missing clock I2S PLL clock"
 #endif
 

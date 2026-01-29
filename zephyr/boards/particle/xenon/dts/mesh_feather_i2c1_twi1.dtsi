@@ -33,3 +33,4 @@
 	pinctrl-1 = <&i2c1_sleep>;
 	pinctrl-names = "default", "sleep";
 };
+

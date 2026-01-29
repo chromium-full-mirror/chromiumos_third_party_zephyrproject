@@ -5,6 +5,7 @@
  */
 
 #include <zephyr/kernel.h>
+#include <zephyr/kernel.h>
 #include <zephyr/devicetree/clocks.h>
 #include <zephyr/drivers/clock_control/nrf_clock_control.h>
 

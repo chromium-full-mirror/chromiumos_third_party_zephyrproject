@@ -155,6 +155,9 @@ SECTIONS {
  * just dump it in an unreadable area at the top of memory.
  */
 #include <zephyr/linker/intlist.ld>
+
+#ifdef CONFIG_LLEXT
 #include <zephyr/linker/llext-sections.ld>
+#endif
 
 } /* SECTIONS */

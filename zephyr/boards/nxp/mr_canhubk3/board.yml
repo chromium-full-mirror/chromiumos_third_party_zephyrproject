@@ -4,5 +4,3 @@ board:
   vendor: nxp
   socs:
     - name: s32k344
-      variants:
-        - name: mcuboot

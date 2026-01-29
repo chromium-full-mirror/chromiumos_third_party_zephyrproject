@@ -66,7 +66,7 @@ static void aspeed_cache_init(void)
 }
 
 /**
- * @brief get aligned address and the number of cacheline to be invalidated
+ * @brief get aligned address and the number of cachline to be invalied
  * @param [IN] addr - start address to be invalidated
  * @param [IN] size - size in byte
  * @param [OUT] p_aligned_addr - pointer to the cacheline aligned address variable

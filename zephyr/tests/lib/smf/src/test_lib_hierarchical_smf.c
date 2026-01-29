@@ -10,19 +10,33 @@
 /*
  * Hierarchical Test Transition:
  *
- * PARENT_AB_ENTRY --> A_ENTRY --> A_RUN --> PARENT_AB_RUN ---|
- *                                                            |
- * |----------------------------------------------------------|
- * |
- * |--> B_ENTRY --> B_RUN --> B_EXIT --> PARENT_AB_EXIT ------|
- *                                                            |
- * |----------------------------------------------------------|
- * |
- * |--> PARENT_C_ENTRY --> C_ENTRY --> C_RUN --> C_EXIT ------|
- *                                                            |
- * |----------------------------------------------------------|
- * |
- * |--> PARENT_C_EXIT --> D_ENTRY
+ *	PARENT_AB_ENTRY --> A_ENTRY --> A_RUN --> PARENT_AB_RUN ---|
+ *	                                                           |
+ *	|----------------------------------------------------------|
+ *	|
+ *	|--> B_ENTRY --> B_RUN --> B_EXIT --> PARENT_AB_EXIT ------|
+ *	                                                           |
+ *	|----------------------------------------------------------|
+ *	|
+ *	|--> PARENT_C_ENTRY --> C_ENTRY --> C_RUN --> C_EXIT ------|
+ *	                                                           |
+ *      |----------------------------------------------------------|
+ *      |
+ *	|--> PARENT_C_EXIT
+ */
+
+/*
+ * Hierarchical 10 Ancestor State Test Transition:
+ *
+ *	P10_ENTRY --> P09_ENTRY --> ... -- P02_ENTRY --> P01_ENTRY --|
+ *                                                                   |
+ *      |------------------------------------------------------------|
+ *      |
+ *      |--> A_ENTRY --> A_RUN --> P01_RUN --> P02_RUN --> P03_RUN --|
+ *                                                                   |
+ *      |------------------------------------------------------------|
+ *      |
+ *      |--> ... --> P09_RUN --> P10_RUN --> B_ENTRY -->
  */
 
 #define TEST_OBJECT(o) ((struct test_object *)o)
@@ -101,10 +115,6 @@ static struct test_object {
 
 static void parent_ab_entry(void *obj)
 {
-	zassert_equal(
-		smf_get_current_executing_state(SMF_CTX(obj)), &test_states[PARENT_AB],
-		"Fail to get the currently-executing state at entry. Expected: State PARENT_AB");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx = 0;
@@ -120,10 +130,6 @@ static void parent_ab_entry(void *obj)
 
 static enum smf_state_result parent_ab_run(void *obj)
 {
-	zassert_equal(
-		smf_get_current_executing_state(SMF_CTX(obj)), &test_states[PARENT_AB],
-		"Fail to get the currently-executing state at run. Expected: State PARENT_AB");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -143,10 +149,6 @@ static enum smf_state_result parent_ab_run(void *obj)
 
 static void parent_ab_exit(void *obj)
 {
-	zassert_equal(
-		smf_get_current_executing_state(SMF_CTX(obj)), &test_states[PARENT_AB],
-		"Fail to get the currently-executing state at exit. Expected: State PARENT_AB");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -163,12 +165,6 @@ static void parent_ab_exit(void *obj)
 
 static void parent_c_entry(void *obj)
 {
-	zassert_equal(
-		smf_get_current_executing_state(SMF_CTX(obj)), &test_states[PARENT_C],
-		"Fail to get the currently-executing state at entry. Expected: State PARENT_C");
-	zassert_equal(smf_get_current_leaf_state(SMF_CTX(obj)), &test_states[STATE_C],
-		      "Fail to get the current leaf state at entry. Expected: State C");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -186,12 +182,6 @@ static enum smf_state_result parent_c_run(void *obj)
 
 static void parent_c_exit(void *obj)
 {
-	zassert_equal(
-		smf_get_current_executing_state(SMF_CTX(obj)), &test_states[PARENT_C],
-		"Fail to get the currently-executing state at exit. Expected: State PARENT_C");
-	zassert_equal(smf_get_current_leaf_state(SMF_CTX(obj)), &test_states[STATE_C],
-		      "Fail to get the current leaf state at exit. Expected: State C");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -202,9 +192,6 @@ static void parent_c_exit(void *obj)
 
 static void state_a_entry(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_A],
-		      "Fail to get the currently-executing state at entry. Expected: State A");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -221,9 +208,6 @@ static void state_a_entry(void *obj)
 
 static enum smf_state_result state_a_run(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_A],
-		      "Fail to get the currently-executing state at run. Expected: State A");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -238,9 +222,6 @@ static enum smf_state_result state_a_run(void *obj)
 
 static void state_a_exit(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_A],
-		      "Fail to get the currently-executing state at exit. Expected: State A");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -251,9 +232,6 @@ static void state_a_exit(void *obj)
 
 static void state_b_entry(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_B],
-		      "Fail to get the currently-executing state at entry. Expected: State B");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -264,9 +242,6 @@ static void state_b_entry(void *obj)
 
 static enum smf_state_result state_b_run(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_B],
-		      "Fail to get the currently-executing state at run. Expected: State B");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -286,9 +261,6 @@ static enum smf_state_result state_b_run(void *obj)
 
 static void state_b_exit(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_B],
-		      "Fail to get the currently-executing state at exit. Expected: State B");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -299,9 +271,6 @@ static void state_b_exit(void *obj)
 
 static void state_c_entry(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_C],
-		      "Fail to get the currently-executing state at entry. Expected: State C");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -312,9 +281,6 @@ static void state_c_entry(void *obj)
 
 static enum smf_state_result state_c_run(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_C],
-		      "Fail to get the currently-executing state at run. Expected: State C");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -328,9 +294,6 @@ static enum smf_state_result state_c_run(void *obj)
 
 static void state_c_exit(void *obj)
 {
-	zassert_equal(smf_get_current_executing_state(SMF_CTX(obj)), &test_states[STATE_C],
-		      "Fail to get the currently-executing state at exit. Expected: State C");
-
 	struct test_object *o = TEST_OBJECT(obj);
 
 	o->tv_idx++;
@@ -381,10 +344,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = NONE;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}
@@ -397,10 +360,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = PARENT_ENTRY;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}
@@ -414,10 +377,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = PARENT_RUN;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}
@@ -431,10 +394,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = PARENT_EXIT;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}
@@ -448,10 +411,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = ENTRY;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}
@@ -465,10 +428,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = RUN;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}
@@ -482,10 +445,10 @@ ZTEST(smf_tests, test_smf_hierarchical)
 
 	test_obj.transition_bits = 0;
 	test_obj.terminate = EXIT;
-	smf_set_initial(SMF_CTX(&test_obj), &test_states[STATE_A]);
+	smf_set_initial((struct smf_ctx *)&test_obj, &test_states[STATE_A]);
 
 	for (int i = 0; i < SMF_RUN; i++) {
-		if (smf_run_state(SMF_CTX(&test_obj)) < 0) {
+		if (smf_run_state((struct smf_ctx *)&test_obj) < 0) {
 			break;
 		}
 	}

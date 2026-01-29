@@ -76,7 +76,10 @@ SECTIONS
 	{
 
 #include <zephyr/linker/rel-sections.ld>
+
+#ifdef CONFIG_LLEXT
 #include <zephyr/linker/llext-sections.ld>
+#endif
 
     /DISCARD/ :
 	{
@@ -337,8 +340,6 @@ SECTIONS
 	*(.init)
 	*(.fini)
 	*(.eini)
-
-#include <snippets-text-sections.ld>
 
 #ifndef CONFIG_LINKER_USE_PINNED_SECTION
 #include <zephyr/linker/kobject-text.ld>

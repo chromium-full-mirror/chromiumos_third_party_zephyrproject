@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 add_subdirectory(core)
-add_subdirectory(custom)
 
 zephyr_syscall_header(${ZEPHYR_BASE}/include/zephyr/arch/riscv/error.h)
 

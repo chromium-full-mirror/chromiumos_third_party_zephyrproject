@@ -9,7 +9,6 @@
 #include <fsl_rtc.h>
 #include "fsl_power.h"
 #include <zephyr/logging/log.h>
-#include <soc.h>
 
 LOG_MODULE_REGISTER(mcux_rtc, CONFIG_COUNTER_LOG_LEVEL);
 
@@ -255,7 +254,7 @@ static DEVICE_API(counter, mcux_rtc_driver_api) = {
 		irq_enable(DT_INST_IRQN(id));					\
 		IF_ENABLED(CONFIG_PM, (						\
 			if (DT_INST_PROP(id, wakeup_source)) {			\
-				NXP_ENABLE_WAKEUP_SIGNAL(DT_INST_IRQN(id));	\
+				EnableDeepSleepIRQ(DT_INST_IRQN(id));		\
 			}							\
 		))								\
 	}
@@ -433,7 +432,7 @@ static DEVICE_API(counter, mcux_rtc_highres_driver_api) = {
 		irq_enable(DT_IRQN(DT_INST_PARENT(n)));						\
 		IF_ENABLED(CONFIG_PM, (								\
 			if (DT_INST_PROP(n, wakeup_source)) {					\
-				NXP_ENABLE_WAKEUP_SIGNAL(DT_IRQN(DT_INST_PARENT(n)));		\
+				EnableDeepSleepIRQ(DT_IRQN(DT_INST_PARENT(n)));			\
 			}									\
 		))										\
 	} while (false)

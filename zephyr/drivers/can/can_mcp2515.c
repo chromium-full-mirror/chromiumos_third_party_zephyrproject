@@ -338,7 +338,7 @@ static int mcp2515_get_max_filters(const struct device *dev, bool ide)
 {
 	ARG_UNUSED(ide);
 
-	return CONFIG_CAN_MCP2515_MAX_FILTERS;
+	return CONFIG_CAN_MAX_FILTER;
 }
 
 static int mcp2515_set_timing(const struct device *dev, const struct can_timing *timing)
@@ -622,13 +622,12 @@ static int mcp2515_add_rx_filter(const struct device *dev, can_rx_callback_t rx_
 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
 
 	/* find free filter */
-	while ((BIT(filter_id) & dev_data->filter_usage) &&
-		(filter_id < CONFIG_CAN_MCP2515_MAX_FILTERS)) {
+	while ((BIT(filter_id) & dev_data->filter_usage) && (filter_id < CONFIG_CAN_MAX_FILTER)) {
 		filter_id++;
 	}
 
 	/* setup filter */
-	if (filter_id < CONFIG_CAN_MCP2515_MAX_FILTERS) {
+	if (filter_id < CONFIG_CAN_MAX_FILTER) {
 		dev_data->filter_usage |= BIT(filter_id);
 
 		dev_data->filter[filter_id] = *filter;
@@ -648,7 +647,7 @@ static void mcp2515_remove_rx_filter(const struct device *dev, int filter_id)
 {
 	struct mcp2515_data *dev_data = dev->data;
 
-	if (filter_id < 0 || filter_id >= CONFIG_CAN_MCP2515_MAX_FILTERS) {
+	if (filter_id < 0 || filter_id >= CONFIG_CAN_MAX_FILTER) {
 		LOG_ERR("filter ID %d out of bounds", filter_id);
 		return;
 	}
@@ -682,7 +681,7 @@ static void mcp2515_rx_filter(const struct device *dev, struct can_frame *frame)
 
 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
 
-	for (; filter_id < CONFIG_CAN_MCP2515_MAX_FILTERS; filter_id++) {
+	for (; filter_id < CONFIG_CAN_MAX_FILTER; filter_id++) {
 		if (!(BIT(filter_id) & dev_data->filter_usage)) {
 			continue; /* filter slot empty */
 		}
@@ -832,17 +831,13 @@ static void mcp2515_handle_interrupts(const struct device *dev)
 			mcp2515_tx_done(dev, 0, 0);
 		}
 
-#if MCP2515_TX_CNT > 1
 		if (canintf & MCP2515_CANINTF_TX1IF) {
 			mcp2515_tx_done(dev, 1, 0);
 		}
-#endif /* MCP2515_TX_CNT > 1 */
 
-#if MCP2515_TX_CNT > 2
 		if (canintf & MCP2515_CANINTF_TX2IF) {
 			mcp2515_tx_done(dev, 2, 0);
 		}
-#endif /* MCP2515_TX_CNT > 2 */
 
 		if (canintf & MCP2515_CANINTF_ERRIF) {
 			mcp2515_handle_errors(dev);
@@ -1010,7 +1005,7 @@ static int mcp2515_init(const struct device *dev)
                                                                                                    \
 	static const struct mcp2515_config mcp2515_config_##inst = {                               \
 		.common = CAN_DT_DRIVER_CONFIG_INST_GET(inst, 0, 1000000),                         \
-		.bus = SPI_DT_SPEC_INST_GET(inst, SPI_WORD_SET(8)),                                \
+		.bus = SPI_DT_SPEC_INST_GET(inst, SPI_WORD_SET(8), 0),                             \
 		.int_gpio = GPIO_DT_SPEC_INST_GET(inst, int_gpios),                                \
 		.int_thread_stack_size = CONFIG_CAN_MCP2515_INT_THREAD_STACK_SIZE,                 \
 		.int_thread_priority = CONFIG_CAN_MCP2515_INT_THREAD_PRIO,                         \

@@ -6,7 +6,11 @@
 
 if BOARD_NUMAKER_M5531
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y if !MODEM
+
+endif # NETWORKING
 
 endif # BOARD_NUMAKER_M5531

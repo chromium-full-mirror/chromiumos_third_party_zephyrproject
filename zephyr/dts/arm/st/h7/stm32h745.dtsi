@@ -43,7 +43,7 @@
 			interrupts = <88 0>, <89 0>;
 			interrupt-names = "ltdc", "ltdc_er";
 			clocks = <&rcc STM32_CLOCK(APB3, 3)>;
-			resets = <&rctl STM32_RESET(APB3, 3)>;
+			resets = <&rctl STM32_RESET(APB3, 3U)>;
 			status = "disabled";
 		};
 
@@ -93,8 +93,7 @@
 	/* System data RAM accessible over AXI bus: AXI SRAM in D1 domain */
 	sram0: memory@24000000 {
 		reg = <0x24000000 DT_SIZE_K(512)>;
-		compatible = "zephyr,memory-region", "mmio-sram";
-		zephyr,memory-region = "SRAM0";
+		compatible = "mmio-sram";
 	};
 
 	/* System data RAM accessible over AHB bus: SRAM1 in D2 domain */
@@ -109,7 +108,6 @@
 		compatible = "zephyr,memory-region", "mmio-sram";
 		reg = <0x30020000 DT_SIZE_K(128)>;
 		zephyr,memory-region = "SRAM2";
-		#memory-region-cells = <0>;
 	};
 
 	/* System data RAM accessible over AHB bus: SRAM3 in D2 domain */
@@ -117,7 +115,6 @@
 		compatible = "zephyr,memory-region", "mmio-sram";
 		reg = <0x30040000 DT_SIZE_K(32)>;
 		zephyr,memory-region = "SRAM3";
-		#memory-region-cells = <0>;
 	};
 
 	/* System data RAM accessible over AHB bus: SRAM4 in D3 domain  */
@@ -139,8 +136,4 @@
 	vbat: vbat {
 		io-channels = <&adc3 17>;
 	};
-};
-
-&mac {
-	memory-regions = <&sram3>;
 };

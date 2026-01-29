@@ -2,13 +2,13 @@
    :name: Heart Rate Sensor
    :relevant-api: sensor_interface
 
-   Get heart rate data from a sensor (polling/interrupt mode).
+   Get heart rate data from a sensor (polling mode).
 
 Overview
 ********
 
-A sensor application that demonstrates how to get data from a heart rate
-sensor either by polling or interrupt.
+A sensor application that demonstrates how to poll data from a heart rate
+sensor.
 
 Requirements
 ************

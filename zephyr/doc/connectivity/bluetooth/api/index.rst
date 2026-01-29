@@ -9,14 +9,9 @@ Bluetooth Classic Host and profiles
 .. toctree::
    :maxdepth: 1
 
-   classic/sdp.rst
-   classic/l2cap_br.rst
-   classic/rfcomm.rst
-   classic/hfp.rst
-   classic/a2dp.rst
-   classic/avrcp.rst
-   classic/goep.rst
-   classic/bip.rst
+   hfp.rst
+   rfcomm.rst
+   sdp.rst
 
 Bluetooth LE Audio
 ==================

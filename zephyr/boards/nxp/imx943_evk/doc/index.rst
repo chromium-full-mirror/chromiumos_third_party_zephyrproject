@@ -73,15 +73,11 @@ For A55 Core, ENET0, ENETC1, ENETC2 ports are enabled by default, so no overlay 
 needed, but NETC depends on GIC ITS, so need to make sure to allocate heap memory to
 be larger than 851968 byes by setting CONFIG_HEAP_MEM_POOL_SIZE.
 
-On the EVK board, switch port0 and port2 are connected to both SGMII port (SGMII-swp0
-and SGMII-swp1) and 100M port (swp0 and swp1), currently only 100M port (swp0 and swp1)
-is enabled, so could connect to 100M port for verify two switch ports.
-
 The two switch ports could be verified via :zephyr:code-sample:`dsa` on M33 core
 or on A55 Core, for example for A55 Core:
 
 .. zephyr-app-commands::
-   :zephyr-app: samples/net/ethernet/dsa
+   :zephyr-app: samples/net/dsa
    :host-os: unix
    :board: imx943_evk/mimx94398/a55
    :goals: flash
@@ -89,7 +85,7 @@ or on A55 Core, for example for A55 Core:
 Or for M33 Core:
 
 .. zephyr-app-commands::
-   :zephyr-app: samples/net/ethernet/dsa
+   :zephyr-app: samples/net/dsa
    :host-os: unix
    :board: imx943_evk/mimx94398/m33/ddr
    :goals: build
@@ -205,24 +201,8 @@ Then the following log could be found on UART1 console:
     *** Booting Zephyr OS build v4.1.0-3650-gdb71736adb68 ***
     Hello World! imx943_evk/mimx94398/a55
 
-Cortex-A55 SMP
-==============
-
-The default SMP variant runs on all four Cortex-A Core, it could be changed by
-disabling some A55 Core nodes in dts and change :kconfig:option:`CONFIG_MP_MAX_NUM_CPUS`
-to the count of enabled A55 Cores in dts.
-
-Building SMP kernel, for example, with the :zephyr:code-sample:`synchronization` sample:
-
-.. zephyr-app-commands::
-   :zephyr-app: samples/synchronization
-   :host-os: unix
-   :board: imx943_evk/mimx94398/a55/smp
-   :goals: build
-
-For different booting method, need to make sure SMP Zephyr to be started from the first
-CPU Core listed in "cpus" dts node, so the first A55 Core in default SMP variant dts
-is Core0, it could be booted by U-Boot "go" command,  J-Link runner or SPSDK runner.
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 Programming and Debugging (M33 in NETC MIX, M7_0 in M7MIX0, M7_1 in M7MIX1)
 ***************************************************************************
@@ -396,9 +376,9 @@ For DDR target
 
 Note:
 
-a. Please connect two additional USB-to-Serial converters between the Host PC and the board's
-Arduino interface using Dupont cables. For M70 in M7MIX0 and M71 in M7MIX1,
-make the connections as shown below.
+a. Please connect two additional usb2serial converter between Host PC and board's
+auduino interface with dupont cable for M70 in M70 MIX and M71 in M71 MIX.
+Connection as below,
 
 .. code-block:: text
 
@@ -414,28 +394,7 @@ make the connections as shown below.
   |         |       |                 |--GND----------------GND(J43-14)-|         |
   +---------+       +-----------------+                                 +---------+
 
-b. For debugging system via JTAG interface, please connect one additional
-USB-to-Serial converter between the Host PC and the board's Arduino interface
-using Dupont cables. For M33S in NETCMIX,
-(LPUART8's pads reused by JTAG's pads, so change to use another UART3,
-then UART3 and JTAG can be used at the same time.)
-make the connections as shown below,
-
-.. code-block:: text
-
-  +---------+  USB  +-----------------+                                           +---------+
-  | Host PC |<----->| USB-to-Serial c |--TX-->RX(J44-10, M1_LED_TP1, LPUART3_RX)--|  board  |
-  |         |       |                 |--RX<--TX(J51-18, M1_PWM_CX, LPUART3_TX)---|         |
-  |         |       |                 |--GND--GND(J45-12)-------------------------|         |
-  |         |       +-----------------+                                           |         |
-  |         |                                                                     |         |
-  |         |                                                                     |         |
-  |         |                                                                     |         |
-  |         |                                                                     |         |
-  |         |                                                                     |         |
-  +---------+                                                                     +---------+
-
-c. There will be 4 serial ports identified when connect USB cable to debug port.
+b. There will be 4 serial ports identified when connect USB cable to debug port.
 The first serial port will be UART8 for M33. As there is multiplexing between JTAG
 and UART8, below bcu (`bcu 1.1.113 download`_) configuration is needed to use UART8.
 
@@ -449,5 +408,3 @@ and UART8, below bcu (`bcu 1.1.113 download`_) configuration is needed to use UA
 
 .. _i.MX Linux BSP release:
    https://www.nxp.com/design/design-center/software/embedded-software/i-mx-software/embedded-linux-for-i-mx-applications-processors:IMXLINUX
-
-.. include:: ../../common/board-footer.rst.inc

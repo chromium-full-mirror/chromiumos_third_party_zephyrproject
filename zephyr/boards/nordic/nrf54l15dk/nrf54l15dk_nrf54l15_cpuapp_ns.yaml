@@ -12,12 +12,12 @@ ram: 256
 flash: 1524
 supported:
   - adc
-  - counter
   - gpio
   - i2c
-  - i2s
-  - pwm
   - spi
+  - counter
   - watchdog
+  - adc
+  - i2s
 vendor: nordic
 sysbuild: true

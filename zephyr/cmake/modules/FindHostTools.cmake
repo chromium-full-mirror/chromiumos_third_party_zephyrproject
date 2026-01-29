@@ -70,13 +70,10 @@ if("${PTY_INTERFACE}" STREQUAL "PTY_INTERFACE-NOTFOUND")
   set(PTY_INTERFACE "")
 endif()
 
-# When targeting a host based target default to the host system's toolchain,
-# unless the user has selected to build with llvm (which is also valid for hosts builds)
-# or they are clearly trying to cross-compile a native simulator based target
+# Default to the host system's toolchain if we are targeting a host based target
 if((${BOARD_DIR} MATCHES "boards\/native") OR ("${ARCH}" STREQUAL "posix")
    OR ("${BOARD}" STREQUAL "unit_testing"))
-  if((NOT "${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "llvm") AND
-     (NOT ("${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "cross-compile" AND DEFINED NATIVE_TARGET_HOST)))
+  if(NOT "${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "llvm")
     set(ZEPHYR_TOOLCHAIN_VARIANT "host")
   endif()
 endif()

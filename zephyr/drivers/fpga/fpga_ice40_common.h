@@ -42,7 +42,8 @@
 	static const struct fpga_ice40_config fpga_ice40_config_##inst = {                         \
 		.bus = SPI_DT_SPEC_INST_GET(inst,                                                  \
 					    SPI_OP_MODE_MASTER | SPI_MODE_CPOL | SPI_MODE_CPHA |   \
-						    SPI_WORD_SET(8) | SPI_TRANSFER_MSB),           \
+						    SPI_WORD_SET(8) | SPI_TRANSFER_MSB,            \
+					    0),                                                    \
 		.creset = GPIO_DT_SPEC_INST_GET(inst, creset_gpios),                               \
 		.cdone = GPIO_DT_SPEC_INST_GET(inst, cdone_gpios),                                 \
 		.config_delay_us = DT_INST_PROP(inst, config_delay_us),                            \

@@ -35,7 +35,7 @@ int net_getaddrinfo_addr_str(const char *addr_str, const char *def_port,
 			     struct zsock_addrinfo **res)
 {
 	const char *port;
-	char host[ZSOCK_NI_MAXHOST];
+	char host[NI_MAXHOST];
 
 	if (addr_str == NULL) {
 		errno = EINVAL;

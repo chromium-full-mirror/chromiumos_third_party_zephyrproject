@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <zephyr/logging/log.h>
 #include "feedback.h"
+
+#include <nrfx_dppi.h>
 #include <nrfx_timer.h>
 #include <helpers/nrfx_gppi.h>
 
@@ -29,7 +31,7 @@ static inline void feedback_target_init(void)
 	/* No target specific init necessary */
 }
 
-#elif IS_ENABLED(CONFIG_SOC_SERIES_NRF54H)
+#elif IS_ENABLED(CONFIG_SOC_SERIES_NRF54HX)
 
 #include <hal/nrf_tdm.h>
 
@@ -49,8 +51,8 @@ static inline void feedback_target_init(void)
 #error "Unsupported target"
 #endif
 
-static nrfx_timer_t feedback_timer_instance =
-	NRFX_TIMER_INSTANCE(NRF_TIMER_INST_GET(FEEDBACK_TIMER_INSTANCE_NUMBER));
+static const nrfx_timer_t feedback_timer_instance =
+	NRFX_TIMER_INSTANCE(FEEDBACK_TIMER_INSTANCE_NUMBER);
 
 /* While it might be possible to determine I2S FRAMESTART to USB SOF offset
  * entirely in software, the I2S API lacks appropriate timestamping. Therefore
@@ -66,19 +68,18 @@ static nrfx_timer_t feedback_timer_instance =
  * SOF offset is around 0 when regulated and therefore the relative clock
  * frequency discrepancies are essentially negligible.
  */
-#define CLKS_PER_SAMPLE	(16000000 / (SAMPLE_RATE))
+#define CLKS_PER_SAMPLE	(16000000 / (SAMPLES_PER_SOF * 1000))
 
 static struct feedback_ctx {
 	int32_t rel_sof_offset;
 	int32_t base_sof_offset;
-	unsigned int nominal;
 } fb_ctx;
 
 struct feedback_ctx *feedback_init(void)
 {
-	int err;
-	nrfx_gppi_handle_t usbd_sof_gppi_handle;
-	nrfx_gppi_handle_t i2s_framestart_gppi_handle;
+	nrfx_err_t err;
+	uint8_t usbd_sof_gppi_channel;
+	uint8_t i2s_framestart_gppi_channel;
 	const nrfx_timer_config_t cfg = {
 		.frequency = NRFX_MHZ_TO_HZ(16UL),
 		.mode = NRF_TIMER_MODE_TIMER,
@@ -86,40 +87,47 @@ struct feedback_ctx *feedback_init(void)
 		.interrupt_priority = NRFX_TIMER_DEFAULT_CONFIG_IRQ_PRIORITY,
 		.p_context = NULL,
 	};
-	uint32_t tsk1 = nrfx_timer_capture_task_address_get(&feedback_timer_instance,
-							    FEEDBACK_TIMER_USBD_SOF_CAPTURE);
-	uint32_t tsk2 = nrfx_timer_task_address_get(&feedback_timer_instance, NRF_TIMER_TASK_CLEAR);
-	uint32_t tsk3 = nrfx_timer_capture_task_address_get(&feedback_timer_instance,
-							    FEEDBACK_TIMER_I2S_FRAMESTART_CAPTURE);
 
 	feedback_target_init();
 
 	feedback_reset_ctx(&fb_ctx);
 
 	err = nrfx_timer_init(&feedback_timer_instance, &cfg, NULL);
-	if (err != 0) {
+	if (err != NRFX_SUCCESS) {
 		LOG_ERR("nrfx timer init error - Return value: %d", err);
 		return &fb_ctx;
 	}
 
 	/* Subscribe TIMER CAPTURE task to USBD SOF event */
-	err = nrfx_gppi_conn_alloc(USB_SOF_EVENT_ADDRESS, tsk1, &usbd_sof_gppi_handle);
-	if (err < 0) {
+	err = nrfx_gppi_channel_alloc(&usbd_sof_gppi_channel);
+	if (err != NRFX_SUCCESS) {
 		LOG_ERR("gppi_channel_alloc failed with: %d\n", err);
 		return &fb_ctx;
 	}
 
-	nrfx_gppi_ep_attach(tsk2, usbd_sof_gppi_handle);
-	nrfx_gppi_conn_enable(usbd_sof_gppi_handle);
+	nrfx_gppi_channel_endpoints_setup(usbd_sof_gppi_channel,
+		USB_SOF_EVENT_ADDRESS,
+		nrfx_timer_capture_task_address_get(&feedback_timer_instance,
+			FEEDBACK_TIMER_USBD_SOF_CAPTURE));
+	nrfx_gppi_fork_endpoint_setup(usbd_sof_gppi_channel,
+		nrfx_timer_task_address_get(&feedback_timer_instance,
+			NRF_TIMER_TASK_CLEAR));
+
+	nrfx_gppi_channels_enable(BIT(usbd_sof_gppi_channel));
 
 	/* Subscribe TIMER CAPTURE task to I2S FRAMESTART event */
-	err = nrfx_gppi_conn_alloc(I2S_FRAMESTART_EVENT_ADDRESS, tsk3, &i2s_framestart_gppi_handle);
-	if (err < 0) {
-		LOG_ERR("gppi_conn_alloc failed with: %d\n", err);
+	err = nrfx_gppi_channel_alloc(&i2s_framestart_gppi_channel);
+	if (err != NRFX_SUCCESS) {
+		LOG_ERR("gppi_channel_alloc failed with: %d\n", err);
 		return &fb_ctx;
 	}
 
-	nrfx_gppi_conn_enable(i2s_framestart_gppi_handle);
+	nrfx_gppi_channel_endpoints_setup(i2s_framestart_gppi_channel,
+		I2S_FRAMESTART_EVENT_ADDRESS,
+		nrfx_timer_capture_task_address_get(&feedback_timer_instance,
+			FEEDBACK_TIMER_I2S_FRAMESTART_CAPTURE));
+
+	nrfx_gppi_channels_enable(BIT(i2s_framestart_gppi_channel));
 
 	/* Enable feedback timer */
 	nrfx_timer_enable(&feedback_timer_instance);
@@ -135,8 +143,8 @@ static void update_sof_offset(struct feedback_ctx *ctx, uint32_t sof_cc,
 	/* /2 because we treat the middle as a turning point from being
 	 * "too late" to "too early".
 	 */
-	if (framestart_cc > (ctx->nominal * CLKS_PER_SAMPLE)/2) {
-		sof_offset = framestart_cc - ctx->nominal * CLKS_PER_SAMPLE;
+	if (framestart_cc > (SAMPLES_PER_SOF * CLKS_PER_SAMPLE)/2) {
+		sof_offset = framestart_cc - SAMPLES_PER_SOF * CLKS_PER_SAMPLE;
 	} else {
 		sof_offset = framestart_cc;
 	}
@@ -151,17 +159,17 @@ static void update_sof_offset(struct feedback_ctx *ctx, uint32_t sof_cc,
 
 		if (sof_offset >= 0) {
 			abs_diff = sof_offset - ctx->rel_sof_offset;
-			base_change = -(ctx->nominal * CLKS_PER_SAMPLE);
+			base_change = -(SAMPLES_PER_SOF * CLKS_PER_SAMPLE);
 		} else {
 			abs_diff = ctx->rel_sof_offset - sof_offset;
-			base_change = ctx->nominal * CLKS_PER_SAMPLE;
+			base_change = SAMPLES_PER_SOF * CLKS_PER_SAMPLE;
 		}
 
 		/* Adjust base offset only if the change happened through the
 		 * outer bound. The actual changes should be significantly lower
 		 * than the threshold here.
 		 */
-		if (abs_diff > (ctx->nominal * CLKS_PER_SAMPLE)/2) {
+		if (abs_diff > (SAMPLES_PER_SOF * CLKS_PER_SAMPLE)/2) {
 			ctx->base_sof_offset += base_change;
 		}
 	}
@@ -187,26 +195,19 @@ void feedback_reset_ctx(struct feedback_ctx *ctx)
 	ARG_UNUSED(ctx);
 }
 
-void feedback_start(struct feedback_ctx *ctx, int i2s_blocks_queued,
-		    bool microframes)
+void feedback_start(struct feedback_ctx *ctx, int i2s_blocks_queued)
 {
-	if (microframes) {
-		ctx->nominal = SAMPLE_RATE / 8000;
-	} else {
-		ctx->nominal = SAMPLE_RATE / 1000;
-	}
-
 	/* I2S data was supposed to go out at SOF, but it is inevitably
 	 * delayed due to triggering I2S start by software. Set relative
 	 * SOF offset value in a way that ensures that values past "half
 	 * frame" are treated as "too late" instead of "too early"
 	 */
-	ctx->rel_sof_offset = (ctx->nominal * CLKS_PER_SAMPLE) / 2;
+	ctx->rel_sof_offset = (SAMPLES_PER_SOF * CLKS_PER_SAMPLE) / 2;
 	/* If there are more than 2 I2S TX blocks queued, use feedback regulator
 	 * to correct the situation.
 	 */
 	ctx->base_sof_offset = (i2s_blocks_queued - 2) *
-		(ctx->nominal * CLKS_PER_SAMPLE);
+		(SAMPLES_PER_SOF * CLKS_PER_SAMPLE);
 }
 
 int feedback_samples_offset(struct feedback_ctx *ctx)

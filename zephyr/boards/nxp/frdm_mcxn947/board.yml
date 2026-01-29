@@ -7,5 +7,3 @@ board:
     variants:
     - name: qspi
       cpucluster: 'cpu0'
-    - name: ns
-      cpucluster: 'cpu0'

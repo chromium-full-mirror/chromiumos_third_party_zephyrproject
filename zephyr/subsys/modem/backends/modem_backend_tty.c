@@ -5,12 +5,13 @@
  */
 
 #include <zephyr/modem/backend/tty.h>
-#include "modem_backend_tty_bottom.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(modem_backend_tty, CONFIG_MODEM_MODULES_LOG_LEVEL);
 
-#include <nsi_host_trampolines.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <poll.h>
 #include <string.h>
 
 #define MODEM_BACKEND_TTY_THREAD_PRIO          (10)
@@ -22,21 +23,25 @@ LOG_MODULE_REGISTER(modem_backend_tty, CONFIG_MODEM_MODULES_LOG_LEVEL);
 static void modem_backend_tty_routine(void *p1, void *p2, void *p3)
 {
 	struct modem_backend_tty *backend = (struct modem_backend_tty *)p1;
+	struct pollfd pd;
 
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
 
+	pd.fd = backend->tty_fd;
+	pd.events = POLLIN;
+
 	/* Run until run flag is cleared. Check every MODEM_BACKEND_TTY_THREAD_RUN_PERIOD_MS */
 	while (atomic_test_bit(&backend->state, MODEM_BACKEND_TTY_STATE_RUN_BIT)) {
+		/* Clear events */
+		pd.revents = 0;
 
-		int ret = modem_backend_tty_poll_bottom(backend->tty_fd);
-
-		if (ret < 0) {
+		if (poll(&pd, 1, MODEM_BACKEND_TTY_THREAD_RUN_PERIOD_MS) < 0) {
 			LOG_ERR("Poll operation failed");
 			break;
 		}
 
-		if (ret) {
+		if (pd.revents & POLLIN) {
 			modem_pipe_notify_receive_ready(&backend->pipe);
 		}
 
@@ -52,7 +57,7 @@ static int modem_backend_tty_open(void *data)
 		return -EALREADY;
 	}
 
-	backend->tty_fd = modem_backend_tty_open_bottom(backend->tty_path);
+	backend->tty_fd = open(backend->tty_path, (O_RDWR | O_NONBLOCK), 0644);
 	if (backend->tty_fd < 0) {
 		return -EPERM;
 	}
@@ -70,7 +75,7 @@ static int modem_backend_tty_transmit(void *data, const uint8_t *buf, size_t siz
 	struct modem_backend_tty *backend = (struct modem_backend_tty *)data;
 	int ret;
 
-	ret = nsi_host_write(backend->tty_fd, buf, size);
+	ret = write(backend->tty_fd, buf, size);
 	modem_pipe_notify_transmit_idle(&backend->pipe);
 	return ret;
 }
@@ -80,7 +85,7 @@ static int modem_backend_tty_receive(void *data, uint8_t *buf, size_t size)
 	int ret;
 	struct modem_backend_tty *backend = (struct modem_backend_tty *)data;
 
-	ret = nsi_host_read(backend->tty_fd, buf, size);
+	ret = read(backend->tty_fd, buf, size);
 	return (ret < 0) ? 0 : ret;
 }
 
@@ -93,7 +98,7 @@ static int modem_backend_tty_close(void *data)
 	}
 
 	k_thread_join(&backend->thread, K_MSEC(MODEM_BACKEND_TTY_THREAD_RUN_PERIOD_MS * 2));
-	nsi_host_close(backend->tty_fd);
+	close(backend->tty_fd);
 	modem_pipe_notify_closed(&backend->pipe);
 	return 0;
 }

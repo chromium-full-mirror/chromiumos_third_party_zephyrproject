@@ -12,7 +12,6 @@
 
 &timg0 {
 	status = "okay";
-
 	counterg0: counterg0 {
 		status = "okay";
 	};

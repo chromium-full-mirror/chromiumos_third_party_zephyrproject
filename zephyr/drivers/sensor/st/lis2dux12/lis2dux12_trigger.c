@@ -11,6 +11,7 @@
 #include <zephyr/logging/log.h>
 #include "lis2dux12.h"
 
+#include "lis2dux12.h"
 #include "lis2dux12_rtio.h"
 
 LOG_MODULE_DECLARE(LIS2DUX12, CONFIG_SENSOR_LOG_LEVEL);

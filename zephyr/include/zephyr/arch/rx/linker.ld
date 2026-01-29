@@ -66,7 +66,10 @@ SECTIONS
 {
 
 #include <zephyr/linker/rel-sections.ld>
+
+#ifdef CONFIG_LLEXT
 #include <zephyr/linker/llext-sections.ld>
+#endif
 
 	GROUP_START(ROMABLE_REGION)
 	. = ROM_START;   /* for kernel logging */
@@ -295,9 +298,8 @@ SECTIONS
 		_end = .;
 	} GROUP_LINK_IN(RAMABLE_REGION)
 
-	_ebss = . ;
-
 #include <zephyr/linker/common-noinit.ld>
+	_ebss = . ;
 
 	_image_ram_end = .;
 	_end = .;

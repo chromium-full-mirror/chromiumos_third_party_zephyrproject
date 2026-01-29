@@ -29,44 +29,6 @@ enum mclk_divider {
 	MCLK_DIV_512
 };
 
-static const uint32_t dma_priority[] = {
-#if defined(CONFIG_DMA_STM32U5)
-	DMA_LOW_PRIORITY_LOW_WEIGHT,
-	DMA_LOW_PRIORITY_MID_WEIGHT,
-	DMA_LOW_PRIORITY_HIGH_WEIGHT,
-	DMA_HIGH_PRIORITY,
-#else
-	DMA_PRIORITY_LOW,
-	DMA_PRIORITY_MEDIUM,
-	DMA_PRIORITY_HIGH,
-	DMA_PRIORITY_VERY_HIGH,
-#endif
-};
-
-#if defined(CONFIG_DMA_STM32U5)
-static const uint32_t dma_src_size[] = {
-	DMA_SRC_DATAWIDTH_BYTE,
-	DMA_SRC_DATAWIDTH_HALFWORD,
-	DMA_SRC_DATAWIDTH_WORD,
-};
-static const uint32_t dma_dest_size[] = {
-	DMA_DEST_DATAWIDTH_BYTE,
-	DMA_DEST_DATAWIDTH_HALFWORD,
-	DMA_DEST_DATAWIDTH_WORD,
-};
-#else
-static const uint32_t dma_p_size[] = {
-	DMA_PDATAALIGN_BYTE,
-	DMA_PDATAALIGN_HALFWORD,
-	DMA_PDATAALIGN_WORD,
-};
-static const uint32_t dma_m_size[] = {
-	DMA_MDATAALIGN_BYTE,
-	DMA_MDATAALIGN_HALFWORD,
-	DMA_MDATAALIGN_WORD,
-};
-#endif
-
 struct queue_item {
 	void *buffer;
 	size_t size;
@@ -128,7 +90,6 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
 		if (stream->state != I2S_STATE_READY) {
 			stream->state = I2S_STATE_ERROR;
 			LOG_ERR("RX mem_block NULL");
-			__HAL_SAI_DISABLE(hsai);
 			goto exit;
 		} else {
 			return;
@@ -140,21 +101,18 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
 	ret = k_msgq_put(&stream->queue, &item, K_NO_WAIT);
 	if (ret < 0) {
 		stream->state = I2S_STATE_ERROR;
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
 	if (stream->state == I2S_STATE_STOPPING) {
 		stream->state = I2S_STATE_READY;
 		LOG_DBG("Stopping RX ...");
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
 	ret = k_mem_slab_alloc(stream->i2s_cfg.mem_slab, &stream->mem_block, K_NO_WAIT);
 	if (ret < 0) {
 		stream->state = I2S_STATE_ERROR;
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
@@ -179,7 +137,6 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 
 	if (stream->state == I2S_STATE_ERROR) {
 		LOG_ERR("TX bad status: %d, Stopping...", stream->state);
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
@@ -187,7 +144,6 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 		if (stream->state != I2S_STATE_READY) {
 			stream->state = I2S_STATE_ERROR;
 			LOG_ERR("TX mem_block NULL");
-			__HAL_SAI_DISABLE(hsai);
 			goto exit;
 		} else {
 			return;
@@ -198,7 +154,6 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 		LOG_DBG("TX Stopped ...");
 		stream->state = I2S_STATE_READY;
 		stream->mem_block = NULL;
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
@@ -208,14 +163,12 @@ void HAL_SAI_TxCpltCallback(SAI_HandleTypeDef *hsai)
 		LOG_DBG("Exit TX callback, no more data in the queue");
 		stream->state = I2S_STATE_READY;
 		stream->mem_block = NULL;
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
 	ret = k_msgq_get(&stream->queue, &item, K_NO_WAIT);
 	if (ret < 0) {
 		stream->state = I2S_STATE_ERROR;
-		__HAL_SAI_DISABLE(hsai);
 		goto exit;
 	}
 
@@ -302,12 +255,14 @@ static int stm32_sai_enable_clock(const struct device *dev)
 static int i2s_stm32_sai_dma_init(const struct device *dev)
 {
 	struct i2s_stm32_sai_data *dev_data = dev->data;
-	struct stream *stream = &dev_data->stream;
-	struct dma_config *dma_cfg = &dev_data->stream.dma_cfg;
-	int ret;
-
 	SAI_HandleTypeDef *hsai = &dev_data->hsai;
 	DMA_HandleTypeDef *hdma = &dev_data->hdma;
+
+	struct stream *stream = &dev_data->stream;
+
+	struct dma_config dma_cfg = dev_data->stream.dma_cfg;
+
+	int ret;
 
 	if (!device_is_ready(stream->dma_dev)) {
 		LOG_ERR("%s DMA device not ready", stream->dma_dev->name);
@@ -315,72 +270,47 @@ static int i2s_stm32_sai_dma_init(const struct device *dev)
 	}
 
 	/* Proceed to the minimum Zephyr DMA driver init */
-	dma_cfg->user_data = hdma;
+	dma_cfg.user_data = hdma;
 
 	/* HACK: This field is used to inform driver that it is overridden */
-	dma_cfg->linked_channel = STM32_DMA_HAL_OVERRIDE;
+	dma_cfg.linked_channel = STM32_DMA_HAL_OVERRIDE;
 
-	ret = dma_config(stream->dma_dev, stream->dma_channel, dma_cfg);
+	ret = dma_config(stream->dma_dev, stream->dma_channel, &dma_cfg);
+
 	if (ret != 0) {
 		LOG_ERR("Failed to configure DMA channel %d", stream->dma_channel);
 		return ret;
 	}
 
 	hdma->Instance = STM32_DMA_GET_INSTANCE(stream->reg, stream->dma_channel);
+	hdma->Init.Request = dma_cfg.dma_slot;
 	hdma->Init.Mode = DMA_NORMAL;
 
-	if (dma_cfg->channel_priority >= ARRAY_SIZE(dma_priority)) {
-		LOG_ERR("Invalid DMA channel priority");
-		return -EINVAL;
-	}
-	hdma->Init.Priority = dma_priority[dma_cfg->channel_priority];
-
-#if defined(DMA_CHANNEL_1)
-	hdma->Init.Channel = dma_cfg->dma_slot * DMA_CHANNEL_1;
+#if defined(CONFIG_SOC_SERIES_STM32H7X) || defined(CONFIG_SOC_SERIES_STM32L4X)
+	hdma->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+	hdma->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+	hdma->Init.Priority = DMA_PRIORITY_HIGH;
+	hdma->Init.PeriphInc = DMA_PINC_DISABLE;
+	hdma->Init.MemInc = DMA_MINC_ENABLE;
 #else
-	hdma->Init.Request = dma_cfg->dma_slot;
-#endif
-
-	if (dma_cfg->source_data_size != dma_cfg->dest_data_size) {
-		LOG_ERR("Source and destination data sizes are not aligned");
-		return -EINVAL;
-	}
-
-	int idx = find_lsb_set(dma_cfg->source_data_size) - 1;
-
-#if defined(CONFIG_DMA_STM32U5)
-	if (idx >= ARRAY_SIZE(dma_src_size)) {
-		LOG_ERR("Invalid source and destination DMA data size");
-		return -EINVAL;
-	}
-
-	hdma->Init.SrcDataWidth = dma_src_size[idx];
-	hdma->Init.DestDataWidth = dma_dest_size[idx];
 	hdma->Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+	hdma->Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
+	hdma->Init.DestDataWidth = DMA_DEST_DATAWIDTH_HALFWORD;
+	hdma->Init.Priority = DMA_HIGH_PRIORITY;
 	hdma->Init.SrcBurstLength = 1;
 	hdma->Init.DestBurstLength = 1;
 	hdma->Init.TransferAllocatedPort = DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT0;
 	hdma->Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-#else
-	if (idx >= ARRAY_SIZE(dma_m_size)) {
-		LOG_ERR("Invalid peripheral and memory DMA data size");
-		return -EINVAL;
-	}
-
-	hdma->Init.PeriphDataAlignment = dma_p_size[idx];
-	hdma->Init.MemDataAlignment = dma_m_size[idx];
-	hdma->Init.PeriphInc = DMA_PINC_DISABLE;
-	hdma->Init.MemInc = DMA_MINC_ENABLE;
 #endif
 
-#if defined(DMA_FIFOMODE_DISABLE)
+#if defined(CONFIG_SOC_SERIES_STM32H7X)
 	hdma->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 #endif
 
-	if (dma_cfg->channel_direction == (enum dma_channel_direction)MEMORY_TO_PERIPHERAL) {
+	if (stream->dma_cfg.channel_direction == (enum dma_channel_direction)MEMORY_TO_PERIPHERAL) {
 		hdma->Init.Direction = DMA_MEMORY_TO_PERIPH;
 
-#if defined(CONFIG_DMA_STM32U5)
+#if !defined(CONFIG_SOC_SERIES_STM32H7X) && !defined(CONFIG_SOC_SERIES_STM32L4X)
 		hdma->Init.SrcInc = DMA_SINC_INCREMENTED;
 		hdma->Init.DestInc = DMA_DINC_FIXED;
 #endif
@@ -389,7 +319,7 @@ static int i2s_stm32_sai_dma_init(const struct device *dev)
 	} else {
 		hdma->Init.Direction = DMA_PERIPH_TO_MEMORY;
 
-#if defined(CONFIG_DMA_STM32U5)
+#if !defined(CONFIG_SOC_SERIES_STM32H7X) && !defined(CONFIG_SOC_SERIES_STM32L4X)
 		hdma->Init.SrcInc = DMA_SINC_FIXED;
 		hdma->Init.DestInc = DMA_DINC_INCREMENTED;
 #endif
@@ -408,7 +338,7 @@ static int i2s_stm32_sai_dma_init(const struct device *dev)
 		LOG_ERR("HAL_DMA_ConfigChannelAttributes: <Failed>");
 		return -EIO;
 	}
-#elif defined(CONFIG_DMA_STM32U5)
+#elif !defined(CONFIG_SOC_SERIES_STM32H7X) && !defined(CONFIG_SOC_SERIES_STM32L4X)
 	if (HAL_DMA_ConfigChannelAttributes(&dev_data->hdma, DMA_CHANNEL_NPRIV) != HAL_OK) {
 		LOG_ERR("HAL_DMA_ConfigChannelAttributes: <Failed>");
 		return -EIO;
@@ -523,8 +453,8 @@ static int i2s_stm32_sai_configure(const struct device *dev, enum i2s_dir dir,
 		return -EINVAL;
 	}
 
-	/* MckOutput is not supported by all MCU series */
-#if defined(SAI_MCK_OUTPUT_ENABLE)
+	/* Control of MCLK output from SAI configuration is not possible on STM32L4xx MCUs */
+#if !defined(CONFIG_SOC_SERIES_STM32L4X)
 	if (cfg->mclk_enable && stream->master) {
 		hsai->Init.MckOutput = SAI_MCK_OUTPUT_ENABLE;
 	} else {
@@ -537,8 +467,8 @@ static int i2s_stm32_sai_configure(const struct device *dev, enum i2s_dir dir,
 	} else {
 		hsai->Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
 
-		/* MckOverSampling is not supported by all MCU series */
-#if defined(SAI_MCK_OVERSAMPLING_DISABLE)
+		/* MckOverSampling is not supported by all STM32L4xx MCUs */
+#if !defined(CONFIG_SOC_SERIES_STM32L4X)
 		if (cfg->mclk_div == (enum mclk_divider)MCLK_DIV_256) {
 			hsai->Init.MckOverSampling = SAI_MCK_OVERSAMPLING_DISABLE;
 		} else {
@@ -877,23 +807,18 @@ static DEVICE_API(i2s, i2s_stm32_driver_api) = {
 	.read = i2s_stm32_sai_read,
 };
 
-#define SAI_DMA_CHANNEL_INIT(index, dir, src, dest)                                                \
+#define SAI_DMA_CHANNEL_INIT(index, dir, src_dev, dest_dev)                                        \
 	.stream = {                                                                                \
 		.dma_dev = DEVICE_DT_GET(STM32_DMA_CTLR(index, dir)),                              \
 		.dma_channel = DT_INST_DMAS_CELL_BY_NAME(index, dir, channel),                     \
 		.reg = (DMA_TypeDef *)DT_REG_ADDR(                                                 \
 			DT_PHANDLE_BY_NAME(DT_DRV_INST(index), dmas, dir)),                        \
-		.dma_cfg = {                                                                       \
-			.dma_slot = STM32_DMA_SLOT(index, dir, slot),                              \
-			.channel_direction = src##_TO_##dest,                                      \
-			.dma_callback = dma_callback,                                              \
-			.channel_priority = STM32_DMA_CONFIG_PRIORITY(                             \
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),                             \
-			.source_data_size = STM32_DMA_CONFIG_##src##_DATA_SIZE(                    \
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),                             \
-			.dest_data_size = STM32_DMA_CONFIG_##dest##_DATA_SIZE(                     \
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),                             \
-		},                                                                                 \
+		.dma_cfg =                                                                         \
+			{                                                                          \
+				.dma_slot = STM32_DMA_SLOT(index, dir, slot),                      \
+				.channel_direction = src_dev##_TO_##dest_dev,                      \
+				.dma_callback = dma_callback,                                      \
+			},                                                                         \
 		.stream_start = stream_start,                                                      \
 		.queue_drop = queue_drop,                                                          \
 	}
@@ -905,18 +830,18 @@ static DEVICE_API(i2s, i2s_stm32_driver_api) = {
 	static const struct stm32_pclken clk_##index[] = STM32_DT_INST_CLOCKS(index);              \
                                                                                                    \
 	struct i2s_stm32_sai_data sai_data_##index = {                                             \
-		.hsai = {                                                                          \
-			.Instance = (SAI_Block_TypeDef *)DT_INST_REG_ADDR(index),                  \
-			.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE,                               \
-			.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_FULL,                              \
-			.Init.SynchroExt = SAI_SYNCEXT_DISABLE,                                    \
-			.Init.CompandingMode = SAI_NOCOMPANDING,                                   \
-			.Init.TriState = SAI_OUTPUT_NOTRELEASED,                                   \
-		},                                                                                 \
-		COND_CODE_1(DT_INST_DMAS_HAS_NAME(index, tx),                                      \
-			    (SAI_DMA_CHANNEL_INIT(index, tx, MEMORY, PERIPHERAL)),                 \
-			    (SAI_DMA_CHANNEL_INIT(index, rx, PERIPHERAL, MEMORY))),                \
-	};                                                                                         \
+		.hsai =                                                                            \
+			{                                                                          \
+				.Instance = (SAI_Block_TypeDef *)DT_INST_REG_ADDR(index),          \
+				.Init.OutputDrive = SAI_OUTPUTDRIVE_DISABLE,                       \
+				.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_FULL,                      \
+				.Init.SynchroExt = SAI_SYNCEXT_DISABLE,                            \
+				.Init.CompandingMode = SAI_NOCOMPANDING,                           \
+				.Init.TriState = SAI_OUTPUT_NOTRELEASED,                           \
+			},                                                                         \
+		COND_CODE_1(DT_INST_DMAS_HAS_NAME(index, tx),                                     \
+			(SAI_DMA_CHANNEL_INIT(index, tx, MEMORY, PERIPHERAL)),                  \
+		(SAI_DMA_CHANNEL_INIT(index, rx, PERIPHERAL, MEMORY)))};                     \
                                                                                                    \
 	struct i2s_stm32_sai_cfg sai_config_##index = {                                            \
 		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(index),                                   \

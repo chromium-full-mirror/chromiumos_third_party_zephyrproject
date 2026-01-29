@@ -37,7 +37,7 @@ Supported Features
 System Clock
 ============
 
-The KE15 SoC is configured to run at 72 MHz using the LPFLL.
+The KE15 SoC is configured to run at 48 MHz using the FIRC.
 
 Serial Port
 ===========
@@ -138,7 +138,8 @@ should see the following message in the terminal:
    ***** Booting Zephyr OS v3.6.0-xxx-gxxxxxxxxxxxx *****
    Hello World! frdm_ke15z
 
-.. include:: ../../common/board-footer.rst.inc
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 .. _KE1XZ SoC Website:
    https://www.nxp.com/products/processors-and-microcontrollers/arm-microcontrollers/general-purpose-mcus/ke-series-arm-cortex-m4-m0-plus/ke1xz-arm-cortex-m0-plus-5v-main-stream-mcu-with-nxp-touch-and-can-control:KE1xZ

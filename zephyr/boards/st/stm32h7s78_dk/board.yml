@@ -4,5 +4,3 @@ board:
   vendor: st
   socs:
     - name: stm32h7s7xx
-      variants:
-        - name: ext_flash_app

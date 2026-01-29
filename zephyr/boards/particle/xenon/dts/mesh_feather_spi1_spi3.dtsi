@@ -36,3 +36,4 @@
 	pinctrl-1 = <&spi3_sleep>;
 	pinctrl-names = "default", "sleep";
 };
+

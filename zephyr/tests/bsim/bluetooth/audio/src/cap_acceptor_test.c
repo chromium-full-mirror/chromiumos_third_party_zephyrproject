@@ -282,7 +282,6 @@ static void started_cb(struct bt_bap_stream *stream)
 	test_stream->valid_rx_cnt = 0U;
 	test_stream->seq_num = 0U;
 	test_stream->tx_cnt = 0U;
-	UNSET_FLAG(test_stream->flag_audio_received);
 
 	printk("Stream %p started\n", stream);
 	k_sem_give(&sem_broadcast_started);
@@ -334,7 +333,6 @@ static void unicast_stream_started(struct bt_bap_stream *stream)
 	test_stream->valid_rx_cnt = 0U;
 	test_stream->seq_num = 0U;
 	test_stream->tx_cnt = 0U;
-	UNSET_FLAG(test_stream->flag_audio_received);
 
 	printk("Started stream %p\n", stream);
 
@@ -798,6 +796,7 @@ static void init(void)
 		UNSET_FLAG(flag_base_received);
 		UNSET_FLAG(flag_pa_synced);
 		UNSET_FLAG(flag_pa_request);
+		UNSET_FLAG(flag_audio_received);
 		UNSET_FLAG(flag_base_metadata_updated);
 		UNSET_FLAG(flag_bis_sync_requested);
 
@@ -883,11 +882,7 @@ static void init(void)
 static void wait_for_data(void)
 {
 	printk("Waiting for data\n");
-	ARRAY_FOR_EACH_PTR(broadcast_sink_streams, test_stream) {
-		if (audio_test_stream_is_streaming(test_stream)) {
-			WAIT_FOR_FLAG(test_stream->flag_audio_received);
-		}
-	}
+	WAIT_FOR_FLAG(flag_audio_received);
 	printk("Data received\n");
 }
 

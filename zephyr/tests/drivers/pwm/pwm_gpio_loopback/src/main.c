@@ -19,7 +19,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <zephyr/pm/device_runtime.h>
 
 static struct gpio_callback gpio_cb;
 
@@ -271,19 +270,4 @@ static void *pwm_gpio_loopback_setup(void)
 	return NULL;
 }
 
-static void pwm_gpio_loopback_before(void *f)
-{
-	for (int i = 0; i < TEST_PWM_COUNT; i++) {
-		zassert_ok(pm_device_runtime_get(pwms_dt[i].dev));
-	}
-}
-
-static void pwm_gpio_loopback_after(void *f)
-{
-	for (int i = 0; i < TEST_PWM_COUNT; i++) {
-		zassert_ok(pm_device_runtime_put(pwms_dt[i].dev));
-	}
-}
-
-ZTEST_SUITE(pwm_gpio_loopback, NULL, pwm_gpio_loopback_setup, pwm_gpio_loopback_before,
-	    pwm_gpio_loopback_after, NULL);
+ZTEST_SUITE(pwm_gpio_loopback, NULL, pwm_gpio_loopback_setup, NULL, NULL, NULL);

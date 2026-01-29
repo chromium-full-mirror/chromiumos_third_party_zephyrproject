@@ -1,7 +1,6 @@
 /* ST Microelectronics LIS2DU12 3-axis accelerometer sensor driver
  *
  * Copyright (c) 2023 STMicroelectronics
- * Copyright (c) 2025 8tronix GmbH
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -60,6 +59,7 @@ static int lis2du12_accel_set_fs_raw(const struct device *dev, uint8_t fs)
 {
 	const struct lis2du12_config *cfg = dev->config;
 	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
+	struct lis2du12_data *data = dev->data;
 	lis2du12_md_t mode;
 
 	if (lis2du12_mode_get(ctx, &mode) < 0) {
@@ -71,6 +71,8 @@ static int lis2du12_accel_set_fs_raw(const struct device *dev, uint8_t fs)
 		return -EIO;
 	}
 
+	data->accel_fs = fs;
+
 	return 0;
 }
 
@@ -78,6 +80,7 @@ static int lis2du12_accel_set_odr_raw(const struct device *dev, uint8_t odr)
 {
 	const struct lis2du12_config *cfg = dev->config;
 	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
+	struct lis2du12_data *data = dev->data;
 	lis2du12_md_t mode;
 
 	if (lis2du12_mode_get(ctx, &mode) < 0) {
@@ -88,6 +91,8 @@ static int lis2du12_accel_set_odr_raw(const struct device *dev, uint8_t odr)
 	if (lis2du12_mode_set(ctx, &mode) < 0) {
 		return -EIO;
 	}
+
+	data->accel_freq = odr;
 
 	return 0;
 }
@@ -124,7 +129,6 @@ static int lis2du12_accel_range_set(const struct device *dev, int32_t range)
 		return -EIO;
 	}
 
-	data->accel_fs = lis2du12_accel_fs_map[fs];
 	data->acc_gain = lis2du12_accel_fs_map[fs] * GAIN_UNIT_XL / 2;
 	return 0;
 }
@@ -139,12 +143,6 @@ static int lis2du12_accel_config(const struct device *dev,
 		return lis2du12_accel_range_set(dev, sensor_ms2_to_g(val));
 	case SENSOR_ATTR_SAMPLING_FREQUENCY:
 		return lis2du12_accel_odr_set(dev, val->val1);
-#if defined(CONFIG_LIS2DU12_TRIGGER)
-	case SENSOR_ATTR_SLOPE_TH:
-		return lis2du12_accel_set_wake_th(dev, val);
-	case SENSOR_ATTR_SLOPE_DUR:
-		return lis2du12_accel_set_wake_dur(dev, val);
-#endif
 	default:
 		LOG_WRN("Accel attribute %d not supported.", attr);
 		return -ENOTSUP;
@@ -351,7 +349,6 @@ static int lis2du12_init_chip(const struct device *dev)
 		LOG_ERR("failed to set accelerometer range %d", fs);
 		return -EIO;
 	}
-	lis2du12->accel_fs = lis2du12_accel_fs_map[fs];
 	lis2du12->acc_gain = lis2du12_accel_fs_map[fs] * GAIN_UNIT_XL / 2;
 
 	/* set odr from DT (the only way to go in high performance) */
@@ -417,8 +414,7 @@ static int lis2du12_init(const struct device *dev)
 	.int1_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, int1_gpios, { 0 }), \
 	.int2_gpio = GPIO_DT_SPEC_INST_GET_OR(inst, int2_gpios, { 0 }), \
 	.drdy_pulsed = DT_INST_PROP(inst, drdy_pulsed),			\
-	.drdy_pin = DT_INST_PROP(inst, drdy_pin),			\
-	.delta_pin = DT_INST_PROP(inst, delta_pin),
+	.drdy_pin = DT_INST_PROP(inst, drdy_pin)
 #else
 #define LIS2DU12_CFG_IRQ(inst)
 #endif /* CONFIG_LIS2DU12_TRIGGER */
@@ -444,7 +440,8 @@ static int lis2du12_init(const struct device *dev)
 		STMEMSC_CTX_SPI(&lis2du12_config_##inst.stmemsc_cfg),		\
 		.stmemsc_cfg = {						\
 			.spi = SPI_DT_SPEC_INST_GET(inst,			\
-					   LIS2DU12_SPI_OP)			\
+					   LIS2DU12_SPI_OP,			\
+					   0),					\
 		},								\
 		LIS2DU12_CONFIG_COMMON(inst)					\
 	}

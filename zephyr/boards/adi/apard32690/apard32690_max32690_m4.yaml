@@ -10,7 +10,6 @@ supported:
   - arduino_gpio
   - arduino_serial
   - arduino_spi
-  - arduino_i2c
   - pmod_spi
   - pmod_gpio
   - gpio

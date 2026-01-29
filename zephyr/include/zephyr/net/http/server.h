@@ -171,15 +171,13 @@ struct http_content_type {
 struct http_client_ctx;
 
 /** Indicates the status of the currently processed piece of data.  */
-enum http_transaction_status {
+enum http_data_status {
 	/** Transaction aborted, data incomplete. */
-	HTTP_SERVER_TRANSACTION_ABORTED = -1,
+	HTTP_SERVER_DATA_ABORTED = -1,
 	/** Transaction incomplete, more data expected. */
-	HTTP_SERVER_REQUEST_DATA_MORE = 0,
+	HTTP_SERVER_DATA_MORE = 0,
 	/** Final data fragment in current transaction. */
-	HTTP_SERVER_REQUEST_DATA_FINAL = 1,
-	/** Transaction completed, response sent completely. */
-	HTTP_SERVER_TRANSACTION_COMPLETE = 2,
+	HTTP_SERVER_DATA_FINAL = 1,
 };
 
 /** @brief Status of captured request headers */
@@ -220,10 +218,7 @@ struct http_response_ctx {
  *        can be specified.
  *
  * @param client HTTP context information for this client connection.
- * @param status HTTP transaction status, HTTP_SERVER_REQUEST_DATA_MORE and
- *               HTTP_SERVER_REQUEST_DATA_FINAL describe the request-body delivery progress.
- *               HTTP_SERVER_TRANSACTION_ABORTED and HTTP_SERVER_TRANSACTION_COMPLETE are
- *               terminal notifications.
+ * @param status HTTP data status, indicate whether more data is expected or not.
  * @param request_ctx Request context structure containing HTTP request data that was received.
  * @param response_ctx Response context structure for application to populate with response data.
  * @param user_data User specified data.
@@ -232,7 +227,7 @@ struct http_response_ctx {
  *         <0 error, close the connection.
  */
 typedef int (*http_resource_dynamic_cb_t)(struct http_client_ctx *client,
-					  enum http_transaction_status status,
+					  enum http_data_status status,
 					  const struct http_request_ctx *request_ctx,
 					  struct http_response_ctx *response_ctx,
 					  void *user_data);

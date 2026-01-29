@@ -5,22 +5,8 @@
  */
 
 #include <zephyr/drivers/clock_control.h>
-#include <zephyr/kernel.h>
-#include <zephyr/sys/util.h>
-#include <bsp_api.h>
-
-#if defined(CONFIG_SOC_SERIES_RZG3S)
 #include <zephyr/dt-bindings/clock/renesas_rzg_clock.h>
-#elif defined(CONFIG_SOC_SERIES_RZA3UL)
-#include <zephyr/dt-bindings/clock/renesas_rza_clock.h>
-#elif defined(CONFIG_SOC_SERIES_RZV2L)
-#include <zephyr/dt-bindings/clock/renesas_rzv_clock.h>
-#endif
-
-#define RZ_CLOCK_DIV(clock_id)        ((clock_id & RZ_CLOCK_DIV_MASK) >> RZ_CLOCK_DIV_SHIFT)
-#define RZ_CLOCK_IP(clock_id)         ((clock_id & RZ_IP_MASK) >> RZ_IP_SHIFT)
-#define RZ_CLOCK_IP_CHANNEL(clock_id) ((clock_id & RZ_IP_CH_MASK) >> RZ_IP_CH_SHIFT)
-#define RZ_CLOCK_SRC(clock_id)        ((clock_id & RZ_CLOCK_MASK) >> RZ_CLOCK_SHIFT)
+#include <zephyr/kernel.h>
 
 #define DT_DRV_COMPAT renesas_rz_cpg
 
@@ -32,15 +18,15 @@ static int clock_control_renesas_rz_on(const struct device *dev, clock_control_s
 
 	uint32_t *clock_id = (uint32_t *)sys;
 
-	uint32_t ip = RZ_CLOCK_IP(*clock_id);
-	uint32_t ch = RZ_CLOCK_IP_CHANNEL(*clock_id);
+	uint32_t ip = (*clock_id & RZ_IP_MASK) >> RZ_IP_SHIFT;
+	uint32_t ch = (*clock_id & RZ_IP_CH_MASK) >> RZ_IP_CH_SHIFT;
 
 	switch (ip) {
 	case RZ_IP_GTM:
 		R_BSP_MODULE_START(FSP_IP_GTM, ch);
 		break;
-	case RZ_IP_SCI:
-		R_BSP_MODULE_START(FSP_IP_SCI, ch);
+	case RZ_IP_GPT:
+		R_BSP_MODULE_START(FSP_IP_GPT, ch);
 		break;
 	case RZ_IP_SCIF:
 		R_BSP_MODULE_START(FSP_IP_SCIF, ch);
@@ -51,32 +37,18 @@ static int clock_control_renesas_rz_on(const struct device *dev, clock_control_s
 	case RZ_IP_RSPI:
 		R_BSP_MODULE_START(FSP_IP_RSPI, ch);
 		break;
-	case RZ_IP_CANFD:
-		R_BSP_MODULE_START(FSP_IP_CANFD, ch);
-		break;
-#if !defined(CONFIG_SOC_SERIES_RZV2L)
-	case RZ_IP_ADC:
-		R_BSP_MODULE_START(FSP_IP_ADC, ch);
-		break;
-	case RZ_IP_WDT:
-		R_BSP_MODULE_START(FSP_IP_WDT, ch);
-		break;
-#endif
-#if !defined(CONFIG_SOC_SERIES_RZA3UL)
-	case RZ_IP_GPT:
-		R_BSP_MODULE_START(FSP_IP_GPT, ch);
-		break;
 	case RZ_IP_MHU:
 		R_BSP_MODULE_START(FSP_IP_MHU, ch);
 		break;
 	case RZ_IP_DMAC:
 		R_BSP_MODULE_START(FSP_IP_DMAC, ch);
 		break;
-#else
-	case RZ_IP_DMAC:
-		R_BSP_MODULE_START(FSP_IP_DMAC_NS, ch);
+	case RZ_IP_CANFD:
+		R_BSP_MODULE_START(FSP_IP_CANFD, ch);
 		break;
-#endif
+	case RZ_IP_ADC:
+		R_BSP_MODULE_START(FSP_IP_ADC, ch);
+		break;
 	default:
 		return -EINVAL; /* Invalid FSP IP Module */
 	}
@@ -92,15 +64,15 @@ static int clock_control_renesas_rz_off(const struct device *dev, clock_control_
 
 	uint32_t *clock_id = (uint32_t *)sys;
 
-	uint32_t ip = RZ_CLOCK_IP(*clock_id);
-	uint32_t ch = RZ_CLOCK_IP_CHANNEL(*clock_id);
+	uint32_t ip = (*clock_id & RZ_IP_MASK) >> RZ_IP_SHIFT;
+	uint32_t ch = (*clock_id & RZ_IP_CH_MASK) >> RZ_IP_CH_SHIFT;
 
 	switch (ip) {
 	case RZ_IP_GTM:
 		R_BSP_MODULE_STOP(FSP_IP_GTM, ch);
 		break;
-	case RZ_IP_SCI:
-		R_BSP_MODULE_STOP(FSP_IP_SCI, ch);
+	case RZ_IP_GPT:
+		R_BSP_MODULE_STOP(FSP_IP_GPT, ch);
 		break;
 	case RZ_IP_SCIF:
 		R_BSP_MODULE_STOP(FSP_IP_SCIF, ch);
@@ -111,36 +83,21 @@ static int clock_control_renesas_rz_off(const struct device *dev, clock_control_
 	case RZ_IP_RSPI:
 		R_BSP_MODULE_STOP(FSP_IP_RSPI, ch);
 		break;
-	case RZ_IP_CANFD:
-		R_BSP_MODULE_STOP(FSP_IP_CANFD, ch);
-		break;
-#if !defined(CONFIG_SOC_SERIES_RZV2L)
-	case RZ_IP_ADC:
-		R_BSP_MODULE_STOP(FSP_IP_ADC, ch);
-		break;
-	case RZ_IP_WDT:
-		R_BSP_MODULE_STOP(FSP_IP_WDT, ch);
-		break;
-#endif
-#if !defined(CONFIG_SOC_SERIES_RZA3UL)
-	case RZ_IP_GPT:
-		R_BSP_MODULE_STOP(FSP_IP_GPT, ch);
-		break;
 	case RZ_IP_MHU:
 		R_BSP_MODULE_STOP(FSP_IP_MHU, ch);
 		break;
 	case RZ_IP_DMAC:
 		R_BSP_MODULE_STOP(FSP_IP_DMAC, ch);
 		break;
-#else
-	case RZ_IP_DMAC:
-		R_BSP_MODULE_STOP(FSP_IP_DMAC_NS, ch);
+	case RZ_IP_CANFD:
+		R_BSP_MODULE_STOP(FSP_IP_CANFD, ch);
 		break;
-#endif
+	case RZ_IP_ADC:
+		R_BSP_MODULE_STOP(FSP_IP_ADC, ch);
+		break;
 	default:
-		return -EINVAL; /* Invalid FSP IP Module */
+		return -EINVAL; /* Invalid */
 	}
-
 	return 0;
 }
 
@@ -153,8 +110,8 @@ static int clock_control_renesas_rz_get_rate(const struct device *dev, clock_con
 
 	uint32_t *clock_id = (uint32_t *)sys;
 
-	fsp_priv_clock_t clk_src = RZ_CLOCK_SRC(*clock_id);
-	uint32_t clk_div = RZ_CLOCK_DIV(*clock_id);
+	fsp_priv_clock_t clk_src = (*clock_id & RZ_CLOCK_MASK) >> RZ_CLOCK_SHIFT;
+	uint32_t clk_div = (*clock_id & RZ_CLOCK_DIV_MASK) >> RZ_CLOCK_DIV_SHIFT;
 
 	uint32_t clk_hz = R_FSP_SystemClockHzGet(clk_src);
 	*rate = clk_hz / clk_div;

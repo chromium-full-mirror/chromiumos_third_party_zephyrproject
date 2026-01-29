@@ -5,7 +5,11 @@
 
 if BOARD_LINUM
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 endif # BOARD_LINUM

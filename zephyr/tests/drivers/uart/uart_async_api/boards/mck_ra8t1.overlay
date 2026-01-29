@@ -10,7 +10,6 @@
 			psels = <RA_PSEL(RA_PSEL_SCI_4, 7, 14)>;
 			drive-strength = "medium";
 		};
-
 		group2 {
 			/* rx */
 			psels = <RA_PSEL(RA_PSEL_SCI_4, 7, 15)>;
@@ -22,7 +21,6 @@
 	pinctrl-0 = <&sci4_default>;
 	pinctrl-names = "default";
 	status = "okay";
-
 	dut: uart {
 		current-speed = <115200>;
 		status = "okay";

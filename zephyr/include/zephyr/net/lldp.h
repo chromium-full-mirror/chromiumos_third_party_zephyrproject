@@ -22,9 +22,6 @@
  * @{
  */
 
-#include <zephyr/net/net_if.h>
-#include <zephyr/net/net_pkt.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

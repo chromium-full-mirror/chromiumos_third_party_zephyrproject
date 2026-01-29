@@ -16,6 +16,7 @@ properties:
 
       For details, see "2.3.4 status" in Devicetree Specification v0.4.
     enum:
+      - "ok" # Deprecated form
       - "okay"
       - "disabled"
       - "reserved"
@@ -208,17 +209,6 @@ properties:
     type: int
     description: |
       Number of cells in power-domains property
-
-  hwlocks:
-    type: phandle-array
-    description: |
-      HW spinlock id relevant to the device.
-    specifier-space: hwlock
-
-  hwlock-names:
-    type: string-array
-    description: |
-      Optional names given to the hwlock specifiers in the "hwlocks" property.
 
   zephyr,deferred-init:
     type: boolean

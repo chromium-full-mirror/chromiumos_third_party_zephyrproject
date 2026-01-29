@@ -184,3 +184,11 @@
 	power-source = <MAX32_VSEL_VDDIOH>;
 	drive-strength = <1>;
 };
+
+&sdhc0 {
+	status = "okay";
+
+	mmc {
+		status = "okay";
+	};
+};

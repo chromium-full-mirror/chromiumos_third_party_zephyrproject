@@ -23,8 +23,12 @@ config SHELL_STACK_SIZE
 
 endif # SHELL
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y  if !NET_LOOPBACK && !NET_TEST
+
+endif # NETWORKING
 
 if XIP
 # Offset between CRAM AXIM and CRAM AXIF, code will be downloaded

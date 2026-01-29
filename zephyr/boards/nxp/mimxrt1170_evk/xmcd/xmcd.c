@@ -7,10 +7,20 @@
 
 #include "xmcd.h"
 
-#if defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && defined(CONFIG_BOOT_FLEXSPI_NOR)
+/* Component ID definition, used by tools. */
+#ifndef FSL_COMPONENT_ID
+#define FSL_COMPONENT_ID "platform.xmcd"
+#endif
+
+#if defined(XIP_BOOT_HEADER_ENABLE) && (XIP_BOOT_HEADER_ENABLE == 1)
 
 #if defined(XIP_BOOT_HEADER_XMCD_ENABLE) && (XIP_BOOT_HEADER_XMCD_ENABLE == 1)
+
+#if defined(__CC_ARM) || defined(__ARMCC_VERSION) || defined(__GNUC__)
 __attribute__((section(".boot_hdr.xmcd_data"), used))
+#elif defined(__ICCARM__)
+#pragma location = ".boot_hdr.xmcd_data"
+#endif
 
 const uint32_t xmcd_data[] = {
 	/* Tag = 0xC, Version = 0, Memory Interface: SEMC,
@@ -31,4 +41,4 @@ const uint32_t xmcd_data[] = {
 	0x02};
 
 #endif /* XIP_BOOT_HEADER_XMCD_ENABLE */
-#endif /* defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && defined(CONFIG_BOOT_FLEXSPI_NOR) */
+#endif /* XIP_BOOT_HEADER_ENABLE */

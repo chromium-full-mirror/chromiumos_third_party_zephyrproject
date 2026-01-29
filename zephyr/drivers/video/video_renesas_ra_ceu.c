@@ -117,7 +117,9 @@ static int video_renesas_ra_ceu_get_format(const struct device *dev, struct vide
 		return ret;
 	}
 
-	return video_estimate_fmt_size(fmt);
+	fmt->pitch = fmt->width * video_bits_per_pixel(fmt->pixelformat) / BITS_PER_BYTE;
+
+	return 0;
 }
 
 static int video_renesas_ra_ceu_set_format(const struct device *dev, struct video_format *fmt)
@@ -167,10 +169,7 @@ static int video_renesas_ra_ceu_set_format(const struct device *dev, struct vide
 		return -EIO;
 	}
 
-	ret = video_estimate_fmt_size(fmt);
-	if (ret < 0) {
-		return ret;
-	}
+	fmt->pitch = fmt->width * video_bits_per_pixel(fmt->pixelformat) / BITS_PER_BYTE;
 
 	memcpy(&data->fmt, fmt, sizeof(struct video_format));
 
@@ -182,6 +181,8 @@ static int video_renesas_ra_ceu_get_caps(const struct device *dev, struct video_
 	const struct video_renesas_ra_ceu_config *config = dev->config;
 
 	caps->min_vbuf_count = 1;
+	caps->min_line_count = LINE_COUNT_HEIGHT;
+	caps->max_line_count = LINE_COUNT_HEIGHT;
 
 	return video_get_caps(config->source_dev, caps);
 }

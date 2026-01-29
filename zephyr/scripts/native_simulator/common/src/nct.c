@@ -61,7 +61,6 @@
 #define NCT_DEBUG_PRINTS 0
 
 /* For pthread_setname_np() */
-#undef _GNU_SOURCE
 #define _GNU_SOURCE
 #include <stdbool.h>
 #include <stdlib.h>
@@ -147,7 +146,7 @@ NSI_INLINE int nct_sem_rewait(sem_t *semaphore)
 {
 	int ret;
 
-	while (((ret = sem_wait(semaphore)) == -1) && (errno == EINTR)) {
+	while ((ret = sem_wait(semaphore)) == EINTR) {
 		/* Restart wait if we were interrupted */
 	}
 	return ret;

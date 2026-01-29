@@ -3,16 +3,13 @@
 #
 # Copyright (c) 2022 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-from __future__ import annotations
 
 import logging
 import os
 import platform
 import re
-from dataclasses import asdict, dataclass, field
 from multiprocessing import Lock, Value
 from pathlib import Path
-from typing import Any
 
 import scl
 import yaml
@@ -35,39 +32,50 @@ except ImportError:
 logger = logging.getLogger('twister')
 
 
-@dataclass
 class DUT:
-    """Device Under Test configuration."""
-    id: str | None = None
-    serial: str | None = None
-    serial_baud: int = 115200
-    platform: str | None = None
-    product: str | None = None
-    serial_pty: str | None = None
-    connected: bool = False
-    runner_params: str | None = None
-    pre_script: str | None = None
-    post_script: str | None = None
-    post_flash_script: str | None = None
-    script_param: str | None = None
-    runner: str | None = None
-    flash_timeout: int = 60
-    flash_with_test: bool = False
-    flash_before: bool = False
-    fixtures: list[str] = field(default_factory=list)
-    probe_id: str | None = None
-    notes: str | None = None
-    match: bool = False
+    def __init__(self,
+                 id=None,
+                 serial=None,
+                 serial_baud=None,
+                 platform=None,
+                 product=None,
+                 serial_pty=None,
+                 connected=False,
+                 runner_params=None,
+                 pre_script=None,
+                 post_script=None,
+                 post_flash_script=None,
+                 script_param=None,
+                 runner=None,
+                 flash_timeout=60,
+                 flash_with_test=False,
+                 flash_before=False):
 
-    def __post_init__(self):
-        """Initialize non-serializable objects after dataclass initialization."""
-        # These are not dataclass fields, so they won't be serialized by asdict()
+        self.serial = serial
+        self.baud = serial_baud or 115200
+        self.platform = platform
+        self.serial_pty = serial_pty
         self._counter = Value("i", 0)
         self._available = Value("i", 1)
         self._failures = Value("i", 0)
+        self.connected = connected
+        self.pre_script = pre_script
+        self.id = id
+        self.product = product
+        self.runner = runner
+        self.runner_params = runner_params
+        self.flash_before = flash_before
+        self.fixtures = []
+        self.post_flash_script = post_flash_script
+        self.post_script = post_script
+        self.pre_script = pre_script
+        self.script_param = script_param
+        self.probe_id = None
+        self.notes = None
         self.lock = Lock()
-        # Ensure serial_baud has a default value
-        self.serial_baud = self.serial_baud or 115200
+        self.match = False
+        self.flash_timeout = flash_timeout
+        self.flash_with_test = flash_with_test
 
     @property
     def available(self):
@@ -107,15 +115,18 @@ class DUT:
         with self._failures.get_lock():
             self._failures.value += value
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert DUT dataclass to dictionary for YAML serialization."""
-        result = asdict(self)
-        # Remove None and False values and empty lists to keep YAML clean
-        return {k: v for k, v in result.items() if v}
+    def to_dict(self):
+        d = {}
+        exclude = ['_available', '_counter', '_failures', 'match']
+        v = vars(self)
+        for k in v:
+            if k not in exclude and v[k]:
+                d[k] = v[k]
+        return d
+
 
     def __repr__(self):
         return f"<{self.platform} ({self.product}) on {self.serial}>"
-
 
 class HardwareMap:
     schema_path = os.path.join(ZEPHYR_BASE, "scripts", "schemas", "twister", "hwmap-schema.yaml")
@@ -136,8 +147,6 @@ class HardwareMap:
         'Microsoft',
         'Nuvoton',
         'Espressif',
-        'SecuringHardware.com',
-        'Cypress Semiconductor'
     ]
 
     runner_mapping = {
@@ -150,7 +159,7 @@ class HardwareMap:
             'J-Link OB'
         ],
         'openocd': [
-            'STM32 STLink', '^XDS110.*', 'STLINK-V3', '^Tigard.*', 'KitProg3'
+            'STM32 STLink', '^XDS110.*', 'STLINK-V3'
         ],
         'dediprog': [
             'TTL232R-3V3',
@@ -159,8 +168,8 @@ class HardwareMap:
     }
 
     def __init__(self, env=None):
-        self.detected: list[DUT] = []
-        self.duts: list[DUT] = []
+        self.detected = []
+        self.duts = []
         self.options = env.options
 
     def discover(self):
@@ -186,7 +195,7 @@ class HardwareMap:
                             self.options.platform.append(d.platform)
 
             elif self.options.device_serial:
-                self.add_device(self.options.device_serial[0],
+                self.add_device(self.options.device_serial,
                                 self.options.platform[0],
                                 self.options.pre_script,
                                 False,
@@ -195,12 +204,6 @@ class HardwareMap:
                                 flash_with_test=self.options.device_flash_with_test,
                                 flash_before=self.options.flash_before,
                                 )
-                if len(self.options.device_serial) > 1:
-                    for serial in self.options.device_serial[1:]:
-                        self.add_device(serial,
-                                        platform=None,
-                                        pre_script=None,
-                                        is_pty=False)
 
             elif self.options.device_serial_pty:
                 self.add_device(self.options.device_serial_pty,
@@ -284,7 +287,7 @@ class HardwareMap:
             runner = dut.get('runner')
             runner_params = dut.get('runner_params')
             serial = dut.get('serial')
-            serial_baud = dut.get('serial_baud', None) or dut.get('baud', None)
+            baud = dut.get('baud', None)
             product = dut.get('product')
             fixtures = dut.get('fixtures', [])
             connected = dut.get('connected') and ((serial or serial_pty) is not None)
@@ -298,7 +301,7 @@ class HardwareMap:
                               id=id,
                               serial_pty=serial_pty,
                               serial=serial,
-                              serial_baud=serial_baud,
+                              serial_baud=baud,
                               connected=connected,
                               pre_script=pre_script,
                               flash_before=flash_before,
@@ -350,11 +353,6 @@ class HardwareMap:
                 # TI XDS110 can have multiple serial devices for a single board
                 # assume endpoint 0 is the serial, skip all others
                 if d.manufacturer == 'Texas Instruments' and not d.location.endswith('0'):
-                    continue
-
-                # The Tigard multi-protocol debug tool provides multiple serial devices.
-                # Assume endpoint 0 is the UART, skip all others.
-                if d.manufacturer == 'SecuringHardware.com' and not d.location.endswith('0'):
                     continue
 
                 if d.product is None:

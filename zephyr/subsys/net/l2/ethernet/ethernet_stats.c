@@ -31,18 +31,12 @@ static int eth_stats_get(uint64_t mgmt_request, struct net_if *iface,
 		}
 
 		eth = net_if_get_device(iface)->api;
-		if (eth == NULL ||
-		    (eth->get_stats == NULL && eth->get_stats_type == NULL)) {
+		if (eth == NULL || eth->get_stats == NULL) {
 			return -ENOENT;
 		}
 
 		len_chk = sizeof(struct net_stats_eth);
-		if (eth->get_stats_type != NULL) {
-			src = eth->get_stats_type(net_if_get_device(iface),
-						  ETHERNET_STATS_TYPE_ALL);
-		} else {
-			src = eth->get_stats(net_if_get_device(iface));
-		}
+		src = eth->get_stats(net_if_get_device(iface));
 		break;
 	}
 

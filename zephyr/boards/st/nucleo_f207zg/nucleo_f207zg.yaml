@@ -8,23 +8,22 @@ toolchain:
   - zephyr
   - gnuarmemb
 supported:
-  - adc
   - arduino_gpio
   - arduino_i2c
   - arduino_spi
-  - backup_sram
-  - can
-  - counter
-  - dac
-  - dma
-  - gpio
   - i2c
-  - netif:eth
+  - spi
+  - gpio
+  - can
+  - usb_device
+  - watchdog
+  - counter
+  - adc
+  - dac
+  - backup_sram
   - pwm
   - rng
+  - dma
   - rtc
-  - spi
-  - usb_device
   - usbd
-  - watchdog
 vendor: st

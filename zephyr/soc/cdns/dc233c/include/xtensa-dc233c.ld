@@ -112,7 +112,10 @@ SECTIONS
 {
 
 #include <zephyr/linker/rel-sections.ld>
+
+#ifdef CONFIG_LLEXT
 #include <zephyr/linker/llext-sections.ld>
+#endif
 
 #ifdef CONFIG_GEN_ISR_TABLES
 #include <zephyr/linker/intlist.ld>
@@ -207,8 +210,6 @@ SECTIONS
     *(.fini.literal)
     KEEP(*(.fini))
     *(.gnu.version)
-
-    #include <snippets-text-sections.ld>
 
     #include <zephyr/linker/kobject-text.ld>
 

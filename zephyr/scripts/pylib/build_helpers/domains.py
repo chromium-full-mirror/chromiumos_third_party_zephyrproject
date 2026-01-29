@@ -1,5 +1,4 @@
 # Copyright (c) 2022 Nordic Semiconductor ASA
-# Copyright 2025 NXP
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -59,12 +58,13 @@ logger.addHandler(handler)
 
 class Domains:
 
-    def __init__(self, data: dict):
+    def __init__(self, domains_yaml):
         try:
+            data = yaml.safe_load(domains_yaml)
             pykwalify.core.Core(source_data=data,
                                 schema_data=schema).validate()
-        except pykwalify.errors.SchemaError as e:
-            logger.critical(f'malformed domains.yaml: {e}')
+        except (yaml.YAMLError, pykwalify.errors.SchemaError):
+            logger.critical(f'malformed domains.yaml')
             exit(1)
 
         self._build_dir = data['build_dir']
@@ -91,18 +91,13 @@ class Domains:
             logger.critical(f'domains.yaml file not found: {domains_file}')
             exit(1)
 
-        return Domains.from_yaml(domains_yaml)
+        return Domains(domains_yaml)
 
     @staticmethod
     def from_yaml(domains_yaml):
         '''Load domains from a string with YAML contents.
         '''
-        try:
-            domains_yaml = yaml.safe_load(domains_yaml)
-            return Domains(domains_yaml)
-        except yaml.YAMLError as e:
-            logger.critical(f'Invalid domains.yaml: {e}')
-            exit(1)
+        return Domains(domains_yaml)
 
     def get_domains(self, names=None, default_flash_order=False):
         if names is None:

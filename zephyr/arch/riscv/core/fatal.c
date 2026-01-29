@@ -80,7 +80,12 @@ const char *z_riscv_mcause_str(unsigned long cause)
 FUNC_NORETURN void z_riscv_fatal_error(unsigned int reason,
 				       const struct arch_esf *esf)
 {
-	__maybe_unused _callee_saved_t *csf = NULL;
+	z_riscv_fatal_error_csf(reason, esf, NULL);
+}
+
+FUNC_NORETURN void z_riscv_fatal_error_csf(unsigned int reason, const struct arch_esf *esf,
+					   const _callee_saved_t *csf)
+{
 	unsigned long mcause;
 
 	__asm__ volatile("csrr %0, mcause" : "=r" (mcause));
@@ -117,8 +122,6 @@ FUNC_NORETURN void z_riscv_fatal_error(unsigned int reason,
 		EXCEPTION_DUMP("   mepc: " PR_REG, esf->mepc);
 		EXCEPTION_DUMP("mstatus: " PR_REG, esf->mstatus);
 		EXCEPTION_DUMP("");
-
-		csf = esf->csf;
 	}
 
 	if (csf != NULL) {
@@ -221,12 +224,12 @@ void z_riscv_fault(struct arch_esf *esf)
 	unsigned int reason = K_ERR_CPU_EXCEPTION;
 
 	if (bad_stack_pointer(esf)) {
-#if defined(CONFIG_PMP_STACK_GUARD) && defined(CONFIG_MULTITHREADING)
+#ifdef CONFIG_PMP_STACK_GUARD
 		/*
 		 * Remove the thread's PMP setting to prevent triggering a stack
 		 * overflow error again due to the previous configuration.
 		 */
-		z_riscv_pmp_kernelmode_disable();
+		z_riscv_pmp_stackguard_disable();
 #endif /* CONFIG_PMP_STACK_GUARD */
 		reason = K_ERR_STACK_CHK_FAIL;
 	}
@@ -244,13 +247,6 @@ FUNC_NORETURN void arch_syscall_oops(void *ssf_ptr)
 void z_impl_user_fault(unsigned int reason)
 {
 	struct arch_esf *oops_esf = _current->syscall_frame;
-
-#ifdef CONFIG_EXCEPTION_DEBUG
-	/* csf isn't populated in the syscall frame */
-	if (oops_esf != NULL) {
-		oops_esf->csf = NULL;
-	}
-#endif /* CONFIG_EXCEPTION_DEBUG */
 
 	if (((_current->base.user_options & K_USER) != 0) &&
 		reason != K_ERR_STACK_CHK_FAIL) {

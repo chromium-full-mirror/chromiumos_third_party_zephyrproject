@@ -20,14 +20,21 @@
  *
  * @param pkt Network packet
  *
+ * @return NET_OK if the packet was consumed, NET_DROP if
+ * the packet parsing failed and the caller should handle
+ * the received packet. If corresponding IP protocol support is
+ * disabled, the function will always return NET_DROP.
  */
 #if defined(CONFIG_NET_SOCKETS_PACKET)
-void net_packet_socket_input(struct net_pkt *pkt, uint16_t proto, enum net_sock_type type);
+enum net_verdict net_packet_socket_input(struct net_pkt *pkt,
+					 uint16_t proto,
+					 enum net_sock_type type);
 #else
-static inline void net_packet_socket_input(struct net_pkt *pkt,
-					   uint16_t proto,
-					   enum net_sock_type type)
+static inline enum net_verdict net_packet_socket_input(struct net_pkt *pkt,
+						       uint16_t proto,
+						       enum net_sock_type type)
 {
+	return NET_CONTINUE;
 }
 #endif
 

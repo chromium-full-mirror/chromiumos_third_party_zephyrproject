@@ -35,13 +35,14 @@ struct eth_litex_dev_data {
 	struct net_if *iface;
 	uint8_t mac_addr[6];
 	uint8_t txslot;
+	struct k_mutex tx_mutex;
 	struct k_sem sem_tx_ready;
 };
 
 struct eth_litex_config {
 	const struct device *phy_dev;
 	void (*config_func)(const struct device *dev);
-	struct net_eth_mac_config mcfg;
+	bool random_mac_address;
 	uint32_t rx_slot_addr;
 	uint32_t rx_length_addr;
 	uint32_t rx_ev_pending_addr;
@@ -63,11 +64,15 @@ static int eth_initialize(const struct device *dev)
 	const struct eth_litex_config *config = dev->config;
 	struct eth_litex_dev_data *context = dev->data;
 
+	k_mutex_init(&context->tx_mutex);
 	k_sem_init(&context->sem_tx_ready, 1, 1);
 
 	config->config_func(dev);
 
-	(void)net_eth_mac_load(&config->mcfg, context->mac_addr);
+	if (config->random_mac_address) {
+		/* generate random MAC address */
+		gen_random_mac(context->mac_addr, 0x10, 0xe2, 0xd5);
+	}
 
 	return 0;
 }
@@ -78,6 +83,8 @@ static int eth_tx(const struct device *dev, struct net_pkt *pkt)
 	struct eth_litex_dev_data *context = dev->data;
 	const struct eth_litex_config *config = dev->config;
 	int ret;
+
+	k_mutex_lock(&context->tx_mutex, K_FOREVER);
 
 	/* get data from packet and send it */
 	len = net_pkt_get_len(pkt);
@@ -91,8 +98,7 @@ static int eth_tx(const struct device *dev, struct net_pkt *pkt)
 	/* wait for the device to be ready to transmit */
 	ret = k_sem_take(&context->sem_tx_ready, MAX_TX_FAILURE);
 	if (ret < 0) {
-		LOG_ERR("TX fifo failed");
-		return -EIO;
+		goto error;
 	};
 	/* start transmitting */
 	litex_write8(1, config->tx_start_addr);
@@ -100,7 +106,13 @@ static int eth_tx(const struct device *dev, struct net_pkt *pkt)
 	/* change slot */
 	context->txslot = (context->txslot + 1) % config->tx_buf_n;
 
+	k_mutex_unlock(&context->tx_mutex);
+
 	return 0;
+error:
+	k_mutex_unlock(&context->tx_mutex);
+	LOG_ERR("TX fifo failed");
+	return -EIO;
 }
 
 static void eth_rx(const struct device *port)
@@ -124,7 +136,7 @@ static void eth_rx(const struct device *port)
 	rxslot = litex_read8(config->rx_slot_addr);
 
 	/* obtain rx buffer */
-	pkt = net_pkt_rx_alloc_with_buffer(context->iface, len, NET_AF_UNSPEC, 0,
+	pkt = net_pkt_rx_alloc_with_buffer(context->iface, len, AF_UNSPEC, 0,
 					   K_NO_WAIT);
 	if (pkt == NULL) {
 		LOG_ERR("Failed to obtain RX buffer of length %u", len);
@@ -318,12 +330,14 @@ static const struct ethernet_api eth_api = {
 		irq_enable(DT_INST_IRQN(n));                                                       \
 	}                                                                                          \
                                                                                                    \
-	static struct eth_litex_dev_data eth_data##n;                                              \
+	static struct eth_litex_dev_data eth_data##n = {                                           \
+		.mac_addr = DT_INST_PROP_OR(n, local_mac_address, {0}),			           \
+	};                                                                                         \
                                                                                                    \
 	static const struct eth_litex_config eth_config##n = {                                     \
 		.phy_dev = DEVICE_DT_GET_OR_NULL(DT_INST_PHANDLE(n, phy_handle)),                  \
 		.config_func = eth_irq_config##n,                                                  \
-		.mcfg = NET_ETH_MAC_DT_INST_CONFIG_INIT(n),                                        \
+		.random_mac_address = DT_INST_PROP(n, zephyr_random_mac_address),                  \
 		.rx_slot_addr = DT_INST_REG_ADDR_BY_NAME(n, rx_slot),                              \
 		.rx_length_addr = DT_INST_REG_ADDR_BY_NAME(n, rx_length),                          \
 		.rx_ev_pending_addr = DT_INST_REG_ADDR_BY_NAME(n, rx_ev_pending),                  \

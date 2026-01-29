@@ -3,8 +3,8 @@
 
 if BOARD_FRDM_MCXN947
 
-configdefault NET_L2_ETHERNET
-	default y
+config NET_L2_ETHERNET
+	default y if NETWORKING
 
 if SD_STACK
 

@@ -16,5 +16,6 @@ Protocols
    mqtt
    mqtt_sn
    ocpp
+   ptp
    tftp
    latmon

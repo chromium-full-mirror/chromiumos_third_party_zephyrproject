@@ -6,12 +6,15 @@
 Tests for quarantine.py classes' methods
 """
 
-import os
-import textwrap
 from unittest import mock
-
+import os
 import pytest
-from twisterlib.quarantine import QuarantineData, QuarantineElement, QuarantineException
+import textwrap
+
+from twisterlib.quarantine import QuarantineException, \
+                                  QuarantineElement, \
+                                  QuarantineData
+
 
 TESTDATA_1 = [
     (

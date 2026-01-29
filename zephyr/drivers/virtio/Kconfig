@@ -8,10 +8,6 @@ config VIRTIO
 
 if VIRTIO
 
-module = VIRTIO
-module-str = VIRTIO
-source "subsys/logging/Kconfig.template.log_config"
-
 config VIRTIO_PCI
 	bool "support for VIRTIO over PCI"
 	default y
@@ -27,3 +23,7 @@ config VIRTIO_MMIO
 	  Enable options for VIRTIO over MMIO
 
 endif # VIRTIO
+
+module = VIRTIO
+module-str = VIRTIO
+source "subsys/logging/Kconfig.template.log_config"

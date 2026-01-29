@@ -27,9 +27,7 @@ void soc_early_init_hook(void)
 {
 	/* Enable ART Flash cache accelerator and prefetch */
 	LL_FLASH_EnableART();
-#if defined(CONFIG_STM32_FLASH_PREFETCH)
 	LL_FLASH_EnablePrefetch();
-#endif
 
 	sys_cache_instr_enable();
 	sys_cache_data_enable();

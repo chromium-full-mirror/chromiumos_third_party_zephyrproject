@@ -32,11 +32,11 @@ Supported Features
 
 .. zephyr:board-supported-hw::
 
-Bluetooth |reg| support
------------------------
+Bluetooth support
+-----------------
 
-Bluetooth |reg| Low Energy support is enabled; however, to build a Zephyr sample using this board,
-you first need to fetch the Bluetooth |reg| controller library into Zephyr as a binary BLOB.
+BLE support is enabled; however, to build a Zephyr sample using this board,
+you first need to fetch the Bluetooth controller library into Zephyr as a binary BLOB.
 
 To fetch binary BLOBs:
 

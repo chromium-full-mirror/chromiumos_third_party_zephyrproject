@@ -36,7 +36,9 @@ static ALWAYS_INLINE void arch_kernel_init(void)
 {
 	z_irq_setup();
 
+#ifdef CONFIG_SOC_PER_CORE_INIT_HOOK
 	soc_per_core_init_hook();
+#endif /* CONFIG_SOC_PER_CORE_INIT_HOOK */
 }
 
 

@@ -7,7 +7,6 @@
 / {
 	fstab {
 		compatible = "zephyr,fstab";
-
 		lfs1: lfs1 {
 			compatible = "zephyr,fstab,littlefs";
 			read-size = <32>;
@@ -21,7 +20,7 @@
 	};
 };
 
-&mt25ql512ab {
+&mt25ql512ab1 {
 	partitions {
 		fs_partition: partition@0 {
 			reg = <0x0 DT_SIZE_M(64)>;

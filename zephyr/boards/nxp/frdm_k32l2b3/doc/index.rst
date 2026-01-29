@@ -165,7 +165,8 @@ should see the following message in the terminal:
    *** Booting Zephyr OS build v4.1.0-7032-g3198db1b1229 ***
    Hello World! frdm_k32l2b3/k32l2b31a
 
-.. include:: ../../common/board-footer.rst.inc
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 .. _KL32-L2 Website:
    https://www.nxp.com/products/K32-L2

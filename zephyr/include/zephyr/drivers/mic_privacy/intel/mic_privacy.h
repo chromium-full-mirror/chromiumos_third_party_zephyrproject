@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/spinlock.h>
 #include <zephyr/devicetree.h>

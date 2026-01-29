@@ -6,8 +6,6 @@
 
 #include <zephyr/dt-bindings/ipc_service/static_vrings.h>
 
-/delete-node/ &sram0_shared;
-
 / {
 	chosen {
 		/delete-property/ zephyr,ipc_shm;
@@ -15,8 +13,7 @@
 	};
 
 	reserved-memory {
-		#address-cells = <1>;
-		#size-cells = <1>;
+		/delete-node/ memory@20070000;
 
 		sram_ipc0: memory@20070000 {
 			reg = <0x20070000 0x8000>;

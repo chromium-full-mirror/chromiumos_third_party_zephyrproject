@@ -13,7 +13,7 @@
  */
 void message_queue_test(void)
 {
-	uint64_t et; /* elapsed time */
+	uint32_t et; /* elapsed time */
 	int i;
 	timing_t  start;
 	timing_t  end;
@@ -24,59 +24,59 @@ void message_queue_test(void)
 		k_msgq_put(&DEMOQX1, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 	PRINT_F(FORMAT, "enqueue 1 byte msg in MSGQ",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_get(&DEMOQX1, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT, "dequeue 1 byte msg from MSGQ",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_put(&DEMOQX4, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT, "enqueue 4 bytes msg in MSGQ",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_get(&DEMOQX4, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT, "dequeue 4 bytes msg in MSGQ",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_put(&DEMOQX192, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT, "enqueue 192 bytes msg in MSGQ",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_get(&DEMOQX192, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT, "dequeue 192 bytes msg in MSGQ",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	k_sem_give(&STARTRCV);
 
@@ -85,31 +85,31 @@ void message_queue_test(void)
 		k_msgq_put(&DEMOQX1, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT,
 		"enqueue 1 byte msg in MSGQ to a waiting higher priority task",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_put(&DEMOQX4, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT,
 		"enqueue 4 bytes in MSGQ to a waiting higher priority task",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 
 	start = timing_timestamp_get();
 	for (i = 0; i < NR_OF_MSGQ_RUNS; i++) {
 		k_msgq_put(&DEMOQX192, data_bench, K_FOREVER);
 	}
 	end = timing_timestamp_get();
-	et = timing_cycles_get(&start, &end);
+	et = (uint32_t)timing_cycles_get(&start, &end);
 
 	PRINT_F(FORMAT,
 		"enqueue 192 bytes in MSGQ to a waiting higher priority task",
-		timing_cycles_to_ns_avg(et, NR_OF_MSGQ_RUNS));
+		SYS_CLOCK_HW_CYCLES_TO_NS_AVG(et, NR_OF_MSGQ_RUNS));
 }

@@ -34,7 +34,11 @@ config IMX_USDHC_DAT3_PWR_TOGGLE
 
 endif # DISK_DRIVERS
 
-configdefault NET_L2_ETHERNET
-	default y if DT_HAS_NXP_ENET_ENABLED
+if NETWORKING
+
+config NET_L2_ETHERNET
+	default y if CPU_CORTEX_M7 # No cache memory support is required for driver
+
+endif # NETWORKING
 
 endif

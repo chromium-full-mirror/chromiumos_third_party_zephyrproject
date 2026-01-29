@@ -104,9 +104,6 @@ schema;platform-schema:
           required: false
         "default":
           type: bool
-        "flash_before":
-          type: bool
-          required: false
         "binaries":
           type: seq
           seq:

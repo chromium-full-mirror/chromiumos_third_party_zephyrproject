@@ -4,6 +4,3 @@ board:
   vendor: nxp
   socs:
   - name: mimx9352
-    variants:
-    - name: ddr
-      cpucluster: m33

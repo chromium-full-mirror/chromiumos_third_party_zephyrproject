@@ -13,7 +13,7 @@ if GPIO_FXL6408
 
 config GPIO_FXL6408_INIT_PRIORITY
 	int "Init priority"
-	default I2C_INIT_PRIORITY
+	default 80
 	help
 	  Device driver initialization priority.
 

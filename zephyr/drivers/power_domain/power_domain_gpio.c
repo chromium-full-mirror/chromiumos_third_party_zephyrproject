@@ -22,7 +22,7 @@ struct pd_gpio_config {
 };
 
 struct pd_gpio_data {
-	k_timepoint_t earliest_next_boot;
+	k_timeout_t next_boot;
 };
 
 struct pd_visitor_context {
@@ -55,6 +55,7 @@ static int pd_gpio_pm_action(const struct device *dev,
 #endif
 	const struct pd_gpio_config *cfg = dev->config;
 	struct pd_gpio_data *data = dev->data;
+	int64_t next_boot_ticks;
 	int rc = 0;
 
 	/* Validate that blocking API's can be used */
@@ -66,7 +67,7 @@ static int pd_gpio_pm_action(const struct device *dev,
 	switch (action) {
 	case PM_DEVICE_ACTION_RESUME:
 		/* Wait until we can boot again */
-		k_sleep(sys_timepoint_timeout(data->earliest_next_boot));
+		k_sleep(data->next_boot);
 		/* Switch power on */
 		gpio_pin_set_dt(&cfg->enable, 1);
 		LOG_INF("%s is now ON", dev->name);
@@ -88,7 +89,8 @@ static int pd_gpio_pm_action(const struct device *dev,
 		gpio_pin_set_dt(&cfg->enable, 0);
 		LOG_INF("%s is now OFF", dev->name);
 		/* Store next time we can boot */
-		data->earliest_next_boot = sys_timepoint_calc(K_USEC(cfg->off_on_delay_us));
+		next_boot_ticks = k_uptime_ticks() + k_us_to_ticks_ceil32(cfg->off_on_delay_us);
+		data->next_boot = K_TIMEOUT_ABS_TICKS(next_boot_ticks);
 		break;
 	case PM_DEVICE_ACTION_TURN_ON:
 		/* Actively control the enable pin now that the device is powered */
@@ -117,7 +119,7 @@ static int pd_gpio_init(const struct device *dev)
 		return -ENODEV;
 	}
 	/* We can't know how long the domain has been off for before boot */
-	data->earliest_next_boot = sys_timepoint_calc(K_USEC(cfg->off_on_delay_us));
+	data->next_boot = K_TIMEOUT_ABS_US(cfg->off_on_delay_us);
 
 	/* Boot according to state */
 	return pm_device_driver_init(dev, pd_gpio_pm_action);

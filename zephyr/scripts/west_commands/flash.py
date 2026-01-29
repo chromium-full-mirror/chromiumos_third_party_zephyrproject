@@ -8,9 +8,8 @@
 
 from pathlib import Path
 
-from west.commands import WestCommand
-
 from run_common import add_parser_common, do_run_common, get_build_dir
+from west.commands import WestCommand
 
 
 class Flash(WestCommand):

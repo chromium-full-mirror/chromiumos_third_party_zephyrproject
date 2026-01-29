@@ -337,8 +337,8 @@ struct net_capture_info {
 	const struct device *capture_dev;
 	struct net_if *capture_iface;
 	struct net_if *tunnel_iface;
-	struct net_sockaddr *peer;
-	struct net_sockaddr *local;
+	struct sockaddr *peer;
+	struct sockaddr *local;
 	bool is_enabled;
 };
 

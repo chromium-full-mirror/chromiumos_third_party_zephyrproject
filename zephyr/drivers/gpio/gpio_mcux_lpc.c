@@ -28,6 +28,9 @@
 #endif
 #include <fsl_gpio.h>
 #include <fsl_device_registers.h>
+#ifdef MCI_IO_MUX
+#include <zephyr/drivers/pinctrl.h>
+#endif
 
 /* Interrupt sources, matching int-source enum in DTS binding definition */
 #define INT_SOURCE_PINT 0
@@ -101,9 +104,10 @@ static int gpio_mcux_lpc_configure(const struct device *dev, gpio_pin_t pin,
 		*pinconfig |= IOCON_PIO_OD_MASK;
 	}
 
-	/* Set DIGIMODE bit */
-	*pinconfig |= IOCON_PIO_DIGIMODE_MASK;
-
+	if ((flags & GPIO_INPUT) != 0) {
+		/* Set DIGIMODE bit */
+		*pinconfig |= IOCON_PIO_DIGIMODE_MASK;
+	}
 	/* Select GPIO mux for this pin (func 0 is always GPIO) */
 	*pinconfig &= ~(IOCON_PIO_FUNC_MASK);
 #endif

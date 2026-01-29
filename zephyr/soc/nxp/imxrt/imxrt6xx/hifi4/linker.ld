@@ -463,6 +463,4 @@ SECTIONS
 #ifdef CONFIG_GEN_ISR_TABLES
 #include <zephyr/linker/intlist.ld>
 #endif
-
-#include <snippets-sections.ld>
 }

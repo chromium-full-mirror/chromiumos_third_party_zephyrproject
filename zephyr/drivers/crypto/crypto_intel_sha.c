@@ -29,7 +29,7 @@ static int intel_sha_get_unused_session_idx(void)
 	return -1;
 }
 
-static void intel_sha_set_ctl_enable(struct sha_container *sha, int status)
+static int intel_sha_set_ctl_enable(struct sha_container *sha, int status)
 {
 	/* wait until not busy when turning off */
 	if (status == 0 && sha->dfsha->shactl.part.en == 1) {
@@ -38,6 +38,7 @@ static void intel_sha_set_ctl_enable(struct sha_container *sha, int status)
 	}
 
 	sha->dfsha->shactl.part.en = status;
+	return 0;
 }
 
 static int intel_sha_set_resume_length_dw0(struct sha_container *sha, uint32_t lower_length)
@@ -52,9 +53,10 @@ static int intel_sha_set_resume_length_dw0(struct sha_container *sha, uint32_t l
 	return err;
 }
 
-static void intel_sha_set_resume_length_dw1(struct sha_container *sha, uint32_t upper_length)
+static int intel_sha_set_resume_length_dw1(struct sha_container *sha, uint32_t upper_length)
 {
 	sha->dfsha->sharldw1.full = upper_length;
+	return 0;
 }
 
 static int intel_sha_regs_cpy(void *dst, const void *src, size_t len)
@@ -85,7 +87,10 @@ static int intel_sha_device_run(const struct device *dev, const void *buf_in, si
 	/* align to OWORD */
 	const size_t aligned_buff_size = ROUND_UP(buf_in_size, 0x10);
 
-	intel_sha_set_ctl_enable(self, 0);
+	err = intel_sha_set_ctl_enable(self, 0);
+	if (err) {
+		return err;
+	}
 
 	/* set processing element disable */
 	self->dfsha->pibcs.part.peen = 0;
@@ -115,8 +120,10 @@ static int intel_sha_device_run(const struct device *dev, const void *buf_in, si
 		if (err) {
 			return err;
 		}
-		intel_sha_set_resume_length_dw1(self, self->dfsha->shaaldw1.full);
-
+		err = intel_sha_set_resume_length_dw1(self, self->dfsha->shaaldw1.full);
+		if (err) {
+			return err;
+		}
 		err = intel_sha_regs_cpy((void *)self->dfsha->initial_vector,
 					 (void *)self->dfsha->sha_result,
 					 sizeof(self->dfsha->initial_vector));
@@ -135,11 +142,14 @@ static int intel_sha_device_run(const struct device *dev, const void *buf_in, si
 	/* increment pointer */
 	self->dfsha->pibfpi.full = buf_in_size;
 
-	intel_sha_set_ctl_enable(self, 1);
+	err = intel_sha_set_ctl_enable(self, 1);
+	if (err) {
+		return err;
+	}
 
-	intel_sha_set_ctl_enable(self, 0);
+	err = intel_sha_set_ctl_enable(self, 0);
 
-	return 0;
+	return err;
 }
 
 static int intel_sha_copy_hash(struct sha_container *const self, void *dst, size_t len)

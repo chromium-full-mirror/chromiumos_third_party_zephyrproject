@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP
+ * Copyright 2024 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -36,7 +36,6 @@
 		zephyr,uart-mcumgr = &lpuart0;
 		zephyr,console = &lpuart0;
 		zephyr,shell-uart = &lpuart0;
-		zephyr,cortex-m-idle-timer = &lptmr0;
 	};
 
 	leds {
@@ -125,6 +124,11 @@
 
 &idle {
 	min-residency-us = <1>;
+};
+
+&stop {
+	min-residency-us = <20000>;
+	exit-latency-us = <13>;
 };
 
 &lpuart0 {

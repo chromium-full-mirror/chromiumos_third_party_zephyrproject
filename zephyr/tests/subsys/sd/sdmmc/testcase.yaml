@@ -8,7 +8,7 @@ tests:
     harness: ztest
     harness_config:
       fixture: fixture_sdhc
-    filter: dt_compat_enabled("zephyr,sdmmc-disk")
+    filter: dt_alias_exists("sdhc0")
     tags: sdhc
     min_ram: 32
     integration_platforms:

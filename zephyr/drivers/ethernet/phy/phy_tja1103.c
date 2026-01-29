@@ -112,12 +112,30 @@ static inline int phy_tja1103_c45_read(const struct device *dev, uint16_t devad,
 
 static int phy_tja1103_reg_read(const struct device *dev, uint16_t reg_addr, uint32_t *data)
 {
-	return phy_tja1103_c22_read(dev, reg_addr, (uint16_t *)data);
+	const struct phy_tja1103_config *cfg = dev->config;
+	int ret;
+
+	mdio_bus_enable(cfg->mdio);
+
+	ret = phy_tja1103_c22_read(dev, reg_addr, (uint16_t *)data);
+
+	mdio_bus_disable(cfg->mdio);
+
+	return ret;
 }
 
 static int phy_tja1103_reg_write(const struct device *dev, uint16_t reg_addr, uint32_t data)
 {
-	return phy_tja1103_c22_write(dev, reg_addr, (uint16_t)data);
+	const struct phy_tja1103_config *cfg = dev->config;
+	int ret;
+
+	mdio_bus_enable(cfg->mdio);
+
+	ret = phy_tja1103_c22_write(dev, reg_addr, (uint16_t)data);
+
+	mdio_bus_disable(cfg->mdio);
+
+	return ret;
 }
 
 static int phy_tja1103_id(const struct device *dev, uint32_t *phy_id)

@@ -194,8 +194,8 @@ def getCopyrightInfo(filePath):
         copyrights = []
 
         for info in infos:
-            for notice in info.copyright_notices:
-                copyrights.extend([notice.original])
+            if info.copyright_lines:
+                copyrights.extend(info.copyright_lines)
 
         return copyrights
     except Exception as e:

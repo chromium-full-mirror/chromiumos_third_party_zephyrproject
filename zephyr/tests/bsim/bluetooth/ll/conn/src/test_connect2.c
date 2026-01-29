@@ -127,20 +127,16 @@ static int start_advertising(void)
 	int err;
 
 	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), NULL, 0);
+	if (err) {
+		printk("Advertising failed to start (err %d)\n", err);
+	}
 
 	return err;
 }
 
 static void recycled(void)
 {
-	int err;
-
-	err = start_advertising();
-	if (err) {
-		FAIL("Advertising failed to restart (err %d)\n", err);
-	} else {
-		printk("Advertising successfully restarted\n");
-	}
+	start_advertising();
 }
 
 static struct bt_conn_cb conn_callbacks = {
@@ -155,10 +151,15 @@ static void bt_ready(void)
 
 	printk("Peripheral Bluetooth initialized\n");
 
-	err = start_advertising();
+	err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_1, ad, ARRAY_SIZE(ad), NULL, 0);
 	if (err) {
 		FAIL("Advertising failed to start (err %d)\n", err);
-	} else {
+		return;
+	}
+
+	err = start_advertising();
+
+	if (!err) {
 		printk("Advertising successfully started\n");
 	}
 }

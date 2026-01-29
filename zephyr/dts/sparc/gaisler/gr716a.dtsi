@@ -5,7 +5,7 @@
  */
 
 #include "skeleton.dtsi"
-#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	cpus {

@@ -21,7 +21,6 @@
  */
 &arduino_i2c {
 	status = "okay";
-
 	icp201xx: icp201xx@63 {
 		compatible = "invensense,icp201xx";
 		reg = <0x63>;

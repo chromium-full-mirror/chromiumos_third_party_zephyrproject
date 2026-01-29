@@ -105,7 +105,7 @@ static int clock_control_bl70x_init_crystal(void)
 }
 
 /* HCLK is the core clock */
-static void clock_control_bl70x_set_root_clock_dividers(uint32_t hclk_div, uint32_t bclk_div)
+static int clock_control_bl70x_set_root_clock_dividers(uint32_t hclk_div, uint32_t bclk_div)
 {
 	uint32_t tmp;
 	uint32_t old_rootclk;
@@ -139,6 +139,8 @@ static void clock_control_bl70x_set_root_clock_dividers(uint32_t hclk_div, uint3
 
 	clock_bflb_set_root_clock(old_rootclk);
 	clock_bflb_settle();
+
+	return 0;
 }
 
 static void clock_control_bl70x_set_machine_timer_clock_enable(bool enable)
@@ -439,7 +441,9 @@ static int clock_control_bl70x_update_root(const struct device *dev)
 
 	/* set root clock to internal 32MHz Oscillator as failsafe */
 	clock_bflb_set_root_clock(BFLB_MAIN_CLOCK_RC32M);
-	clock_control_bl70x_set_root_clock_dividers(0, 0);
+	if (clock_control_bl70x_set_root_clock_dividers(0, 0) != 0) {
+		return -EIO;
+	}
 	sys_write32(BFLB_RC32M_FREQUENCY, CORECLOCKREGISTER);
 
 	if (data->crystal_enabled) {
@@ -450,7 +454,11 @@ static int clock_control_bl70x_update_root(const struct device *dev)
 		clock_control_bl70x_deinit_crystal();
 	}
 
-	clock_control_bl70x_set_root_clock_dividers(data->root.divider - 1, data->bclk.divider - 1);
+	ret = clock_control_bl70x_set_root_clock_dividers(data->root.divider - 1,
+							  data->bclk.divider - 1);
+	if (ret < 0) {
+		return ret;
+	}
 
 	if (data->root.source == bl70x_clkid_clk_dll) {
 		clock_control_bl70x_init_root_as_dll(dev);
@@ -522,20 +530,10 @@ static void clock_control_bl70x_peripheral_clock_init(void)
 
 	/* enable ADC clock routing */
 	regval |= (1 << 2);
-	/* enable SEC clock routing */
-	regval |= (1 << 3);
 	/* enable UART0 clock routing */
 	regval |= (1 << 16);
-	/* enable SPI0 clock routing */
-	regval |= (1 << 18);
 	/* enable I2C0 clock routing */
 	regval |= (1 << 19);
-	/* enable PWM clock routing */
-	regval |= (1 << 20);
-	/* enable DMA clock routing */
-	regval |= (1 << 12);
-	/* enable IR clock routing */
-	regval |= (1 << 22);
 
 	sys_write32(regval, GLB_BASE + GLB_CGEN_CFG1_OFFSET);
 

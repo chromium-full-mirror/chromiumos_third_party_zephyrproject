@@ -12,6 +12,5 @@ cd ${ZEPHYR_BASE}
 set -uex
 
 WORK_DIR=${ZEPHYR_BASE}/bsim_net nice tests/bsim/net/compile.sh
-BOARD=nrf52_bsim/native \
 RESULTS_FILE=${ZEPHYR_BASE}/bsim_out/bsim_results.net.52.xml \
 SEARCH_PATH=tests/bsim/net/ tests/bsim/run_parallel.sh

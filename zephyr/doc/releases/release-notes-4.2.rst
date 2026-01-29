@@ -71,8 +71,6 @@ Security Vulnerability Related
 
 The following CVEs are addressed by this release:
 
-* :cve:`2025-12890` `Bluetooth: peripheral: Invalid handling of malformed connection request
-  <https://github.com/zephyrproject-rtos/zephyr/security/advisories/GHSA-8hrf-pfww-83v9>`_
 * :cve:`2025-27809` `TLS clients may unwittingly skip server authentication
   <https://mbed-tls.readthedocs.io/en/latest/security-advisories/mbedtls-security-advisory-2025-03-1/>`_
 * :cve:`2025-27810` `Potential authentication bypass in TLS handshake
@@ -524,7 +522,7 @@ New Boards
 
 * Ai-Thinker Co., Ltd.
 
-   * :zephyr:board:`ai_wb2_12f_kit` (``ai_wb2_12f_kit``)
+   * :zephyr:board:`ai_wb2_12f` (``ai_wb2_12f``)
 
 * Ambiq Micro, Inc.
 
@@ -590,7 +588,7 @@ New Boards
 
 * ITE Tech. Inc.
 
-   * ``it515xx_evb``
+   * :zephyr:board:`it515xx_evb` (``it515xx_evb``)
 
 * KWS Computersysteme Gmbh
 
@@ -652,7 +650,7 @@ New Boards
 
 * Raytac Corporation
 
-   * :zephyr:board:`raytac_an54lq_db_15` (``raytac_an54lq_db_15``)
+   * :zephyr:board:`raytac_an54l15q_db` (``raytac_an54l15q_db``)
    * :zephyr:board:`raytac_an7002q_db` (``raytac_an7002q_db``)
    * :zephyr:board:`raytac_mdbt50q_cx_40_dongle` (``raytac_mdbt50q_cx_40_dongle``)
 
@@ -755,7 +753,7 @@ New shields
 
 * :ref:`Arduino Giga Display Shield <arduino_giga_display_shield>`
 * :ref:`Arduino Modulino Buttons <arduino_modulino_buttons>`
-* :ref:`Arduino Modulino SmartLEDs <arduino_modulino_pixels>`
+* :ref:`Arduino Modulino SmartLEDs <arduino_modulino_smartleds>`
 * :ref:`DVP 20-pin OV7670 <dvp_20pin_ov7670>`
 * :ref:`EVAL AD4052 ARDZ <eval_ad4052_ardz>`
 * :ref:`EVAL ADXL367 ARDZ <eval_adxl367_ardz>`
@@ -1395,8 +1393,8 @@ Other notable changes
   * 3.6.3: https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-3.6.3
   * 3.6.4: https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-3.6.4
 
-* Updated TF-M to version 2.2.0 (from 2.1.1). The release notes can be found at:
-  https://trustedfirmware-m.readthedocs.io/en/latest/releases/2.2.0.html
+* Updated TF-M to version 2.1.2 (from 2.1.1). The release notes can be found at:
+  https://trustedfirmware-m.readthedocs.io/en/tf-mv2.1.2/releases/2.1.2.html
 
 * Updated all boards with an external I2C connectors (Qwiic, Stemma, Grove...)
   to use the ``zephyr_i2c`` devicetree label. This allows using the existing

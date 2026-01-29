@@ -12,6 +12,7 @@
 #include <zephyr/init.h>
 #include <zephyr/fs/fs.h>
 #include <zephyr/sd/sd_spec.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <limits.h>

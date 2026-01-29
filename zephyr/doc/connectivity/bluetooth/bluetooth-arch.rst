@@ -192,7 +192,7 @@ The stack is split up as follows in the source tree:
   Implements the controller-side of HCI, the Link Layer as well as access to the
   radio transceiver.
 
-``include/zephyr/bluetooth/``
+``include/bluetooth/``
   :ref:`Public API <bluetooth_api>` header files. These are the header files
   applications need to include in order to use Bluetooth functionality.
 

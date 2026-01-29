@@ -9,6 +9,8 @@ Overview
 
 This sample app demonstrates use of a USB CDC-ACM to bridge a standard hardware
 UART on a supported board.
+This sample can be found under :zephyr_file:`samples/subsys/usb/cdc_acm_bridge` in the
+Zephyr project tree.
 
 Requirements
 ************

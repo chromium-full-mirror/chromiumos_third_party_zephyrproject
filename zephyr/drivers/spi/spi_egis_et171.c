@@ -59,7 +59,6 @@ struct stream {
 
 struct spi_et171_data {
 	struct spi_context ctx;
-	uint32_t base_clk;
 	uint32_t tx_fifo_size;
 	uint32_t rx_fifo_size;
 	int tx_cnt;
@@ -80,8 +79,6 @@ struct spi_et171_cfg {
 	uint32_t base;
 	uint32_t irq_num;
 	uint32_t f_sys;
-	const struct device *clock_dev;
-	clock_control_subsys_t clock_subsys;
 	bool xip;
 };
 
@@ -110,11 +107,10 @@ static int spi_config(const struct device *dev,
 		      const struct spi_config *config)
 {
 	const struct spi_et171_cfg * const cfg = dev->config;
-	struct spi_et171_data * const data = dev->data;
 	uint32_t sclk_div, data_len;
 
 	/* Set the divisor for SPI interface sclk */
-	sclk_div = (data->base_clk / 2 + config->frequency - 1) / config->frequency - 1;
+	sclk_div = (cfg->f_sys / 2 + config->frequency - 1) / config->frequency - 1;
 	sys_clear_bits(SPI_TIMIN(cfg->base), TIMIN_SCLK_DIV_MSK);
 	sys_set_bits(SPI_TIMIN(cfg->base), sclk_div);
 
@@ -1065,22 +1061,6 @@ int spi_et171_init(const struct device *dev)
 	}
 #endif
 
-	if (cfg->f_sys != 0U) {
-		data->base_clk = cfg->f_sys;
-	} else {
-		if (!device_is_ready(cfg->clock_dev)) {
-			return -EINVAL;
-		}
-		err = clock_control_on(cfg->clock_dev, cfg->clock_subsys);
-		if (err != 0 && err != -EALREADY && err != -ENOSYS) {
-			return err;
-		}
-		if (clock_control_get_rate(cfg->clock_dev,
-					   cfg->clock_subsys, &data->base_clk) != 0) {
-			return -EINVAL;
-		}
-	}
-
 	/* Get the TX/RX FIFO size of this device */
 	data->tx_fifo_size = TX_FIFO_SIZE(cfg->base);
 	data->rx_fifo_size = RX_FIFO_SIZE(cfg->base);
@@ -1317,17 +1297,7 @@ static void spi_et171_irq_handler(void *arg)
 		.cfg_func = spi_et171_cfg_##n,                                                     \
 		.base = DT_INST_REG_ADDR(n),                                                       \
 		.irq_num = DT_INST_IRQN(n),                                                        \
-		COND_CODE_1(DT_INST_NODE_HAS_PROP(n, clock_frequency), (                           \
-				.f_sys = DT_INST_PROP(n, clock_frequency),                         \
-				.clock_dev = NULL,                                                 \
-				.clock_subsys = NULL,                                              \
-			), (                                                                       \
-				.f_sys = 0,                                                        \
-				.clock_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR(n)),                \
-				.clock_subsys = (clock_control_subsys_t)                           \
-					DT_INST_PHA(n, clocks, clkid),                             \
-			)                                                                          \
-		)                                                                                  \
+		.f_sys = DT_INST_PROP(n, clock_frequency),                                         \
 		.xip = SPI_ROM_CFG_XIP(DT_DRV_INST(n)),                                            \
 	};                                                                                         \
                                                                                                    \

@@ -9,22 +9,32 @@
 #include <stdint.h>
 #include "fsl_common.h"
 
+/*! @name Driver version */
+/*@{*/
+/*! @brief FLASH_CONFIG driver version 2.0.1. */
+#define FSL_FLASH_CONFIG_DRIVER_VERSION (MAKE_VERSION(2, 0, 1))
+/*@}*/
+
+#ifndef FSL_FEATURE_SILICON_VERSION_A
+#define FSL_FEATURE_SILICON_VERSION_A (1U)
+#endif
+
 /* XSPI memory config block related definitions */
 #define FC_XSPI_CFG_BLK_TAG     (0x42464346UL) /* ascii "FCFB" Big Endian */
 #define FC_XSPI_CFG_BLK_VERSION (0x56010400UL) /* V1.4.0 */
 
 /*! @brief XSPI clock configuration - When clock source is PLL */
-typedef enum fc_xspi_serial_clock_freq {
-	FC_XSPI_SERIAL_CLK_30MHZ = 1,
-	FC_XSPI_SERIAL_CLK_50MHZ = 2,
-	FC_XSPI_SERIAL_CLK_60MHZ = 3,
-	FC_XSPI_SERIAL_CLK_80MHZ = 4,
-	FC_XSPI_SERIAL_CLK_100MHZ = 5,
-	FC_XSPI_SERIAL_CLK_120MHZ = 6,
-	FC_XSPI_SERIAL_CLK_133MHZ = 7,
-	FC_XSPI_SERIAL_CLK_166MHZ = 8,
-	FC_XSPI_SERIAL_CLK_200MHZ = 9,
-} fc_xspi_serial_clk_freq_t;
+enum {
+	Fc_XspiSerialClk_30MHz = 1,
+	Fc_XspiSerialClk_50MHz = 2,
+	Fc_XspiSerialClk_60MHz = 3,
+	Fc_XspiSerialClk_80MHz = 4,
+	Fc_XspiSerialClk_100MHz = 5,
+	Fc_XspiSerialClk_120MHz = 6,
+	Fc_XspiSerialClk_133MHz = 7,
+	Fc_XspiSerialClk_166MHz = 8,
+	Fc_XspiSerialClk_200MHz = 9,
+};
 
 /*! @brief LUT instructions supported by XSPI */
 /*!< Stop execution, deassert CS. */
@@ -82,22 +92,22 @@ typedef enum fc_xspi_serial_clock_freq {
 	XSPI_LUT_PAD1(pad1) | XSPI_LUT_OPRND1(op1))
 
 /* !@brief XSPI Read Sample Clock Source definition */
-typedef enum fc_xspi_read_sample_clk_source {
-	FC_XSPI_READ_SAMPLE_CLK_LOOPBACK_INTERNALLY = 0,
-	FC_XSPI_READ_SAMPLE_CLK_LOOPBACK_FROM_DQS_PAD = 2,
-	FC_XSPI_READ_SAMPLE_CLK_EXTERNAL_INPUT_FROM_DQS_PAD = 3,
+typedef enum _FlashReadSampleClkSource {
+	kXSPIReadSampleClk_LoopbackInternally = 0,
+	kXSPIReadSampleClk_LoopbackFromDqsPad = 2,
+	kXSPIReadSampleClk_ExternalInputFromDqsPad = 3,
 } fc_xspi_read_sample_clk_t;
 
 /* !@brief Misc feature bit definitions */
 enum {
 	/* !< Bit for Differential clock enable */
-	FC_XSPI_MISC_OFFSET_DIFF_CLK_ENABLE = 0,
+	Fc_XspiMiscOffset_DiffClkEnable = 0,
 	/* !< Bit for Word Addressable enable */
-	FC_XSPI_MISC_OFFSET_WORD_ADDRESSABLE_ENABLE = 3,
+	Fc_XspiMiscOffset_WordAddressableEnable = 3,
 	/* !< Bit for Safe Configuration Frequency enable */
-	FC_XSPI_MISC_OFFSET_SAFE_CONFIG_FREQ_ENABLE = 4,
-	/* !< Bit for DDR clock configuration indication. */
-	FC_XSPI_MISC_OFFSET_DDR_MODE_ENABLE = 6,
+	Fc_XspiMiscOffset_SafeConfigFreqEnable = 4,
+	/* !< Bit for DDR clock confiuration indication. */
+	Fc_XspiMiscOffset_DdrModeEnable = 6,
 };
 
 typedef struct {
@@ -107,13 +117,13 @@ typedef struct {
 
 /* !@brief XSPI LUT Sequence structure */
 typedef struct _lut_sequence {
-	uint8_t seq_num; /* !< Sequence Number, valid number: 1-16 */
-	uint8_t seq_id;  /* !< Sequence Index, valid number: 0-15 */
+	uint8_t seqNum; /* !< Sequence Number, valid number: 1-16 */
+	uint8_t seqId;  /* !< Sequence Index, valid number: 0-15 */
 	uint16_t reserved;
 } fc_xspi_lut_seq_t;
 
 /* !@brief XSPI Memory Configuration Block */
-typedef struct xspi_config {
+typedef struct _XSPIConfig {
 	/* !< [0x000-0x003] Tag, fixed value 0x42464346UL */
 	uint32_t tag;
 	/* !< [0x004-0x007] Version, [31:24] -'V',
@@ -129,53 +139,53 @@ typedef struct xspi_config {
 	 * 2: DQS pad loopback
 	 * 3: External DQS signal
 	 */
-	uint8_t read_sample_clk_src;
+	uint8_t readSampleClkSrc;
 	/* !< [0x00d-0x00d] CS hold time, default value: 3 */
-	uint8_t cs_hold_time;
+	uint8_t csHoldTime;
 	/* !< [0x00e-0x00e] CS setup time, default value: 3 */
-	uint8_t cs_setup_time;
+	uint8_t csSetupTime;
 	/* !< [0x00f-0x00f] Column Address with, for HyperBus protocol,
 	 * it is fixed to 3, others to 0.
 	 */
-	uint8_t column_address_width;
+	uint8_t columnAddressWidth;
 	/* !< [0x010-0x010] Device Mode Configure enable flag,
 	 * 1 - Enable, 0 - Disable
 	 */
-	uint8_t device_mode_cfg_enable;
+	uint8_t deviceModeCfgEnable;
 	/* !< [0x011-0x011] Specify the configuration command type.
 	 * 0: No mode change
 	 * 1: Quad enable (switch from SPI to Quad mode)
 	 * 2: Spi2Xpi (switch from SPI to DPI, QPI, or OPI mode)
 	 * 3: Xpi2Spi (switch from DPI, QPI, or OPI to SPI mode)
 	 */
-	uint8_t device_mode_type;
+	uint8_t deviceModeType;
 	/* !< [0x012-0x013] Wait time for Device mode configuration
 	 * command, unit: 100us
 	 */
-	uint16_t wait_time_cfg_commands;
+	uint16_t waitTimeCfgCommands;
 	/* !< [0x014-0x017] Device mode sequence info
 	 * [ 7:0] - Number of required sequences
 	 * [15:8] - Sequence index
 	 */
-	fc_xspi_lut_seq_t device_mode_seq;
+	fc_xspi_lut_seq_t deviceModeSeq;
 	/* !< [0x018-0x01b] Argument/Parameter for device configuration */
-	uint32_t device_mode_arg;
+	uint32_t deviceModeArg;
 	/* !< [0x01c-0x01c] Configure command Enable Flag,
 	 * 1 - Enable, 0 - Disable
 	 */
-	uint8_t config_cmd_enable;
+	uint8_t configCmdEnable;
 	/* !< [0x01d-0x01f] Configure Mode Type, similar as deviceModeTpe */
-	uint8_t config_mode_type[3];
+	uint8_t configModeType[3];
 	/* !< [0x020-0x02b] Sequence info for Device Configuration command,
 	 * similar as deviceModeSeq
 	 */
-	fc_xspi_lut_seq_t config_cmd_seqs[3];
+	fc_xspi_lut_seq_t configCmdSeqs[3];
 	/* !< [0x02c-0x02f] Reserved for future use */
 	uint32_t reserved1;
 	/* !< [0x030-0x03b] Arguments/Parameters for
 	 * device Configuration commands
 	 */
-	uint32_t config_cmd_args[3];
+	uint32_t configCmdArgs[3];
 	/* !< [0x03c-0x03f] Reserved for future use */
 	uint32_t reserved2;
 	/* !< [0x040-0x043] Controller Misc Options.
@@ -187,88 +197,88 @@ typedef struct xspi_config {
 	 * frequency Bit 6: DDR mode enable: set to 1 if DDR read is
 	 * expected Other bits Reserved; set to 0
 	 */
-	uint32_t controller_misc_option;
+	uint32_t controllerMiscOption;
 	/* !< [0x044-0x044] Device Type: 1 for Serial NOR flash memory */
-	uint8_t device_type;
+	uint8_t deviceType;
 	/* !< [0x045-0x045] Serial Flash Pad Type:
 	 *1 - Single, 2 - Dual, 4 - Quad, 8 - Octal
 	 */
-	uint8_t sflash_pad_type;
-	/* !< [0x046-0x046] Serial Flash Frequency
-	 * 1: 30 mhz
-	 * 2: 50 mhz
-	 * 3: 60 mhz
-	 * 4: 80 mhz
-	 * 5: 100 mhz
-	 * 6: 120 mhz
-	 * 7: 133 mhz
-	 * 8: 166 mhz
-	 * 9: 200 mhz
+	uint8_t sflashPadType;
+	/* !< [0x046-0x046] Serial Flash Frequencey
+	 * 1: 30 MHz
+	 * 2: 50 MHz
+	 * 3: 60 MHz
+	 * 4: 80 MHz
+	 * 5: 100 MHz
+	 * 6: 120 MHz
+	 * 7: 133 MHz
+	 * 8: 166 MHz
+	 * 9: 200 MHz
 	 */
-	uint8_t serial_clk_freq;
+	uint8_t serialClkFreq;
 	/* !< [0x047-0x047] LUT customization Enable, it is required if
 	 * the program/erase cannot be done using 1 LUT sequence,
 	 * currently, only applicable to HyperFLASH
 	 */
-	uint8_t lut_custom_seq_enable;
+	uint8_t lutCustomSeqEnable;
 	/* !< [0x048-0x04f] Reserved for future use */
 	uint32_t reserved3[2];
 	/* !< [0x050-0x053] Size of Flash connected to A1 */
-	uint32_t sflash_a1_size;
+	uint32_t sflashA1Size;
 	/* !< [0x054-0x057] Size of Flash connected to A2 */
-	uint32_t sflash_a2_size;
+	uint32_t sflashA2Size;
 	/* !< [0x058-0x05b] Size of Flash connected to B1 */
-	uint32_t sflash_b1_size;
+	uint32_t sflashB1Size;
 	/* !< [0x05c-0x05f] Size of Flash connected to B2 */
-	uint32_t sflash_b2_size;
+	uint32_t sflashB2Size;
 	/* !< [0x060-0x063] CS pad setting override value */
-	uint32_t cs_pad_setting_override;
+	uint32_t csPadSettingOverride;
 	/* !< [0x064-0x067] SCK pad setting override value */
-	uint32_t sclk_pad_setting_override;
+	uint32_t sclkPadSettingOverride;
 	/* !< [0x068-0x06b] data pad setting override value */
-	uint32_t data_pad_setting_override;
+	uint32_t dataPadSettingOverride;
 	/* !< [0x06c-0x06f] DQS pad setting override value */
-	uint32_t dqs_pad_setting_override;
+	uint32_t dqsPadSettingOverride;
 	/* !< [0x070-0x073] Timeout threshold for read status command */
-	uint32_t timeout_in_ms;
+	uint32_t timeoutInMs;
 	/* !< [0x074-0x077] CS deselect interval between two commands */
-	uint32_t command_interval;
+	uint32_t commandInterval;
 	/* !< [0x078-0x07b] CLK edge to data valid time for
 	 * PORT A and PORT B
 	 */
-	fc_xspi_dll_time_t data_valid_time[2];
+	fc_xspi_dll_time_t dataValidTime[2];
 	/* !< [0x07c-0x07d] Busy offset, valid value: 0-31 */
-	uint16_t busy_offset;
+	uint16_t busyOffset;
 	/* !< [0x07e-0x07f] Busy flag polarity, 0 - busy flag is 1 when
 	 * flash device is busy, 1 - busy flag is 0 when flash device is busy
 	 */
-	uint16_t busy_bit_polarity;
+	uint16_t busyBitPolarity;
 #if defined(FSL_FEATURE_SILICON_VERSION_A)
 	/* !< [0x080-0x1bf] Lookup table holds Flash command sequences */
-	uint32_t lookup_table[80];
+	uint32_t lookupTable[80];
 	/* !< [0x1c0-0x1ef] Customizable LUT Sequences */
-	fc_xspi_lut_seq_t lut_custom_seq[12];
+	fc_xspi_lut_seq_t lutCustomSeq[12];
 	/* !< [0x1f0-0x1f3] Customizable DLLCRA for SDR setting */
-	uint32_t dll_cra_sdr_val;
+	uint32_t dllCraSdrVal;
 	/* !< [0x1f4-0x1f7] Customizable SMPR SDR setting */
-	uint32_t smpr_sdr_val;
+	uint32_t smprSdrVal;
 	/* !< [0x1f8-0x1fb] Customizable DLLCRA for DDR setting */
-	uint32_t dll_cra_ddr_val;
+	uint32_t dllCraDdrVal;
 	/* !< [0x1fc-0x1ff] Customizable SMPR DDR setting */
-	uint32_t smpr_ddr_val;
+	uint32_t smprDdrVal;
 #else
 	/* !< [0x080-0x1e7] B0 Lookup table holds Flash command sequences */
-	uint32_t lookup_table[90];
+	uint32_t lookupTable[90];
 	/* !< [0x1e8-0x217] Customizable LUT Sequences */
-	fc_xspi_lut_seq_t lut_custom_seq[12];
+	fc_xspi_lut_seq_t lutCustomSeq[12];
 	/* !< [0x218-0x21b] Customizable DLLCRA for SDR setting */
-	uint32_t dll_cra_sdr_val;
+	uint32_t dllCraSdrVal;
 	/* !< [0x21c-0x21f] Customizable SMPR SDR setting */
-	uint32_t smpr_sdr_val;
+	uint32_t smprSdrVal;
 	/* !< [0x220-0x223] Customizable DLLCRA for DDR setting */
-	uint32_t dll_cra_ddr_val;
+	uint32_t dllCraDdrVal;
 	/* !< [0x224-0x227] Customizable SMPR DDR setting */
-	uint32_t smpr_ddr_val;
+	uint32_t smprDdrVal;
 #endif
 } fc_xspi_mem_config_t;
 /*
@@ -276,31 +286,31 @@ typedef struct xspi_config {
  */
 typedef struct _fc_xspi_nor_config {
 	/* !< Common memory configuration info via XSPI */
-	fc_xspi_mem_config_t mem_config;
+	fc_xspi_mem_config_t memConfig;
 	/* !< Page size of Serial NOR */
-	uint32_t page_size;
+	uint32_t pageSize;
 	/* !< Sector size of Serial NOR */
-	uint32_t sector_size;
+	uint32_t sectorSize;
 	/* !< Clock frequency for IP command */
-	uint8_t ipcmd_serial_clk_freq;
+	uint8_t ipcmdSerialClkFreq;
 	/* !< Sector/Block size is the same */
-	uint8_t is_uniform_block_size;
+	uint8_t isUniformBlockSize;
 	/* !< Data order (D0, D1, D2, D3) is swapped (D1, D0, D3, D2) */
-	uint8_t is_data_order_swapped;
+	uint8_t isDataOrderSwapped;
 	/* !< Reserved for future use */
 	uint8_t reserved0[1];
 	/* !< Serial NOR Flash type: 0/1/2/3 */
-	uint8_t serial_nor_type;
+	uint8_t serialNorType;
 	/* !< Need to exit NoCmd mode before other IP command */
-	uint8_t need_exit_nocmd_mode;
+	uint8_t needExitNoCmdMode;
 	/* !< Half the Serial Clock for non-read command: true/false */
-	uint8_t half_clk_for_non_read_cmd;
-	/* !< Need to Restore NoCmd mode after IP command execution */
-	uint8_t need_restore_nocmd_mode;
+	uint8_t halfClkForNonReadCmd;
+	/* !< Need to Restore NoCmd mode after IP commmand execution */
+	uint8_t needRestoreNoCmdMode;
 	/* !< Block size */
-	uint32_t block_size;
+	uint32_t blockSize;
 	/* !< Flash State Context */
-	uint32_t flash_state_ctx;
+	uint32_t flashStateCtx;
 #if defined(FSL_FEATURE_SILICON_VERSION_A)
 	/* !< Reserved for future use */
 	uint32_t reserved2[58];
@@ -315,11 +325,11 @@ typedef struct _fc_xspi_nor_config {
  */
 typedef struct _fc_xspi_psram_config {
 	/* !< XMCD header */
-	uint32_t xmcd_header;
+	uint32_t xmcdHeader;
 	/* !< Simplified XSPI RAM Configuration Option 0 */
-	uint32_t xmcd_opt0;
+	uint32_t xmcdOpt0;
 	/* !< Simplified XSPI RAM Configuration Option 1 */
-	uint32_t xmcd_opt1;
+	uint32_t xmcdOpt1;
 	/* !< Reserved for future use */
 	uint32_t reserved2[189];
 } fc_xspi_psram_config_t;

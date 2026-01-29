@@ -46,7 +46,6 @@ static void initialize_gui(void)
 int main(void)
 {
 	const struct device *display_dev;
-	int ret;
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
@@ -57,11 +56,7 @@ int main(void)
 	initialize_gui();
 
 	lv_timer_handler();
-	ret = display_blanking_off(display_dev);
-	if (ret < 0 && ret != -ENOSYS) {
-		LOG_ERR("Failed to turn blanking off (error %d)", ret);
-		return 0;
-	}
+	display_blanking_off(display_dev);
 
 	while (1) {
 		uint32_t sleep_ms = lv_timer_handler();

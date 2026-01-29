@@ -1,7 +1,7 @@
 /*
- * Copyright 2023, 2025 NXP
- *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2023 NXP
  */
 
 /dts-v1/;
@@ -23,7 +23,6 @@
 		gps1 = &lpuart2;
 		telem1 = &lpuart3;
 		telem4-gps2 = &lpuart5;
-		rtc = &counter_rtc;
 	};
 
 	chosen {
@@ -468,8 +467,4 @@ zephyr_udc0: &usb1 {
 &itm {
 	pinctrl-0 = <&pinmux_swo>;
 	pinctrl-names = "default";
-};
-
-&counter_rtc {
-	status = "okay";
 };

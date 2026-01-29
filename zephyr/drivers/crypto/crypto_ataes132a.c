@@ -110,12 +110,6 @@ static int ataes132a_send_command(const struct device *dev, uint8_t opcode,
 	burst_read_i2c(&cfg->i2c, ATAES_COMMAND_MEM_ADDR, data->command_buffer, 64);
 
 	count = data->command_buffer[0];
-	/* validate count: at least 3 bytes (1 for count, 2 for CRC) */
-	if (count < 3) {
-		LOG_ERR("invalid packet received: count=%d"
-			" , expects count>=3", count);
-		return -EINVAL;
-	}
 
 	/* Calculate and validate response CRC */
 	ataes132a_atmel_crc(data->command_buffer, count - 2, crc);
@@ -136,11 +130,7 @@ static int ataes132a_send_command(const struct device *dev, uint8_t opcode,
 		burst_read_i2c(&cfg->i2c, ATAES_COMMAND_MEM_ADDR, data->command_buffer, 64);
 
 		count = data->command_buffer[0];
-		if (count < 3) {
-			LOG_ERR("invalid packet received: count=%d"
-				" , expects count>=3", count);
-			return -EINVAL;
-		}
+
 		ataes132a_atmel_crc(data->command_buffer, count -  2, crc);
 		retry_count++;
 
@@ -723,7 +713,7 @@ static int do_ccm_encrypt_mac(struct cipher_ctx *ctx,
 
 	if (aead_op->ad != NULL || aead_op->ad_len != 0U) {
 		LOG_ERR("Associated data is not supported.");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	ataes132a_aes_ccm_encrypt(dev, key_id, &mac_mode,
@@ -768,7 +758,7 @@ static int do_ccm_decrypt_auth(struct cipher_ctx *ctx,
 
 	if (aead_op->ad != NULL || aead_op->ad_len != 0U) {
 		LOG_ERR("Associated data is not supported.");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	/* Normal Decryption Mode will only decrypt host generated packets */
@@ -845,18 +835,18 @@ static int ataes132a_session_setup(const struct device *dev,
 
 	if (algo != CRYPTO_CIPHER_ALGO_AES) {
 		LOG_ERR("ATAES132A unsupported algorithm");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	/*ATAES132A support I2C polling only*/
 	if (!(ctx->flags & CAP_SYNC_OPS)) {
 		LOG_ERR("Async not supported by this driver");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (ctx->keylen != ATAES132A_AES_KEY_SIZE) {
 		LOG_ERR("ATAES132A unsupported key size");
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
 	if (op_type == CRYPTO_CIPHER_OP_ENCRYPT) {
@@ -869,7 +859,7 @@ static int ataes132a_session_setup(const struct device *dev,
 			break;
 		default:
 			LOG_ERR("ATAES132A unsupported mode");
-			return -ENOTSUP;
+			return -EINVAL;
 		}
 	} else {
 		switch (mode) {
@@ -881,7 +871,7 @@ static int ataes132a_session_setup(const struct device *dev,
 			break;
 		default:
 			LOG_ERR("ATAES132A unsupported mode");
-			return -ENOTSUP;
+			return -EINVAL;
 		}
 	}
 

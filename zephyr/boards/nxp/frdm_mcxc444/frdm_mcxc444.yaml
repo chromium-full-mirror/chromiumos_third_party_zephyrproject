@@ -1,5 +1,5 @@
 #
-# Copyright 2024-2025 NXP
+# Copyright 2024 NXP
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -23,9 +23,6 @@ supported:
   - pwm
   - usb_device
   - usbd
-  - watchdog
-  - dma
-  - dac
 testing:
   ignore_tags:
     - net

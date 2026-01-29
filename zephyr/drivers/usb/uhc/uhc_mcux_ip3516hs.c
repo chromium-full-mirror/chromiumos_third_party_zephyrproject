@@ -13,6 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/init.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/drivers/usb/uhc.h>
 #include <zephyr/drivers/pinctrl.h>
 
@@ -67,7 +68,8 @@ static usb_status_t mcux_host_callback(usb_device_handle deviceHandle,
 
 static int uhc_mcux_init(const struct device *dev)
 {
-	const struct uhc_mcux_ip3516hs_config *config = dev->config;
+	const struct uhc_mcux_config *config = dev->config;
+	usb_phy_config_struct_t *phy_config;
 	struct uhc_mcux_data *priv = uhc_get_private(dev);
 	k_thread_entry_t thread_entry = NULL;
 	usb_status_t status;
@@ -82,8 +84,9 @@ static int uhc_mcux_init(const struct device *dev)
 	}
 
 #ifdef CONFIG_DT_HAS_NXP_USBPHY_ENABLED
-	if (config->phy_config != NULL) {
-		USB_EhciPhyInit(priv->controller_id, 0u, config->phy_config);
+	phy_config = ((const struct uhc_mcux_ip3516hs_config *)dev->config)->phy_config;
+	if (phy_config != NULL) {
+		USB_EhciPhyInit(priv->controller_id, 0u, phy_config);
 	}
 #endif
 
@@ -97,9 +100,8 @@ static int uhc_mcux_init(const struct device *dev)
 	}
 
 	/* Create MCUX USB host driver task */
-	k_thread_create(&priv->drv_stack_data, config->uhc_config.drv_stack,
-			CONFIG_UHC_NXP_THREAD_STACK_SIZE, thread_entry,
-			(void *)dev, NULL, NULL, K_PRIO_COOP(2), 0, K_NO_WAIT);
+	k_thread_create(&priv->drv_stack_data, config->drv_stack, CONFIG_UHC_NXP_THREAD_STACK_SIZE,
+			thread_entry, (void *)dev, NULL, NULL, K_PRIO_COOP(2), 0, K_NO_WAIT);
 	k_thread_name_set(&priv->drv_stack_data, "uhc_mcux_ip3516hs");
 
 	return 0;
@@ -136,9 +138,10 @@ static void uhc_mcux_transfer_callback(void *param, usb_host_transfer_t *transfe
 		}
 	}
 
-	if ((xfer->buf != NULL) && (transfer->transferBuffer != NULL) &&
-	    USB_EP_DIR_IS_IN(xfer->ep) && (transfer->transferSofar > 0)) {
-		net_buf_add(xfer->buf, transfer->transferSofar);
+	if ((xfer->buf != NULL) && (transfer->transferBuffer != NULL)) {
+		if (transfer->transferSofar > 0) {
+			net_buf_add(xfer->buf, transfer->transferSofar);
+		}
 	}
 
 	transfer->setupPacket = NULL;

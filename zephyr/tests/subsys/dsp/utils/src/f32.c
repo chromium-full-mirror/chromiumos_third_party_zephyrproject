@@ -8,7 +8,6 @@
 
 #include <zephyr/ztest.h>
 #include <zephyr/kernel.h>
-#include <zephyr/dsp/dsp.h>
 #include <zephyr/dsp/utils.h>
 
 #include "common/test_common.h"

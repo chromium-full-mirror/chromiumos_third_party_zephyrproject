@@ -6,7 +6,6 @@
 &spi0 {
 	rx-dtc;
 	tx-dtc;
-
 	slow@0 {
 		compatible = "test-spi-loopback-slow";
 		reg = <0>;

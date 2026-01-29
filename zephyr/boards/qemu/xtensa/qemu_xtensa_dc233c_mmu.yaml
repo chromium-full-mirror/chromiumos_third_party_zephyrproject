@@ -9,7 +9,5 @@ toolchain:
 testing:
   default: true
   ignore_tags:
-    - bluetooth
-    - fpu
     - net
-    - smp
+    - bluetooth

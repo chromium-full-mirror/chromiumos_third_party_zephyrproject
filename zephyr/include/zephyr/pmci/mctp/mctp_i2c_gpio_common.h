@@ -20,6 +20,6 @@
 /* Max packet size (pseudo registers are byte sized) */
 #define MCTP_I2C_GPIO_MAX_PKT_SIZE 255
 
-/** INTERNAL_HIDDEN @endcond */
+/** @endcond INTERNAL_HIDDEN */
 
 #endif /* ZEPHYR_MCTP_I2C_GPIO_COMMON_H_ */

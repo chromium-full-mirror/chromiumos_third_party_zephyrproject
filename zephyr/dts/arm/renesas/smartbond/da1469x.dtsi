@@ -56,7 +56,6 @@
 				compatible = "renesas,smartbond-lp-osc";
 				clock-frequency = <DT_FREQ_K(32)>;
 				#clock-cells = <0>;
-				calibration-interval = <1000>;
 				status = "okay";
 			};
 
@@ -72,7 +71,6 @@
 				compatible = "renesas,smartbond-lp-osc";
 				clock-frequency = <DT_FREQ_K(15)>;
 				#clock-cells = <0>;
-				calibration-interval = <1000>;
 				status = "okay";
 			};
 
@@ -272,7 +270,7 @@
 			clock-src = <&divn_clk>;
 			interrupts = <17 0>;
 			prescaler = <32>;
-			status = "reserved";
+			status = "disabled";
 		};
 
 		timer3: timer@50040a00 {

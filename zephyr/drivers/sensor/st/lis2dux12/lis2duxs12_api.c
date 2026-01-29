@@ -164,17 +164,14 @@ static void st_lis2duxs12_stream_config_fifo(const struct device *dev,
 	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&config->ctx;
 	lis2duxs12_pin_int_route_t pin_int = { 0 };
 	lis2duxs12_fifo_mode_t fifo_mode = { 0 };
-	lis2duxs12_fifo_batch_t batch = { 0 };
-	lis2duxs12_fifo_event_t fifo_event = { 0 };
-	uint16_t watermark = 0;
 
 	/* disable FIFO as first thing */
 	fifo_mode.store = LIS2DUXS12_FIFO_1X;
 	fifo_mode.xl_only = 0;
+	fifo_mode.watermark = 0;
 	fifo_mode.operation = LIS2DUXS12_BYPASS_MODE;
-	batch.dec_ts = LIS2DUXS12_DEC_TS_OFF;
-	batch.bdr_xl = LIS2DUXS12_BDR_XL_ODR_OFF;
-	watermark = 0;
+	fifo_mode.batch.dec_ts = LIS2DUXS12_DEC_TS_OFF;
+	fifo_mode.batch.bdr_xl = LIS2DUXS12_BDR_XL_ODR_OFF;
 
 	pin_int.fifo_th = PROPERTY_DISABLE;
 	pin_int.fifo_full = PROPERTY_DISABLE;
@@ -184,9 +181,9 @@ static void st_lis2duxs12_stream_config_fifo(const struct device *dev,
 		pin_int.fifo_full = (trig_cfg.int_fifo_full) ? PROPERTY_ENABLE : PROPERTY_DISABLE;
 
 		if (pin_int.fifo_th) {
-			fifo_event = LIS2DUXS12_FIFO_EV_WTM;
+			fifo_mode.fifo_event = LIS2DUXS12_FIFO_EV_WTM;
 		} else if (pin_int.fifo_full) {
-			fifo_event = LIS2DUXS12_FIFO_EV_FULL;
+			fifo_mode.fifo_event = LIS2DUXS12_FIFO_EV_FULL;
 		}
 
 		switch (config->fifo_mode_sel) {
@@ -205,32 +202,27 @@ static void st_lis2duxs12_stream_config_fifo(const struct device *dev,
 		}
 
 		fifo_mode.operation = LIS2DUXS12_STREAM_MODE;
-		batch.dec_ts = config->ts_batch;
-		batch.bdr_xl = config->accel_batch;
-		watermark = config->fifo_wtm;
+		fifo_mode.batch.dec_ts = config->ts_batch;
+		fifo_mode.batch.bdr_xl = config->accel_batch;
+		fifo_mode.watermark = config->fifo_wtm;
 
 		/* In case each FIFO word contains 2x accelerometer samples,
 		 * then watermark can be divided by two to match user expectation.
 		 */
 		if (config->fifo_mode_sel == 2) {
-			watermark /= 2;
+			fifo_mode.watermark /= 2;
 		}
 	}
-
-	lis2duxs12_fifo_mode_set(ctx, fifo_mode);
 
 	/*
 	 * Set FIFO watermark (number of unread sensor data TAG + 6 bytes
 	 * stored in FIFO) to FIFO_WATERMARK samples
 	 */
-	lis2duxs12_fifo_watermark_set(ctx, watermark);
-
-	lis2duxs12_fifo_batch_set(ctx, batch);
-	lis2duxs12_fifo_stop_on_wtm_set(ctx, fifo_event);
+	lis2duxs12_fifo_mode_set(ctx, fifo_mode);
 
 	/* Set FIFO batch rates */
-	lis2dux12->accel_batch_odr = batch.bdr_xl;
-	lis2dux12->ts_batch_odr = batch.dec_ts;
+	lis2dux12->accel_batch_odr = fifo_mode.batch.bdr_xl;
+	lis2dux12->ts_batch_odr = fifo_mode.batch.dec_ts;
 
 	/* Set pin interrupt (fifo_th could be on or off) */
 	if (config->drdy_pin == 1) {
@@ -364,18 +356,17 @@ int st_lis2duxs12_init(const struct device *dev)
 	}
 
 	/* reset device */
-	ret = lis2duxs12_sw_reset(ctx);
+	ret = lis2duxs12_init_set(ctx, LIS2DUXS12_RESET);
 	if (ret < 0) {
 		return ret;
 	}
+
+	k_busy_wait(100);
 
 	LOG_INF("%s: chip id 0x%x", dev->name, chip_id);
 
 	/* Set bdu and if_inc recommended for driver usage */
-	ret = lis2duxs12_init_set(ctx);
-	if (ret < 0) {
-		return ret;
-	}
+	lis2duxs12_init_set(ctx, LIS2DUXS12_SENSOR_ONLY_ON);
 
 	lis2duxs12_timestamp_set(ctx, PROPERTY_ENABLE);
 

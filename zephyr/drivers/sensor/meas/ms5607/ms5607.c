@@ -324,7 +324,8 @@ static DEVICE_API(sensor, ms5607_api_funcs) = {
 	{								\
 		.tf = &ms5607_spi_transfer_function,			\
 		.bus_cfg.spi = SPI_DT_SPEC_INST_GET(inst,		\
-						MS5607_SPI_OPERATION)	\
+						MS5607_SPI_OPERATION,	\
+						0),			\
 	}
 
 /* Initializes a struct ms5607_config for an instance on a I2C bus. */

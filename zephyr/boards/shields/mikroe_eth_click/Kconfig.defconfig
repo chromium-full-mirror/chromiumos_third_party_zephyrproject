@@ -3,8 +3,12 @@
 
 if SHIELD_MIKROE_ETH_CLICK
 
+if NETWORKING
+
 # ENC28J60 is L2 chip slave on SPI
-configdefault NET_L2_ETHERNET
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 endif # SHIELD_MIKROE_ETH_CLICK

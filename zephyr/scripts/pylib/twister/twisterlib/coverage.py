@@ -3,7 +3,6 @@
 # Copyright (c) 2018-2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-import collections
 import contextlib
 import filecmp
 import glob
@@ -53,7 +52,7 @@ class CoverageTool:
     @staticmethod
     def retrieve_gcov_data(input_file):
         logger.debug(f"Working on {input_file}")
-        extracted_coverage_info = collections.defaultdict(list)
+        extracted_coverage_info = {}
         capture_data = False
         capture_complete = False
         with open(input_file) as fp:
@@ -79,8 +78,10 @@ class CoverageTool:
                         continue
                 else:
                     continue
-                hex_bytes = bytes.fromhex(hex_dump)
-                extracted_coverage_info[file_name].append(hex_bytes)
+                if file_name in extracted_coverage_info:
+                    extracted_coverage_info[file_name].append(hex_dump)
+                else:
+                    extracted_coverage_info[file_name] = [hex_dump]
         if not capture_data:
             capture_complete = True
         return {'complete': capture_complete, 'data': extracted_coverage_info}
@@ -98,7 +99,7 @@ class CoverageTool:
                 os.mkdir(subdir)
                 dirs.append(subdir)
                 with open(f'{subdir}/tmp.gcda', 'wb') as fp:
-                    fp.write(dump)
+                    fp.write(bytes.fromhex(dump))
 
             # Iteratively call gcov-tool (not gcov) to merge the files
             merge_tool = self.gcov_tool + '-tool'
@@ -108,7 +109,7 @@ class CoverageTool:
 
             # Read back the final output file
             with open(f'{dirs[-1]}/tmp.gcda', 'rb') as fp:
-                return fp.read(-1)
+                return fp.read(-1).hex()
 
     def create_gcda_files(self, extracted_coverage_info):
         gcda_created = True
@@ -124,8 +125,9 @@ class CoverageTool:
 
             try:
                 hexdump_val = self.merge_hexdumps(hexdumps)
+                hex_bytes = bytes.fromhex(hexdump_val)
                 with open(filename, 'wb') as fp:
-                    fp.write(hexdump_val)
+                    fp.write(hex_bytes)
             except ValueError:
                 logger.exception(f"Unable to convert hex data for file: {filename}")
                 gcda_created = False
@@ -415,8 +417,6 @@ class Gcovr(CoverageTool):
                "-e", "tests/*"]
         if self.version >= "7.0":
             cmd += ["--gcov-object-directory", outdir]
-        if self.version >= "8.0":
-            cmd += ["--gcov-ignore-parse-errors=suspicious_hits.warn_once_per_file"]
         cmd += excludes + self.options + ["--json", "-o", coverage_file, outdir]
         cmd_str = " ".join(cmd)
         logger.debug(f"Running: {cmd_str}")

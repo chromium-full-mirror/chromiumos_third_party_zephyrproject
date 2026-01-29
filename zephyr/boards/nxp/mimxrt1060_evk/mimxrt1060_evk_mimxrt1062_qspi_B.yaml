@@ -1,6 +1,5 @@
 #
 # Copyright (c) 2022, Whisper.ai
-# Copyright 2025 NXP
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -31,5 +30,4 @@ supported:
   - spi
   - usbd
   - watchdog
-  - rtc
 vendor: nxp

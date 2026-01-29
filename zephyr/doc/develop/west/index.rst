@@ -43,6 +43,7 @@ each command.
    sign.rst
    zephyr-cmds.rst
    why.rst
+   moving-to-west.rst
    without-west.rst
 
 For details on west's Python APIs, see :ref:`west-apis`.

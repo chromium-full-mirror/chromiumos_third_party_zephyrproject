@@ -26,10 +26,28 @@ For running with QEMU or :zephyr:board:`native_sim <native_sim>`, see :ref:`blue
 Setup Linux
 ***********
 
-Please follow :ref:`getting_started` on how to setup Linux for building and flashing applications.
+Install nrftools (only required in the actual hardware test mode)
+*****************************************************************
 
-Setup Windows 10/11 virtual machine
-***********************************
+Download latest nrftools (version >= 10.12.1) from site
+https://www.nordicsemi.com/Software-and-tools/Development-Tools/nRF-Command-Line-Tools/Download.
+
+.. image:: download_nrftools_linux.png
+   :height: 350
+   :width: 600
+   :align: center
+
+After you extract archive, you will see 2 .deb files, e.g.:
+
+- JLink_Linux_V688a_x86_64.deb
+
+- nRF-Command-Line-Tools_10_12_1_Linux-amd64.deb
+
+and README.md. To install the tools, double click on each .deb file or follow
+instructions from README.md.
+
+Setup Windows 10 virtual machine
+********************************
 
 Choose and install your hypervisor like VMWare Workstation(preferred) or
 VirtualBox. On VirtualBox could be some issues, if your host has fewer than 6 CPU.
@@ -37,7 +55,7 @@ VirtualBox. On VirtualBox could be some issues, if your host has fewer than 6 CP
 Create Windows virtual machine instance. Make sure it has at least 2 cores and
 installed guest extensions.
 
-Setup tested with VirtualBox 7.2.4 and VMWare Workstation 16.1.1 Pro.
+Setup tested with VirtualBox 7.1.4 and VMWare Workstation 16.1.1 Pro.
 
 Update Windows
 ==============
@@ -168,10 +186,10 @@ consoles. We will use Git Bash as Windows terminal.
    :width: 400
    :align: center
 
-Install PTS
-===========
+Install PTS 8
+=============
 
-On Windows virtual machine, install the latest PTS from https://pts.bluetooth.com/download.
+On Windows virtual machine, install latest PTS from https://www.bluetooth.org.
 Remember to install drivers from installation directory
 "C:/Program Files (x86)/Bluetooth SIG/Bluetooth PTS/PTS Driver/win64/CSRBlueCoreUSB.inf"
 
@@ -227,6 +245,16 @@ Connect devices (only required in the actual hardware test mode)
    :width: 500
    :align: center
 
+Flash board (only required in the actual hardware test mode)
+************************************************************
+
+On Linux, go to ~/zephyrproject. There should be already ~/zephyrproject/build
+directory. Flash board:
+
+.. code-block::
+
+    west flash
+
 Setup auto-pts project
 **********************
 
@@ -251,6 +279,7 @@ Install required python modules:
 .. code-block::
 
    cd auto-pts
+   pip3 install --user wheel
    pip3 install --user -r autoptsclient_requirements.txt
 
 Autopts server on Windows virtual machine
@@ -272,14 +301,9 @@ Install required python modules:
 Restart virtual machine.
 
 Running AutoPTS
-***************
+****************
 
-Please follow the information from
-https://github.com/zephyrproject-rtos/zephyr/tree/main/tests/bluetooth/tester on how to build,
-flash and run the Bluetooth Tester application.
-
-Server and client by default will run on localhost address.
-Run the server in the Windows virtual machine:
+Server and client by default will run on localhost address. Run server:
 
 .. code-block::
 
@@ -290,89 +314,59 @@ Run the server in the Windows virtual machine:
    :width: 700
    :align: center
 
-See also https://github.com/auto-pts/auto-pts for additional information on how to run auto-pts.
-
-Testing Zephyr Host Stack on hardware
-=====================================
+Testing Zephyr Host Stack on QEMU:
 
 .. code-block::
 
-    python ./autoptsclient-zephyr.py zephyr-master -t /dev/ttyACM0 -b BOARD -i SERVER_IP -l LOCAL_IP
+    # A Bluetooth controller needs to be mounted.
+    # For running with HCI UART, please visit: https://docs.zephyrproject.org/latest/samples/bluetooth/hci_uart/README.html#bluetooth-hci-uart
 
-Where ``/dev/ttyACM0`` is the tty for the board,
-``BOARD`` is the board to use (e.g. ``nrf53_audio``),
-``SERVER_IP`` is the IP of the AutoPTS server,
-``LOCAL_IP`` is the local IP of the Linux machine.
+    python ./autoptsclient-zephyr.py "C:\Users\USER_NAME\Documents\Profile Tuning Suite\PTS_PROJECT\PTS_PROJECT.pqw6" \
+    	~/zephyrproject/build/zephyr/zephyr.elf -i SERVER_IP -l LOCAL_IP
 
-Testing Zephyr Host Stack on QEMU
-=================================
 
-A Bluetooth controller needs to be mounted.
-For running with HCI UART, please visit :zephyr:code-sample:`bluetooth_hci_uart`.
+Testing Zephyr Host Stack on :zephyr:board:`native_sim <native_sim>`:
 
 .. code-block::
 
-    python ./autoptsclient-zephyr.py zephyr-master BUILD_DIR/zephyr/zephyr.elf -i SERVER_IP -l LOCAL_IP
+    # A Bluetooth controller needs to be mounted.
+    # For running with HCI UART, please visit: https://docs.zephyrproject.org/latest/samples/bluetooth/hci_uart/README.html#bluetooth-hci-uart
 
-Where ``BUILD_DIR`` is the build directory,
-``SERVER_IP`` is the IP of the AutoPTS server,
-``LOCAL_IP`` is the local IP of the Linux machine.
+    west build -b native_sim zephyr/tests/bluetooth/tester/ -DEXTRA_CONF_FILE=overlay-native.conf
 
-Testing Zephyr Host Stack on :zephyr:board:`native_sim <native_sim>`
-====================================================================
+    sudo python ./autoptsclient-zephyr.py "C:\Users\USER_NAME\Documents\Profile Tuning Suite\PTS_PROJECT\PTS_PROJECT.pqw6" \
+    	~/zephyrproject/build/zephyr/zephyr.exe -i SERVER_IP -l LOCAL_IP --hci 0
 
-When tester application has been built for :zephyr:board:`native_sim <native_sim>` it produces a
-``zephyr.exe`` file, that can be run as a native Linux application.
-Depending on your system,
-you may need to perform the following steps to successfully run ``zephyr.exe``.
 
-Setting capabilities
---------------------
+Testing Zephyr combined (controller + host) build on nRF52:
 
-Since the application will need access to connect to a socket for HCI,
-you may need to perform the following
+.. note::
 
-.. code-block::
+    If the error "ImportError: No module named pywintypes" appeared after the fresh setup,
+    uninstall and install the pywin32 module:
 
-    setcap cap_net_raw,cap_net_admin,cap_sys_admin+ep zephyr.exe
+    .. code-block::
 
-This is not required if you run ``zephyr.exe`` or ``./autoptsclient-zephyr.py`` with e.g. ``sudo``.
+      pip install --upgrade --force-reinstall pywin32
 
-Downing the HCI controller
---------------------------
-
-You may also need to "down" or "power off" the HCI controller before running ``zephyr.exe``.
-This can be done either with ``hciconfig`` as
+Run client:
 
 .. code-block::
 
-    hciconfig hciX down
+    python ./autoptsclient-zephyr.py zephyr-master ~/zephyrproject/build/zephyr/zephyr.elf -t /dev/ACM0 \
+    	-b nrf52 -l 192.168.2.1 -i 192.168.2.2
 
-Where ``hciX`` is a value like ``hci0``. You may run ``hciconfig`` to get a list of your HCI devices.
+.. image:: autoptsclient_run_2.png
+   :height: 100
+   :width: 800
+   :align: center
 
-Since ``hciconfig`` is deprecated on some systems, you may need to use
+At the first run, when Windows asks, enable connection through firewall:
 
-.. code-block::
-
-    btmgmt -i hciX power off
-
-Similar to ``hciconfig``, ``btmgmt info`` may be used to list current controllers and their states.
-
-Both ``hciconfig`` and ``btmgmt`` may require ``sudo`` when powering down a controller.
-
-Running the client
-------------------
-
-The application can be run as
-
-.. code-block::
-
-    python ./autoptsclient-zephyr.py zephyr-master --hci HCI BUILD_DIR/zephyr/zephyr.exe -i SERVER_IP -l LOCAL_IP
-
-Where ``HCI`` is the HCI index, e.g. ``0`` or ``1``,
-``BUILD_DIR`` is the build directory,
-``SERVER_IP`` is the IP of the AutoPTS server,
-``LOCAL_IP`` is the local IP of the Linux machine.
+.. image:: allow_firewall_2.png
+   :height: 450
+   :width: 600
+   :align: center
 
 Troubleshooting
 ****************

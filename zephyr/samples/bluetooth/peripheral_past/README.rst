@@ -18,6 +18,9 @@ Requirements
 Building and Running
 ********************
 
+This sample can be found under :zephyr_file:`samples/bluetooth/peripheral_past`
+in the Zephyr tree.
+
 Use the sample found under :zephyr_file:`samples/bluetooth/central_past` on
 another board that will connect to this and transfer a periodic advertisement
 sync.

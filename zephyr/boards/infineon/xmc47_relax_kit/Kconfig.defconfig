@@ -4,10 +4,15 @@
 
 if BOARD_XMC47_RELAX_KIT
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
+	default y
+config MDIO
+	default y
+config TEST_RANDOM_GENERATOR
 	default y
 
-config TEST_RANDOM_GENERATOR
-	default y if NETWORKING
+endif # NETWORKING
 
 endif

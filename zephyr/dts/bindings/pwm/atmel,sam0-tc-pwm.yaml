@@ -45,7 +45,6 @@ properties:
     enum:
       - 8
       - 16
-      - 32
 
   prescaler:
     type: int

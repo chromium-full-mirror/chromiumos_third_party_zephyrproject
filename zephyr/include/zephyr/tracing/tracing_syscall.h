@@ -4,12 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @file
- * @ingroup subsys_tracing_apis_syscall
- * @brief Header file for syscall tracing API.
- */
-
 #ifndef ZEPHYR_INCLUDE_TRACING_SYSCALL_H_
 #define ZEPHYR_INCLUDE_TRACING_SYSCALL_H_
 
@@ -20,8 +14,8 @@
 #else
 
 /**
- * @brief Tracing hooks for system calls
- * @defgroup subsys_tracing_apis_syscall Syscall Tracing
+ * @brief Syscall Tracing APIs
+ * @defgroup subsys_tracing_apis_syscall Syscall Tracing APIs
  * @ingroup subsys_tracing_apis
  * @{
  */

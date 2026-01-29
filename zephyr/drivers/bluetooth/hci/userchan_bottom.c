@@ -20,7 +20,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <nsi_errno.h>
-#include <nsi_tracing.h>
 
 #define BTPROTO_HCI      1
 #define HCI_CHANNEL_USER 1
@@ -104,12 +103,6 @@ int user_chan_unix_connect(char socket_path[])
 {
 	int fd;
 	struct sockaddr_un addr;
-	size_t socket_path_size = strlen(socket_path);
-
-	if (socket_path_size >= sizeof(addr.sun_path)) {
-		nsi_print_error_and_exit("Unix socket path too long (%zu>=%zu)\n",
-					 socket_path_size, sizeof(addr.sun_path));
-	}
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0) {

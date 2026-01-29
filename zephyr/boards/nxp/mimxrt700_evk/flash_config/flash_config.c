@@ -1,47 +1,56 @@
 /*
  * Copyright 2023, 2025 NXP
  *
- * SPDX-License-Identifier: Apache-2.0
+ * SPDXLicense-Identifier: Apache-2.0
  */
 #include "flash_config.h"
 
-#if defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1)
+/* Component ID definition, used by tools. */
+#ifndef FSL_COMPONENT_ID
+#define FSL_COMPONENT_ID "platform.drivers.flash_config"
+#endif
+
+#if defined(BOOT_HEADER_ENABLE) && (BOOT_HEADER_ENABLE == 1)
+#if defined(__ARMCC_VERSION) || defined(__GNUC__)
 __attribute__((section(".flash_conf"), used))
+#elif defined(__ICCARM__)
+#pragma location = ".flash_conf"
+#endif
 
 const fc_static_platform_config_t flash_config = {
 	.xspi_fcb_block = {
-		.mem_config = {
+		.memConfig = {
 			.tag = FC_XSPI_CFG_BLK_TAG,
 			.version = FC_XSPI_CFG_BLK_VERSION,
-			.read_sample_clk_src =
-				FC_XSPI_READ_SAMPLE_CLK_EXTERNAL_INPUT_FROM_DQS_PAD,
-			.cs_hold_time = 3,
-			.cs_setup_time = 3,
-			.device_mode_cfg_enable = 1,
-			.device_mode_type = 2,
-			.wait_time_cfg_commands = 1,
-			.device_mode_seq = {
-				.seq_num = 1,
-				.seq_id = 6,
+			.readSampleClkSrc =
+				kXSPIReadSampleClk_ExternalInputFromDqsPad,
+			.csHoldTime = 3,
+			.csSetupTime = 3,
+			.deviceModeCfgEnable = 1,
+			.deviceModeType = 2,
+			.waitTimeCfgCommands = 1,
+			.deviceModeSeq = {
+				.seqNum = 1,
+				.seqId = 6,
 				/* SeeLookup table for more details */
 				.reserved = 0,
 			},
-			.device_mode_arg = 2, /* Enable OPI DDR mode */
-			.controller_misc_option =
-			(1u << FC_XSPI_MISC_OFFSET_SAFE_CONFIG_FREQ_ENABLE) |
-			(1u << FC_XSPI_MISC_OFFSET_DDR_MODE_ENABLE),
-			.device_type = 1,
-			.sflash_pad_type = 8,
-			.serial_clk_freq = FC_XSPI_SERIAL_CLK_200MHZ,
-			.sflash_a1_size = 64ul * 1024u * 1024u,
-			.busy_offset = 0u,
-			.busy_bit_polarity = 0u,
+			.deviceModeArg = 2, /* Enable OPI DDR mode */
+			.controllerMiscOption =
+			(1u << Fc_XspiMiscOffset_SafeConfigFreqEnable) |
+			(1u << Fc_XspiMiscOffset_DdrModeEnable),
+			.deviceType = 1,
+			.sflashPadType = 8,
+			.serialClkFreq = Fc_XspiSerialClk_200MHz,
+			.sflashA1Size = 64ul * 1024u * 1024u,
+			.busyOffset = 0u,
+			.busyBitPolarity = 0u,
 #if defined(FSL_FEATURE_SILICON_VERSION_A)
-			.lut_custom_seq_enable = 0u,
+			.lutCustomSeqEnable = 0u,
 #else
-			.lut_custom_seq_enable = 1u,
+			.lutCustomSeqEnable = 1u,
 #endif
-			.lookup_table = {
+			.lookupTable = {
 				/*Read*/
 				[0] = FC_XSPI_LUT_SEQ(FC_CMD_DDR, FC_XSPI_8PAD,
 					0xEE, FC_CMD_DDR, FC_XSPI_8PAD, 0x11),
@@ -120,23 +129,23 @@ const fc_static_platform_config_t flash_config = {
 		},
 
 		/* For PAGEPROGRAM custom LUT, uses joined LUT. */
-		.lut_custom_seq[4].seq_num = 2U,
-		.lut_custom_seq[4].seq_id = 9U,
+		.lutCustomSeq[4].seqNum = 2U,
+		.lutCustomSeq[4].seqId = 9U,
 #endif
 		},
-		.page_size = 256u,
-		.sector_size = 4u * 1024u,
-		.ipcmd_serial_clk_freq = 1u,
-		.serial_nor_type = 2u,
-		.block_size = 64u * 1024u,
-		.flash_state_ctx = 0x07008200u,
+		.pageSize = 256u,
+		.sectorSize = 4u * 1024u,
+		.ipcmdSerialClkFreq = 1u,
+		.serialNorType = 2u,
+		.blockSize = 64u * 1024u,
+		.flashStateCtx = 0x07008200u,
 	},
 #ifdef BOOT_ENABLE_XSPI1_PSRAM
 	.psram_config_block = {
-		.xmcd_header = 0xC0010008,
-		.xmcd_opt0 = 0xC0000700,
+		.xmcdHeader = 0xC0010008,
+		.xmcdOpt0 = 0xC0000700,
 	},
 #endif
 };
 
-#endif /* defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1) */
+#endif /* BOOT_HEADER_ENABLE */

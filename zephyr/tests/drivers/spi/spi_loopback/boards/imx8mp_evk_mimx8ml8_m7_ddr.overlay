@@ -15,7 +15,6 @@
 			slew-rate = "fast";
 			drive-strength = "x6";
 		};
-
 		group2 {
 			pinmux = <&iomuxc_ecspi1_ss0_ecspi_ss_ecspi1_ss0>;
 			slew-rate = "fast";
@@ -35,7 +34,6 @@
 		reg = <0>;
 		spi-max-frequency = <500000>;
 	};
-
 	fast@0 {
 		compatible = "test-spi-loopback-fast";
 		reg = <0>;

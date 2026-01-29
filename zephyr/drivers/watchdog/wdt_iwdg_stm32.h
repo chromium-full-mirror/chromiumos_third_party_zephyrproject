@@ -28,8 +28,6 @@ struct iwdg_stm32_config {
 struct iwdg_stm32_data {
 	uint32_t prescaler;
 	uint32_t reload;
-	/* IWDG user defined callback on EWI */
-	wdt_callback_t callback;
 };
 
 #endif	/* ZEPHYR_DRIVERS_WATCHDOG_IWDG_STM32_H_ */

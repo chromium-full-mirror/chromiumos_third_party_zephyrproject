@@ -4,7 +4,4 @@ common:
     - bluetooth_audio
 tests:
   bluetooth.audio.ccid.test:
-    platform_allow:
-      - native_sim
-    integration_platforms:
-      - native_sim
+    type: unit

@@ -17,12 +17,6 @@
 #include <zephyr/shell/shell.h>
 #include <zephyr/sys/util.h>
 
-#ifdef CONFIG_FLASH_SHELL_TEST_COMMANDS
-#include <zephyr/timing/timing.h>
-#endif
-
-#define SPEED_TEST_MAX_REPETITIONS 10000
-
 /* Buffer is only needed for bytes that follow command and offset */
 #define BUF_ARRAY_CNT (CONFIG_SHELL_ARGC_MAX - 2)
 
@@ -352,23 +346,22 @@ static int read_write_erase_validate(const struct shell *sh, size_t argc, char *
 		return -EINVAL;
 	}
 
-	if (*repeat == 0 || *repeat > SPEED_TEST_MAX_REPETITIONS) {
-		shell_error(sh, "<repeat> must be between 1 and %d.", SPEED_TEST_MAX_REPETITIONS);
+	if (*repeat == 0 || *repeat > 10) {
+		shell_error(sh, "<repeat> must be between 1 and 10.");
 		return -EINVAL;
 	}
 
 	return 0;
 }
 
-static void speed_output(const struct shell *sh, uint64_t total_time, uint32_t loops, uint32_t size)
+static void speed_output(const struct shell *sh, uint64_t total_time, double loops, double size)
 {
-	uint64_t time_per_loop = timing_cycles_to_ns_avg(total_time, loops);
+	double time_per_loop = (double)total_time / loops;
 	double throughput = size;
 	uint8_t speed_index = 0;
 
 	if (time_per_loop > 0) {
-		throughput *= NSEC_PER_SEC;
-		throughput /= time_per_loop;
+		throughput /= (time_per_loop / 1000.0);
 	}
 
 	while (throughput >= (double)speed_divisor && speed_index < ARRAY_SIZE(speed_types)) {
@@ -376,9 +369,8 @@ static void speed_output(const struct shell *sh, uint64_t total_time, uint32_t l
 		++speed_index;
 	}
 
-	shell_print(sh, "Total: %llu ns, Per loop: %llu ns, Speed: ~%.1f%sps",
-		    timing_cycles_to_ns(total_time), time_per_loop, throughput,
-		    speed_types[speed_index]);
+	shell_print(sh, "Total: %llums, Per loop: ~%.0fms, Speed: ~%.1f%sps",
+		    total_time, time_per_loop, throughput, speed_types[speed_index]);
 }
 
 static int cmd_read_test(const struct shell *sh, size_t argc, char *argv[])
@@ -389,7 +381,7 @@ static int cmd_read_test(const struct shell *sh, size_t argc, char *argv[])
 	int result;
 	uint32_t addr;
 	uint32_t size;
-	timing_t start_time, stop_time;
+	uint64_t start_time;
 	uint64_t loop_time;
 	uint64_t total_time = 0;
 	uint32_t loops = 0;
@@ -404,14 +396,10 @@ static int cmd_read_test(const struct shell *sh, size_t argc, char *argv[])
 		return result;
 	}
 
-	timing_init();
-	timing_start();
-
 	while (repeat--) {
-		start_time = timing_counter_get();
+		start_time = k_uptime_get();
 		result = flash_read(flash_dev, addr, test_arr, size);
-		stop_time = timing_counter_get();
-		loop_time = timing_cycles_get(&start_time, &stop_time);
+		loop_time = k_uptime_delta(&start_time);
 
 		if (result) {
 			shell_error(sh, "Read failed: %d", result);
@@ -420,14 +408,12 @@ static int cmd_read_test(const struct shell *sh, size_t argc, char *argv[])
 
 		++loops;
 		total_time += loop_time;
-		shell_print(sh, "Loop #%u done in %llu ns.", loops, timing_cycles_to_ns(loop_time));
+		shell_print(sh, "Loop #%u done in %llums.", loops, loop_time);
 	}
 
 	if (result == 0) {
-		speed_output(sh, total_time, loops, size);
+		speed_output(sh, total_time, (double)loops, (double)size);
 	}
-
-	timing_stop();
 
 	return result;
 }
@@ -439,7 +425,7 @@ static int cmd_write_test(const struct shell *sh, size_t argc, char *argv[])
 	int result;
 	uint32_t addr;
 	uint32_t size;
-	timing_t start_time, stop_time;
+	uint64_t start_time;
 	uint64_t loop_time;
 	uint64_t total_time = 0;
 	uint32_t loops = 0;
@@ -458,14 +444,10 @@ static int cmd_write_test(const struct shell *sh, size_t argc, char *argv[])
 		test_arr[i] = (uint8_t)i;
 	}
 
-	timing_init();
-	timing_start();
-
 	while (repeat--) {
-		start_time = timing_counter_get();
+		start_time = k_uptime_get();
 		result = flash_write(flash_dev, addr, test_arr, size);
-		stop_time = timing_counter_get();
-		loop_time = timing_cycles_get(&start_time, &stop_time);
+		loop_time = k_uptime_delta(&start_time);
 
 		if (result) {
 			shell_error(sh, "Write failed: %d", result);
@@ -474,14 +456,12 @@ static int cmd_write_test(const struct shell *sh, size_t argc, char *argv[])
 
 		++loops;
 		total_time += loop_time;
-		shell_print(sh, "Loop #%u done in %llu ns.", loops, timing_cycles_to_ns(loop_time));
+		shell_print(sh, "Loop #%u done in %llu ticks.", loops, loop_time);
 	}
 
 	if (result == 0) {
-		speed_output(sh, total_time, loops, size);
+		speed_output(sh, total_time, (double)loops, (double)size);
 	}
-
-	timing_stop();
 
 	return result;
 }
@@ -493,7 +473,7 @@ static int cmd_erase_test(const struct shell *sh, size_t argc, char *argv[])
 	int result;
 	uint32_t addr;
 	uint32_t size;
-	timing_t start_time, stop_time;
+	uint64_t start_time;
 	uint64_t loop_time;
 	uint64_t total_time = 0;
 	uint32_t loops = 0;
@@ -512,14 +492,10 @@ static int cmd_erase_test(const struct shell *sh, size_t argc, char *argv[])
 		test_arr[i] = (uint8_t)i;
 	}
 
-	timing_init();
-	timing_start();
-
 	while (repeat--) {
-		start_time = timing_counter_get();
+		start_time = k_uptime_get();
 		result = flash_erase(flash_dev, addr, size);
-		stop_time = timing_counter_get();
-		loop_time = timing_cycles_get(&start_time, &stop_time);
+		loop_time = k_uptime_delta(&start_time);
 
 		if (result) {
 			shell_error(sh, "Erase failed: %d", result);
@@ -528,14 +504,12 @@ static int cmd_erase_test(const struct shell *sh, size_t argc, char *argv[])
 
 		++loops;
 		total_time += loop_time;
-		shell_print(sh, "Loop #%u done in %llu ns.", loops, timing_cycles_to_ns(loop_time));
+		shell_print(sh, "Loop #%u done in %llums.", loops, loop_time);
 	}
 
 	if (result == 0) {
-		speed_output(sh, total_time, loops, size);
+		speed_output(sh, total_time, (double)loops, (double)size);
 	}
-
-	timing_stop();
 
 	return result;
 }
@@ -548,7 +522,7 @@ static int cmd_erase_write_test(const struct shell *sh, size_t argc, char *argv[
 	int result_write = 0;
 	uint32_t addr;
 	uint32_t size;
-	timing_t start_time, stop_time;
+	uint64_t start_time;
 	uint64_t loop_time;
 	uint64_t total_time = 0;
 	uint32_t loops = 0;
@@ -567,15 +541,11 @@ static int cmd_erase_write_test(const struct shell *sh, size_t argc, char *argv[
 		test_arr[i] = (uint8_t)i;
 	}
 
-	timing_init();
-	timing_start();
-
 	while (repeat--) {
-		start_time = timing_counter_get();
+		start_time = k_uptime_get();
 		result_erase = flash_erase(flash_dev, addr, size);
 		result_write = flash_write(flash_dev, addr, test_arr, size);
-		stop_time = timing_counter_get();
-		loop_time = timing_cycles_get(&start_time, &stop_time);
+		loop_time = k_uptime_delta(&start_time);
 
 		if (result_erase) {
 			shell_error(sh, "Erase failed: %d", result_erase);
@@ -589,14 +559,12 @@ static int cmd_erase_write_test(const struct shell *sh, size_t argc, char *argv[
 
 		++loops;
 		total_time += loop_time;
-		shell_print(sh, "Loop #%u done in %llu ns.", loops, timing_cycles_to_ns(loop_time));
+		shell_print(sh, "Loop #%u done in %llums.", loops, loop_time);
 	}
 
 	if (result_erase == 0 && result_write == 0) {
-		speed_output(sh, total_time, loops, size);
+		speed_output(sh, total_time, (double)loops, (double)size);
 	}
-
-	timing_stop();
 
 	return (result_erase != 0 ? result_erase : result_write);
 }
@@ -619,18 +587,16 @@ static int set_bypass(const struct shell *sh, shell_bypass_cb_t bypass)
 		shell_print(sh, "Loading...");
 	}
 
-	shell_set_bypass(sh, bypass, NULL);
+	shell_set_bypass(sh, bypass);
 
 	return 0;
 }
 
-static void bypass_cb(const struct shell *sh, uint8_t *recv, size_t len, void *user_data)
+static void bypass_cb(const struct shell *sh, uint8_t *recv, size_t len)
 {
 	uint32_t left_to_read = flash_load_total - flash_load_written - flash_load_boff;
 	uint32_t to_copy = MIN(len, left_to_read);
 	uint32_t copied = 0;
-
-	ARG_UNUSED(user_data);
 
 	while (copied < to_copy) {
 

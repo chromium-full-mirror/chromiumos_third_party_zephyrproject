@@ -9,10 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <stdint.h>
 
 #include <zephyr/sys/util_internal.h>
 #include <zephyr/types.h>
 #include <zephyr/sys/util_macro.h>
+#include <zephyr/sys/util_internal.h>
 #include <zephyr/ztest.h>
 #include <zephyr/ztest_assert.h>
 

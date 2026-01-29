@@ -22,7 +22,6 @@ GEN_OFFSET_SYM(_xtensa_irq_bsa_t, a2);
 GEN_OFFSET_SYM(_xtensa_irq_bsa_t, a3);
 
 GEN_OFFSET_SYM(_xtensa_irq_bsa_t, exccause);
-GEN_OFFSET_SYM(_xtensa_irq_bsa_t, excvaddr);
 GEN_OFFSET_SYM(_xtensa_irq_bsa_t, pc);
 GEN_OFFSET_SYM(_xtensa_irq_bsa_t, ps);
 GEN_OFFSET_SYM(_xtensa_irq_bsa_t, sar);

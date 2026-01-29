@@ -38,8 +38,7 @@ X-NUCLEO-IKS01A1 provides the following key features:
 
 
 More information about X-NUCLEO-IKS01A1 can be found here:
-
-- `X-NUCLEO-IKS01A1 data sheet`_
+       - `X-NUCLEO-IKS01A1 data sheet`_
 
 
 Programming

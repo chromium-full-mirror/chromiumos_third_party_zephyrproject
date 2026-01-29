@@ -47,13 +47,6 @@ enum {
 	BT_KEYS_OOB = BIT(5),
 };
 
-enum bt_keys_cfg_flags {
-	BT_KEYS_CFG_SIGNING = BIT(0),
-	BT_KEYS_CFG_SC_PAIR_ONLY = BIT(1),
-	BT_KEYS_CFG_OVERWRITE_OLDEST = BIT(2),
-	/* BIT(24) and higher: Invalid. See STORAGE_CFG_FLAGS. */
-};
-
 struct bt_ltk {
 	uint8_t rand[8];
 	uint8_t ediv[2];
@@ -81,9 +74,6 @@ struct bt_keys {
 	bt_addr_le_t addr;
 	uint8_t state;
 	uint8_t storage_start[0] __aligned(sizeof(void *));
-	/* cfg_version and cfg_flags total 4 octets to maintain struct alignment */
-	uint8_t cfg_version;
-	uint8_t cfg_flags[3];
 	uint8_t enc_size;
 	uint8_t flags;
 	uint16_t keys;
@@ -227,7 +217,6 @@ enum {
 
 struct bt_keys_link_key {
 	bt_addr_t addr;
-	uint8_t enc_key_size;
 	uint8_t storage_start[0] __aligned(sizeof(void *));
 	uint8_t flags;
 	uint8_t val[16];

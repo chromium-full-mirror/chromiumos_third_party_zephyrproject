@@ -8,9 +8,8 @@
 
 from textwrap import dedent
 
-from west.commands import WestCommand
-
 from run_common import add_parser_common, do_run_common
+from west.commands import WestCommand
 
 
 class Debug(WestCommand):

@@ -100,8 +100,9 @@ extern FUNC_NORETURN void z_cstart(void);
  */
 FUNC_NORETURN void z_prep_c(void)
 {
+#if defined(CONFIG_SOC_PREP_HOOK)
 	soc_prep_hook();
-
+#endif
 	/* Initialize tpidruro with our struct _cpu instance address */
 	write_tpidruro((uintptr_t)&_kernel.cpus[0]);
 

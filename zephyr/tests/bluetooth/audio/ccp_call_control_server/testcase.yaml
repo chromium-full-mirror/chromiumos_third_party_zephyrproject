@@ -4,7 +4,4 @@ common:
     - bluetooth_audio
 tests:
   bluetooth.audio.ccp_call_control_server.test:
-    platform_allow:
-      - native_sim
-    integration_platforms:
-      - native_sim
+    type: unit

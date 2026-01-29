@@ -101,6 +101,12 @@ output of "commander rps converter --help"
 [1]: https://www.silabs.com/documents/public/user-guides/ug574-siwx917-soc-manufacturing-utility-user-guide.pdf
 '''
 
+class ToggleAction(argparse.Action):
+
+    def __call__(self, parser, args, ignored, option):
+        setattr(args, self.dest, not option.startswith('--no-'))
+
+
 class Sign(Forceable):
     def __init__(self):
         super(Sign, self).__init__(
@@ -141,7 +147,8 @@ schema (rimage "target") is not defined in board.cmake.''')
 
         # bin file options
         group = parser.add_argument_group('binary (.bin) file options')
-        group.add_argument('--bin', dest='gen_bin', action=argparse.BooleanOptionalAction,
+        group.add_argument('--bin', '--no-bin', dest='gen_bin', nargs=0,
+                           action=ToggleAction,
                            help='''produce a signed .bin file?
                            (default: yes, if supported and unsigned bin
                            exists)''')
@@ -152,7 +159,8 @@ schema (rimage "target") is not defined in board.cmake.''')
 
         # hex file options
         group = parser.add_argument_group('Intel HEX (.hex) file options')
-        group.add_argument('--hex', dest='gen_hex', action=argparse.BooleanOptionalAction,
+        group.add_argument('--hex', '--no-hex', dest='gen_hex', nargs=0,
+                           action=ToggleAction,
                            help='''produce a signed .hex file?
                            (default: yes, if supported and unsigned hex
                            exists)''')
@@ -577,8 +585,8 @@ class RimageSigner(Signer):
         # Non-SOF build does not have extended manifest data for
         # rimage to process, which might result in rimage error.
         # So skip it when not doing SOF builds.
-        rimage_schema = build_conf.get('CONFIG_RIMAGE_SIGNING_SCHEMA', None)
-        if rimage_schema is None:
+        is_sof_build = build_conf.getboolean('CONFIG_SOF')
+        if not is_sof_build:
             no_manifest = True
             self.generate_uuid_registry()
 

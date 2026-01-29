@@ -5,6 +5,7 @@
  */
 
 #include <zephyr/bluetooth/hci_types.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/iso.h>
 #include <zephyr/logging/log.h>

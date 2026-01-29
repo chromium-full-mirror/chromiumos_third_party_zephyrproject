@@ -87,20 +87,12 @@ def guess_file_from_patterns(directory, patterns, name, extensions):
 
 
 def guess_image(board_or_shield):
-    img_exts = ("webp", "png", "jpg", "jpeg")
-
-    name_parts = board_or_shield.name.split('_')
-    prefix_matches = []
-    for i in range(len(name_parts) - 1, 0, -1):
-        partial_name = '_'.join(name_parts[:i])
-        prefix_matches.append(f"**/{partial_name}.{{ext}}")
-
+    img_exts = ("jpg", "jpeg", "webp", "png")
     patterns = (
-        *prefix_matches,
+        "**/{name}.{ext}",
         "**/*{name}*.{ext}",
         "**/*.{ext}",
     )
-
     img_file = guess_file_from_patterns(
         board_or_shield.dir, patterns, board_or_shield.name, img_exts
     )
@@ -207,7 +199,6 @@ def run_twister_cmake_only(outdir, vendor_filter):
         *[arg for path in EDT_PICKLE_PATHS for arg in ('--keep-artifacts', path)],
         *[arg for path in RUNNERS_YAML_PATHS for arg in ('--keep-artifacts', path)],
         "--cmake-only",
-        "-v",
         "--outdir",
         str(outdir),
     ]
@@ -291,13 +282,11 @@ def get_catalog(generate_hw_features=False, hw_features_vendor_filter=None):
         doc_page = guess_doc_page(board)
 
         supported_features = {}
-        compatibles = {}
 
         # Use pre-gathered build info and DTS files
         if board.name in board_devicetrees:
             for board_target, edt in board_devicetrees[board.name].items():
                 features = {}
-                target_compatibles = set()
                 for node in edt.nodes:
                     if node.binding_path is None:
                         continue
@@ -331,7 +320,6 @@ def get_catalog(generate_hw_features=False, hw_features_vendor_filter=None):
                             locations.add("soc")
 
                     existing_feature = features.get(binding_type, {}).get(node.matching_compat)
-                    target_compatibles.add(node.matching_compat)
 
                     node_info = {
                         "filename": str(filename),
@@ -358,9 +346,8 @@ def get_catalog(generate_hw_features=False, hw_features_vendor_filter=None):
 
                     features.setdefault(binding_type, {})[node.matching_compat] = feature_data
 
-                # Store features and compatibles for this specific target
+                # Store features for this specific target
                 supported_features[board_target] = features
-                compatibles[board_target] = list(target_compatibles)
 
         board_runner_info = {}
         if board.name in board_runners:
@@ -397,7 +384,6 @@ def get_catalog(generate_hw_features=False, hw_features_vendor_filter=None):
             "socs": list(socs),
             "revision_default": board.revision_default,
             "supported_features": supported_features,
-            "compatibles": compatibles,
             "image": guess_image(board),
             # runners
             "supported_runners": board_runner_info.get("runners", []),

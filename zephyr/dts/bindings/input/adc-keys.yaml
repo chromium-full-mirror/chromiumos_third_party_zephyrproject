@@ -10,7 +10,7 @@ description: |
 
   Example:
 
-  #include <zephyr/dt-bindings/input/input-event-codes.h>
+  #include <dt-bindings/input/input-event-codes.h>
 
   / {
           buttons {

@@ -78,6 +78,7 @@ struct pca9685_config {
 	struct i2c_dt_spec i2c;
 	bool outdrv_open_drain;
 	bool och_on_ack;
+	bool invrt;
 };
 
 struct pca9685_data {
@@ -172,9 +173,7 @@ static int pca9685_set_cycles(const struct device *dev,
 	int32_t pre_scale;
 	int ret;
 
-	if (flags & PWM_POLARITY_INVERTED) {
-		pulse_count = period_count - pulse_count;
-	}
+	ARG_UNUSED(flags);
 
 	if (channel >= CHANNEL_CNT) {
 		LOG_WRN("channel out of range: %u", channel);
@@ -276,6 +275,7 @@ static int pca9685_init(const struct device *dev)
 		.i2c = I2C_DT_SPEC_INST_GET(inst),                      \
 		.outdrv_open_drain = DT_INST_PROP(inst, open_drain),    \
 		.och_on_ack = DT_INST_PROP(inst, och_on_ack),           \
+		.invrt = DT_INST_PROP(inst, invert),                    \
 	};                                                              \
                                                                         \
 	static struct pca9685_data pca9685_##inst##_data;               \

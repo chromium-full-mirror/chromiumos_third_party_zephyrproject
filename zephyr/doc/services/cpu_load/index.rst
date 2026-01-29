@@ -1,4 +1,4 @@
-.. _cpu_load_metric:
+.. _cpu_load_subsys:
 
 CPU Load
 ########

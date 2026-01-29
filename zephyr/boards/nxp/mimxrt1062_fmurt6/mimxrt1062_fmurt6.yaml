@@ -1,7 +1,7 @@
 #
-# Copyright 2023, 2025 NXP
-#
 # SPDX-License-Identifier: Apache-2.0
+#
+# Copyright 2023 NXP
 #
 
 identifier: mimxrt1062_fmurt6
@@ -28,5 +28,4 @@ supported:
   - uart
   - usb_device
   - watchdog
-  - rtc
 vendor: nxp

@@ -13,7 +13,8 @@
 #include <zephyr/pm/device.h>
 
 #include <fsl_inputmux.h>
-#include <soc.h>
+
+#include "intc_nxp_pint/power.h"
 
 #define DT_DRV_COMPAT nxp_pint
 
@@ -95,12 +96,7 @@ int nxp_pint_pin_enable(uint8_t pin, enum nxp_pint_trigger trigger, bool wake)
 	 * driver handles the IRQ
 	 */
 	PINT_PinInterruptConfig(pint_base, slot, trigger, NULL);
-	if (wake) {
-		NXP_ENABLE_WAKEUP_SIGNAL(pint_irq_cfg[slot].irq);
-	} else {
-		NXP_DISABLE_WAKEUP_SIGNAL(pint_irq_cfg[slot].irq);
-		irq_enable(pint_irq_cfg[slot].irq);
-	}
+	nxp_pint_pin_deep_sleep_irq(pint_irq_cfg[slot].irq, wake);
 
 	return 0;
 }
@@ -173,22 +169,6 @@ void nxp_pint_pin_unset_callback(uint8_t pin)
 	}
 
 	pint_irq_cfg[slot].callback = NULL;
-}
-
-int nxp_pint_pin_get_slot_index(uint8_t pin)
-{
-	int slot;
-
-	if (pin > ARRAY_SIZE(pin_pint_id)) {
-		return -EINVAL;
-	}
-
-	slot = pin_pint_id[pin];
-	if (slot == NO_PINT_ID) {
-		return -EINVAL;
-	}
-
-	return slot;
 }
 
 /* NXP PINT ISR handler- called with PINT slot ID */

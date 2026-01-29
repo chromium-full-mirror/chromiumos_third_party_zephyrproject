@@ -405,7 +405,8 @@ static int iis328dq_init(const struct device *dev)
 		STMEMSC_CTX_SPI_INCR(&iis328dq_config_##inst.stmemsc_cfg),                         \
 			.stmemsc_cfg =                                                             \
 				{                                                                  \
-					.spi = SPI_DT_SPEC_INST_GET(inst, IIS328DQ_SPI_OPERATION)  \
+					.spi = SPI_DT_SPEC_INST_GET(inst, IIS328DQ_SPI_OPERATION,  \
+								    0),                            \
 				},                                                                 \
 			IIS328DQ_CONFIG_COMMON(inst)                                               \
 	}

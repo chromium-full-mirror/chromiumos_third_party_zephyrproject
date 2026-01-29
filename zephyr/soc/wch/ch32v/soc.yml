@@ -1,5 +1,4 @@
 # Copyright (c) 2024 Michael Hope
-# Copyright (c) 2025 Thomas Boje
 # SPDX-License-Identifier: Apache-2.0
 
 family:
@@ -20,4 +19,3 @@ family:
   - name: qingke-v4f
     socs:
     - name: ch32v303
-    - name: ch32v307

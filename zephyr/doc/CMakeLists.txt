@@ -32,7 +32,7 @@ find_package(Doxygen REQUIRED dot)
 
 find_program(SPHINXBUILD sphinx-build)
 if(NOT SPHINXBUILD)
-  message(WARNING "The 'sphinx-build' command was not found; Sphinx-based targets will not be available.")
+  message(FATAL_ERROR "The 'sphinx-build' command was not found")
 endif()
 find_program(SPHINXAUTOBUILD sphinx-autobuild)
 
@@ -187,96 +187,90 @@ if(HW_FEATURES_VENDOR_FILTER)
   list(APPEND SPHINXOPTS "-D" "zephyr_hw_features_vendor_filter=${vendor_filter}")
 endif()
 
-if(SPHINXBUILD)
-  add_doc_target(
-    html
-    COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
-    ${SPHINXBUILD}
-      -b html
-      -c ${DOCS_CFG_DIR}
-      -d ${DOCS_DOCTREE_DIR}
-      -w ${DOCS_BUILD_DIR}/html.log
-      ${SPHINX_TAGS_ARGS}
-      ${SPHINXOPTS}
-      ${SPHINXOPTS_EXTRA}
-      ${DOCS_SRC_DIR}
-      ${DOCS_HTML_DIR}
-    USES_TERMINAL
-    COMMENT "Running Sphinx HTML build..."
-  )
+add_doc_target(
+  html
+  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
+  ${SPHINXBUILD}
+    -b html
+    -c ${DOCS_CFG_DIR}
+    -d ${DOCS_DOCTREE_DIR}
+    -w ${DOCS_BUILD_DIR}/html.log
+    ${SPHINX_TAGS_ARGS}
+    ${SPHINXOPTS}
+    ${SPHINXOPTS_EXTRA}
+    ${DOCS_SRC_DIR}
+    ${DOCS_HTML_DIR}
+  USES_TERMINAL
+  COMMENT "Running Sphinx HTML build..."
+)
 
-  set_target_properties(
-    html html-nodeps
-    PROPERTIES
-      ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
-  )
+set_target_properties(
+  html html-nodeps
+  PROPERTIES
+    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
+)
 
-  add_dependencies(html devicetree)
-endif()
+add_dependencies(html devicetree)
 
 #-------------------------------------------------------------------------------
 # html-live
 
-if(SPHINXBUILD)
-  add_doc_target(
-    html-live
-    COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
-    ${SPHINXAUTOBUILD}
-      --watch ${DOCS_CFG_DIR}
-      --ignore ${DOCS_BUILD_DIR}
-      -b html
-      -c ${DOCS_CFG_DIR}
-      -d ${DOCS_DOCTREE_DIR}
-      -w ${DOCS_BUILD_DIR}/html.log
-      ${SPHINX_TAGS_ARGS}
-      ${SPHINXOPTS}
-      ${SPHINXOPTS_EXTRA}
-      ${DOCS_SRC_DIR}
-      ${DOCS_HTML_DIR}
-    USES_TERMINAL
-    COMMENT "Running Sphinx HTML autobuild..."
-  )
+add_doc_target(
+  html-live
+  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
+  ${SPHINXAUTOBUILD}
+    --watch ${DOCS_CFG_DIR}
+    --ignore ${DOCS_BUILD_DIR}
+    -b html
+    -c ${DOCS_CFG_DIR}
+    -d ${DOCS_DOCTREE_DIR}
+    -w ${DOCS_BUILD_DIR}/html.log
+    ${SPHINX_TAGS_ARGS}
+    ${SPHINXOPTS}
+    ${SPHINXOPTS_EXTRA}
+    ${DOCS_SRC_DIR}
+    ${DOCS_HTML_DIR}
+  USES_TERMINAL
+  COMMENT "Running Sphinx HTML autobuild..."
+)
 
-  set_target_properties(
-    html-live html-live-nodeps
-    PROPERTIES
-      ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
-  )
+set_target_properties(
+  html-live html-live-nodeps
+  PROPERTIES
+    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
+)
 
-  add_dependencies(html-live devicetree)
-endif()
+add_dependencies(html-live devicetree)
 #-------------------------------------------------------------------------------
 # pdf
 
-if(SPHINXBUILD)
-  add_doc_target(
-    latex
-    COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_LATEX_DIR}
-    ${SPHINXBUILD}
-      -b latex
-      -c ${DOCS_CFG_DIR}
-      -d ${DOCS_DOCTREE_DIR}
-      -w ${DOCS_BUILD_DIR}/latex.log
-      ${SPHINX_TAGS_ARGS}
-      -t convertimages
-      ${SPHINXOPTS}
-      ${SPHINXOPTS_EXTRA}
-      ${DOCS_SRC_DIR}
-      ${DOCS_LATEX_DIR}
-    USES_TERMINAL
-    COMMENT "Running Sphinx LaTeX build..."
-  )
+add_doc_target(
+  latex
+  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_LATEX_DIR}
+  ${SPHINXBUILD}
+    -b latex
+    -c ${DOCS_CFG_DIR}
+    -d ${DOCS_DOCTREE_DIR}
+    -w ${DOCS_BUILD_DIR}/latex.log
+    ${SPHINX_TAGS_ARGS}
+    -t convertimages
+    ${SPHINXOPTS}
+    ${SPHINXOPTS_EXTRA}
+    ${DOCS_SRC_DIR}
+    ${DOCS_LATEX_DIR}
+  USES_TERMINAL
+  COMMENT "Running Sphinx LaTeX build..."
+)
 
-  set_target_properties(
-    latex latex-nodeps
-    PROPERTIES
-      ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LATEX_DIR};${DOCS_DOCTREE_DIR}"
-  )
+set_target_properties(
+  latex latex-nodeps
+  PROPERTIES
+    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LATEX_DIR};${DOCS_DOCTREE_DIR}"
+)
 
-  add_dependencies(latex devicetree)
-endif()
+add_dependencies(latex devicetree)
 
-if(SPHINXBUILD AND LATEX_PDFLATEX_FOUND AND LATEXMK)
+if(LATEX_PDFLATEX_FOUND AND LATEXMK)
   if(WIN32)
     set(PDF_BUILD_COMMAND "make.bat")
   else()
@@ -302,32 +296,30 @@ endif()
 #-------------------------------------------------------------------------------
 # linkcheck
 
-if(SPHINXBUILD)
-  add_doc_target(
-    linkcheck
-    COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_LINKCHECK_DIR}
-    ${SPHINXBUILD}
-      -b linkcheck
-      -c ${DOCS_CFG_DIR}
-      -d ${DOCS_DOCTREE_DIR}
-      -w ${DOCS_BUILD_DIR}/linkcheck.log
-      ${SPHINX_TAGS_ARGS}
-      ${SPHINXOPTS}
-      ${SPHINXOPTS_EXTRA}
-      ${DOCS_SRC_DIR}
-      ${DOCS_LINKCHECK_DIR}
-    USES_TERMINAL
-    COMMENT "Running Sphinx link check..."
-  )
+add_doc_target(
+  linkcheck
+  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_LINKCHECK_DIR}
+  ${SPHINXBUILD}
+    -b linkcheck
+    -c ${DOCS_CFG_DIR}
+    -d ${DOCS_DOCTREE_DIR}
+    -w ${DOCS_BUILD_DIR}/linkcheck.log
+    ${SPHINX_TAGS_ARGS}
+    ${SPHINXOPTS}
+    ${SPHINXOPTS_EXTRA}
+    ${DOCS_SRC_DIR}
+    ${DOCS_LINKCHECK_DIR}
+  USES_TERMINAL
+  COMMENT "Running Sphinx link check..."
+)
 
-  set_target_properties(
-    linkcheck linkcheck-nodeps
-    PROPERTIES
-      ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LINKCHECK_DIR};${DOCS_DOCTREE_DIR}"
-  )
+set_target_properties(
+  linkcheck linkcheck-nodeps
+  PROPERTIES
+    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LINKCHECK_DIR};${DOCS_DOCTREE_DIR}"
+)
 
-  add_dependencies(linkcheck devicetree)
-endif()
+add_dependencies(linkcheck devicetree)
 
 #-------------------------------------------------------------------------------
 # others

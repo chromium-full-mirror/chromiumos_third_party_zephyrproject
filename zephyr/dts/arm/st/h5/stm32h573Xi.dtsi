@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <mem.h>
 #include <st/h5/stm32h573.dtsi>
 
 / {

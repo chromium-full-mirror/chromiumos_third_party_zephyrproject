@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <zephyr/posix/sys/socket.h>
 #include <zephyr/net/socket.h>
 
 #include <zephyr/data/json.h>

@@ -79,8 +79,6 @@ net:
 posix:
   files:
     - lib/posix/
-    - include/zephyr/posix/
-    - tests/posix/
 
 test_framework:
   files:

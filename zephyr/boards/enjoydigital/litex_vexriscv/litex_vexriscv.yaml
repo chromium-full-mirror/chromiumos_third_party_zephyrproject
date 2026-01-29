@@ -17,7 +17,6 @@ supported:
   - spi
   - i2s
   - i2c
-  - netif:eth
   - watchdog
 testing:
   ignore_tags:

@@ -30,5 +30,8 @@ The UART default settings are:
 Building and Running
 ********************
 
+This sample can be found under :zephyr_file:`samples/boards/st/bluetooth/interactive_gui` in the
+Zephyr tree.
+
 .. _BlueNRG GUI:
    https://www.st.com/en/embedded-software/stsw-bnrgui.html

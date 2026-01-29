@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2021 Basalte bv
- * Copyright 2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -25,25 +24,6 @@ LOG_MODULE_REGISTER(mcux_snvs, CONFIG_COUNTER_LOG_LEVEL);
 #include <fsl_snvs_lp.h>
 #endif
 
-/*
- * Helper macros to consolidate optional SRTC alarm handling.
- * When MCUX_SNVS_SRTC is not enabled, these become no-ops or zero.
- */
-#ifdef MCUX_SNVS_SRTC
-#define SNVS_SRTC_ENABLE_IRQ(base) SNVS_LP_SRTC_EnableInterrupts((base), kSNVS_SRTC_AlarmInterrupt)
-#define SNVS_SRTC_DISABLE_IRQ(base)                                                                \
-	SNVS_LP_SRTC_DisableInterrupts((base), kSNVS_SRTC_AlarmInterrupt)
-#define SNVS_SRTC_GET_ALARM_FLAGS(base)                                                            \
-	(SNVS_LP_SRTC_GetStatusFlags((base)) & kSNVS_SRTC_AlarmInterruptFlag)
-#define SNVS_SRTC_CLEAR_ALARM_FLAGS(base)                                                          \
-	SNVS_LP_SRTC_ClearStatusFlags((base), kSNVS_SRTC_AlarmInterruptFlag)
-#else
-#define SNVS_SRTC_ENABLE_IRQ(base)
-#define SNVS_SRTC_DISABLE_IRQ(base)
-#define SNVS_SRTC_GET_ALARM_FLAGS(base) (0U)
-#define SNVS_SRTC_CLEAR_ALARM_FLAGS(base)
-#endif
-
 struct mcux_snvs_config {
 	/* info must be first element */
 	struct counter_config_info info;
@@ -65,24 +45,16 @@ struct mcux_snvs_data {
 
 static int mcux_snvs_start(const struct device *dev)
 {
-	const struct mcux_snvs_config *config = dev->config;
+	ARG_UNUSED(dev);
 
-	SNVS_HP_RTC_StartTimer(config->base);
-	SNVS_HP_RTC_EnableInterrupts(config->base, kSNVS_RTC_AlarmInterrupt);
-	SNVS_SRTC_ENABLE_IRQ(config->base);
-
-	return 0;
+	return -EALREADY;
 }
 
 static int mcux_snvs_stop(const struct device *dev)
 {
-	const struct mcux_snvs_config *config = dev->config;
+	ARG_UNUSED(dev);
 
-	SNVS_HP_RTC_DisableInterrupts(config->base, kSNVS_RTC_AlarmInterrupt);
-	SNVS_SRTC_DISABLE_IRQ(config->base);
-	SNVS_HP_RTC_StopTimer(config->base);
-
-	return 0;
+	return -ENOTSUP;
 }
 
 static int mcux_snvs_get_value(const struct device *dev, uint32_t *ticks)
@@ -213,7 +185,10 @@ static uint32_t mcux_snvs_get_pending_int(const struct device *dev)
 	uint32_t flags;
 
 	flags = SNVS_HP_RTC_GetStatusFlags(config->base) & kSNVS_RTC_AlarmInterruptFlag;
-	flags |= SNVS_SRTC_GET_ALARM_FLAGS(config->base);
+
+#ifdef MCUX_SNVS_SRTC
+	flags |= SNVS_LP_SRTC_GetStatusFlags(config->base) & kSNVS_SRTC_AlarmInterruptFlag;
+#endif
 
 	return flags;
 }
@@ -229,7 +204,7 @@ void mcux_snvs_isr(const struct device *dev)
 {
 	const struct mcux_snvs_config *config = dev->config;
 	struct mcux_snvs_data *data = dev->data;
-	counter_alarm_callback_t cb;
+
 	uint32_t current;
 
 	mcux_snvs_get_value(dev, &current);
@@ -238,23 +213,25 @@ void mcux_snvs_isr(const struct device *dev)
 		/* Clear alarm flag */
 		SNVS_HP_RTC_ClearStatusFlags(config->base, kSNVS_RTC_AlarmInterruptFlag);
 
-		cb = data->alarm_hp_rtc_callback;
-		if (cb != NULL) {
-			data->alarm_hp_rtc_callback = NULL;
-			cb(dev, 0, current, data->alarm_hp_rtc_user_data);
+		if (data->alarm_hp_rtc_callback) {
+			data->alarm_hp_rtc_callback(dev, 0, current, data->alarm_hp_rtc_user_data);
+
+			mcux_snvs_cancel_alarm(dev, 0);
 		}
 	}
 
-	if (SNVS_SRTC_GET_ALARM_FLAGS(config->base)) {
+#ifdef MCUX_SNVS_SRTC
+	if (SNVS_LP_SRTC_GetStatusFlags(config->base) & kSNVS_SRTC_AlarmInterruptFlag) {
 		/* Clear alarm flag */
-		SNVS_SRTC_CLEAR_ALARM_FLAGS(config->base);
+		SNVS_LP_SRTC_ClearStatusFlags(config->base, kSNVS_SRTC_AlarmInterruptFlag);
 
-		cb = data->alarm_lp_srtc_callback;
-		if (cb != NULL) {
-			data->alarm_lp_srtc_callback = NULL;
-			cb(dev, 1, current, data->alarm_lp_srtc_user_data);
+		if (data->alarm_lp_srtc_callback) {
+			data->alarm_lp_srtc_callback(dev, 1, current,
+						     data->alarm_lp_srtc_user_data);
+			mcux_snvs_cancel_alarm(dev, 1);
 		}
 	}
+#endif
 }
 
 int mcux_snvs_rtc_set(const struct device *dev, uint32_t ticks)

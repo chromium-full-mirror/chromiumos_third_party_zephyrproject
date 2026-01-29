@@ -6,12 +6,6 @@
 
 #include <zephyr/dt-bindings/gpio/arduino-header-r3.h>
 
-/ {
-	aliases {
-		adc0 = &adc4052_eval_ad4052_ardz;
-	};
-};
-
 &arduino_spi {
 	status = "okay";
 
@@ -27,7 +21,7 @@
 		#size-cells = <0>;
 		#io-channel-cells = <1>;
 		status = "okay";
-		compatible = "adi,ad4052-adc";
+		compatible = "adi,ad405x-adc";
 
 		channel@0 {
 			reg = <0>;

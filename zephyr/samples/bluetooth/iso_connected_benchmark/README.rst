@@ -29,6 +29,9 @@ Requirements
 Building and running
 ********************
 
+This sample can be found under
+:zephyr_file:`samples/bluetooth/iso_connected_benchmark` in the Zephyr tree.
+
 See :zephyr:code-sample-category:`bluetooth` samples for details.
 
 

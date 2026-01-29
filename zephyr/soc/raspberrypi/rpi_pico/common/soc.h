@@ -6,15 +6,12 @@
  */
 
 /**
- * @file SoC configuration macros for the Raspberry Pi Pico family processors
- * (RP2040 and RP235xx).
+ * @file SoC configuration macros for the Raspberry Pi RP2040 family processors
  */
 
 #ifndef _RPI_PICO_COMMON_SOC_H_
 #define _RPI_PICO_COMMON_SOC_H_
 
-#ifdef CONFIG_CPU_CORTEX_M
 #include <cmsis_core_m_defaults.h>
-#endif
 
 #endif /* _RPI_PICO_COMMON_SOC_H_ */

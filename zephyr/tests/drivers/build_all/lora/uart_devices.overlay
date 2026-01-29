@@ -22,7 +22,6 @@
 			status = "okay";
 
 			current-speed = <115200>;
-
 			test_reyax_rylrxxxx: reyax_rylrxxxx {
 				compatible = "reyax,rylrxxx";
 				status = "okay";

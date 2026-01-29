@@ -8,33 +8,35 @@ Tests for handlers.py classes' methods
 """
 
 import itertools
+from unittest import mock
 import os
+import pytest
 import signal
 import subprocess
 import sys
+
 from contextlib import nullcontext
 from importlib import reload
+from serial import SerialException
 from subprocess import CalledProcessError, TimeoutExpired
 from types import SimpleNamespace
-from unittest import mock
 
-import pytest
 import twisterlib.harness
-from serial import SerialException
+
+ZEPHYR_BASE = os.getenv("ZEPHYR_BASE")
+
 from twisterlib.error import TwisterException
+from twisterlib.statuses import TwisterStatus
 from twisterlib.handlers import (
+    Handler,
     BinaryHandler,
     DeviceHandler,
-    Handler,
     QEMUHandler,
-    SimulationHandler,
+    SimulationHandler
 )
-from twisterlib.hardwaremap import DUT
-from twisterlib.statuses import TwisterStatus
-
-# pylint: disable=no-name-in-module
-from . import ZEPHYR_BASE
-
+from twisterlib.hardwaremap import (
+    DUT
+)
 
 @pytest.fixture
 def mocked_instance(tmp_path):
@@ -1048,21 +1050,21 @@ TESTDATA_13 = [
         None,
         None,
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir']
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir']
     ),
     (
         [],
         None,
         None,
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir']
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir']
     ),
     (
         '--dummy',
         None,
         None,
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--', '--dummy']
     ),
     (
@@ -1070,7 +1072,7 @@ TESTDATA_13 = [
         None,
         None,
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--', '--dummy1', '--dummy2', '--dummy, 3']
     ),
 
@@ -1079,7 +1081,7 @@ TESTDATA_13 = [
         'runner',
         'product',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'runner', 'param1', 'param2']
     ),
 
@@ -1088,7 +1090,7 @@ TESTDATA_13 = [
         'pyocd',
         'product',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'pyocd', 'param1', 'param2', '--', '--dev-id', 12345]
     ),
     (
@@ -1096,7 +1098,7 @@ TESTDATA_13 = [
         'nrfjprog',
         'product',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'nrfjprog', 'param1', 'param2', '--', '--dev-id', 12345]
     ),
     (
@@ -1104,7 +1106,7 @@ TESTDATA_13 = [
         'openocd',
         'STM32 STLink',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'openocd', 'param1', 'param2',
          '--', '--cmd-pre-init', 'hla_serial 12345']
     ),
@@ -1113,7 +1115,7 @@ TESTDATA_13 = [
         'openocd',
         'STLINK-V3',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'openocd', 'param1', 'param2',
          '--', '--cmd-pre-init', 'hla_serial 12345']
     ),
@@ -1122,7 +1124,7 @@ TESTDATA_13 = [
         'openocd',
         'EDBG CMSIS-DAP',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'openocd', 'param1', 'param2',
          '--', '--cmd-pre-init', 'cmsis_dap_serial 12345']
     ),
@@ -1131,7 +1133,7 @@ TESTDATA_13 = [
         'jlink',
         'product',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
          '--runner', 'jlink', '--dev-id', 12345,
          'param1', 'param2']
     ),
@@ -1140,8 +1142,8 @@ TESTDATA_13 = [
         'stm32cubeprogrammer',
         'product',
         None,
-        ['west', 'flash', '--no-rebuild', '-d', '$build_dir',
-         '--runner', 'stm32cubeprogrammer', '--dev-id', 12345,
+        ['west', 'flash', '--skip-rebuild', '-d', '$build_dir',
+         '--runner', 'stm32cubeprogrammer', '--tool-opt=sn=12345',
          'param1', 'param2']
     ),
     (
@@ -1473,18 +1475,10 @@ def test_devicehandler_handle(
     openpty_mock = mock.Mock(return_value=('master', 'slave'))
     ttyname_mock = mock.Mock(side_effect=lambda x: x + ' name')
 
-    lp_mock = SimpleNamespace(
-        comports=mock.Mock(return_value=[
-            SimpleNamespace(name='dummy serial'),
-            SimpleNamespace(name='slave name'),
-        ])
-    )
-
     with mock.patch('builtins.open', mock.mock_open(read_data='')), \
          mock.patch('subprocess.Popen', side_effect=mock_popen), \
          mock.patch('threading.Event', mock.Mock()), \
          mock.patch('threading.Thread', side_effect=mock_thread), \
-         mock.patch('twisterlib.handlers.list_ports', lp_mock, create=True), \
          mock.patch('pty.openpty', openpty_mock), \
          mock.patch('os.ttyname', ttyname_mock):
         handler.handle(harness)

@@ -15,6 +15,7 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/irq.h>
 #include <zephyr/drivers/sensor/mcux_lpcmp.h>
+#include <fsl_lpcmp.h>
 
 LOG_MODULE_REGISTER(mcux_lpcmp, CONFIG_SENSOR_LOG_LEVEL);
 

@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2025 Shontal Biton
- * Copyright (c) 2025 Silicon Laboratories Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,17 +9,14 @@
 
 / {
 	soc {
-		compatible = "silabs,efr32zg28b322f1024im68", "silabs,efr32zg28", "silabs,xg28",
-			     "silabs,efr32", "simple-bus";
+		compatible = "silabs,efr32zg28b322f1024im68",
+			     "silabs,efr32zg28", "silabs,efr32",
+			     "simple-bus";
 	};
 };
 
 &flash0 {
 	reg = <0x08000000 DT_SIZE_K(1024)>;
-};
-
-&radio {
-	ble-2mbps-supported;
 };
 
 &sram0 {

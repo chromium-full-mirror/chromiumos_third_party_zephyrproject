@@ -22,5 +22,3 @@ tests:
       - USERSPACE_TEST=1
     integration_platforms:
       - qemu_x86
-    platform_exclude:
-      - max32657evkit/max32657

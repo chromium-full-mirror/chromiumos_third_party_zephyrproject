@@ -3,7 +3,11 @@
 
 if SHIELD_SEEED_W5500
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 endif # SHIELD_SEEED_W5500

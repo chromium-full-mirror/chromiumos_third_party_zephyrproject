@@ -20,7 +20,7 @@
 #include <zephyr/toolchain.h>
 
 #if defined CONFIG_SHELL_GETOPT
-#include <zephyr/sys/sys_getopt.h>
+#include <getopt.h>
 #endif
 
 #ifdef __cplusplus
@@ -789,8 +789,7 @@ typedef void (*shell_uninit_cb_t)(const struct shell *sh, int res);
  */
 typedef void (*shell_bypass_cb_t)(const struct shell *sh,
 				  uint8_t *data,
-				  size_t len,
-				  void *user_data);
+				  size_t len);
 
 struct shell_transport;
 
@@ -991,15 +990,12 @@ struct shell_ctx {
 	/** When bypass is set, all incoming data is passed to the callback. */
 	shell_bypass_cb_t bypass;
 
-	/** When bypass is set, this user data pointer is passed to the callback. */
-	void *bypass_user_data;
-
 	/*!< Logging level for a backend. */
 	uint32_t log_level;
 
 #if defined CONFIG_SHELL_GETOPT
 	/*!< getopt context for a shell backend. */
-	struct sys_getopt_state getopt;
+	struct getopt_state getopt;
 #endif
 
 	uint16_t cmd_buff_len; /*!< Command length.*/
@@ -1368,9 +1364,8 @@ int shell_set_root_cmd(const char *cmd);
  *
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] bypass	Bypass callback or null to disable.
- * @param[in] user_data	Bypass callback user data.
  */
-void shell_set_bypass(const struct shell *sh, shell_bypass_cb_t bypass, void *user_data);
+void shell_set_bypass(const struct shell *sh, shell_bypass_cb_t bypass);
 
 /** @brief Get shell readiness to execute commands.
  *
@@ -1388,7 +1383,7 @@ bool shell_ready(const struct shell *sh);
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] val	Insert mode.
  *
- * @return 0 or 1: previous value
+ * @retval 0 or 1: previous value
  * @retval -EINVAL if shell is NULL.
  */
 int shell_insert_mode_set(const struct shell *sh, bool val);
@@ -1401,7 +1396,7 @@ int shell_insert_mode_set(const struct shell *sh, bool val);
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] val	Color mode.
  *
- * @return 0 or 1: previous value
+ * @retval 0 or 1: previous value
  * @retval -EINVAL if shell is NULL.
  */
 int shell_use_colors_set(const struct shell *sh, bool val);
@@ -1413,7 +1408,7 @@ int shell_use_colors_set(const struct shell *sh, bool val);
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] val	vt100 mode.
  *
- * @return 0 or 1: previous value
+ * @retval 0 or 1: previous value
  * @retval -EINVAL if shell is NULL.
  */
 int shell_use_vt100_set(const struct shell *sh, bool val);
@@ -1425,7 +1420,7 @@ int shell_use_vt100_set(const struct shell *sh, bool val);
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] val	Echo mode.
  *
- * @return 0 or 1: previous value
+ * @retval 0 or 1: previous value
  * @retval -EINVAL if shell is NULL.
  */
 int shell_echo_set(const struct shell *sh, bool val);
@@ -1438,7 +1433,7 @@ int shell_echo_set(const struct shell *sh, bool val);
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] obscure	Obscure mode.
  *
- * @return 0 or 1: previous value.
+ * @retval 0 or 1: previous value.
  * @retval -EINVAL if shell is NULL.
  */
 int shell_obscure_set(const struct shell *sh, bool obscure);
@@ -1451,7 +1446,7 @@ int shell_obscure_set(const struct shell *sh, bool obscure);
  * @param[in] sh	Pointer to the shell instance.
  * @param[in] val	Delete mode.
  *
- * @return 0 or 1: previous value
+ * @retval 0 or 1: previous value
  * @retval -EINVAL if shell is NULL.
  */
 int shell_mode_delete_set(const struct shell *sh, bool val);
@@ -1461,7 +1456,7 @@ int shell_mode_delete_set(const struct shell *sh, bool val);
  *
  * @param[in] sh Pointer to the shell instance
  *
- * @return return value of previous command
+ * @retval return value of previous command
  */
 int shell_get_return_value(const struct shell *sh);
 

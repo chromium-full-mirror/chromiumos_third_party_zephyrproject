@@ -78,7 +78,6 @@ def hash_file(file: Path) -> str:
 
     return sha256.hexdigest()
 
-
 def get_doxygen_option(doxyfile: str, option: str) -> list[str]:
     """Obtain the value of a Doxygen option.
 

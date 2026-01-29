@@ -6,7 +6,7 @@
 
 / {
 	aliases {
-		pwm-test = &pwm1;
+		pwm-0 = &pwm1;
 	};
 };
 
@@ -16,7 +16,6 @@
 
 &timer1 {
 	status = "okay";
-
 	pwm1: pwm {
 		status = "okay";
 		pinctrl-0 = <&tmr1c_oa_p0_11>;

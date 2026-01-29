@@ -15,82 +15,63 @@ extern "C" {
 
 static inline int isupper(int a)
 {
-	return (('A' <= a) && (a <= 'Z'));
+	return (int)(((unsigned)(a)-(unsigned)'A') < 26U);
 }
 
 static inline int isalpha(int c)
 {
-	/* force to lowercase */
-	c |= 32;
-
-	return (('a' <= c) && (c <= 'z'));
-}
-
-static inline int isblank(int c)
-{
-	return ((c == ' ') || (c == '\t'));
+	return (int)((((unsigned)c|32u)-(unsigned)'a') < 26U);
 }
 
 static inline int isspace(int c)
 {
-	return ((c == ' ') || (('\t' <= c) && (c <= '\r')));
+	return (int)(c == (int)' ' || ((unsigned)c-(unsigned)'\t') < 5U);
 }
 
 static inline int isgraph(int c)
 {
-	return ((' ' < c) && (c <= '~'));
+	return (int)((((unsigned)c) > ' ') &&
+			(((unsigned)c) <= (unsigned)'~'));
 }
 
 static inline int isprint(int c)
 {
-	return ((' ' <= c) && (c <= '~'));
+	return (int)((((unsigned)c) >= ' ') &&
+			(((unsigned)c) <= (unsigned)'~'));
 }
 
 static inline int isdigit(int a)
 {
-	return (('0' <= a) && (a <= '9'));
-}
-
-static inline int islower(int c)
-{
-	return (('a' <= c) && (c <= 'z'));
+	return (int)(((unsigned)(a)-(unsigned)'0') < 10U);
 }
 
 static inline int isxdigit(int a)
 {
-	if (isdigit(a) != 0) {
-		return 1;
-	}
+	unsigned int ua = (unsigned int)a;
 
-	/* force to lowercase */
-	a |= 32;
-
-	return (('a' <= a) && (a <= 'f'));
+	return (int)(((ua - (unsigned)'0') < 10U) ||
+			((ua | 32U) - (unsigned)'a' < 6U));
 }
 
 static inline int tolower(int chr)
 {
-	return (chr >= 'A' && chr <= 'Z') ? (chr + 32) : (chr);
+	return (chr >= (int)'A' && chr <= (int)'Z') ? (chr + 32) : (chr);
 }
 
 static inline int toupper(int chr)
 {
-	return ((chr >= 'a' && chr <= 'z') ? (chr - 32) : (chr));
+	return (int)((chr >= (int)'a' && chr <=
+				(int)'z') ? (chr - 32) : (chr));
 }
 
 static inline int isalnum(int chr)
 {
-	return (isalpha(chr) || isdigit(chr));
-}
-
-static inline int ispunct(int c)
-{
-	return (isgraph(c) && !isalnum(c));
+	return (int)(isalpha(chr) || isdigit(chr));
 }
 
 static inline int iscntrl(int c)
 {
-	return ((((unsigned int)c) <= 31U) || (((unsigned int)c) == 127U));
+	return (int)((((unsigned int)c) <= 31U) || (((unsigned int)c) == 127U));
 }
 
 #ifdef __cplusplus

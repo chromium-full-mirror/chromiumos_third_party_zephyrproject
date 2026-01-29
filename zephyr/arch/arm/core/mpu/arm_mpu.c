@@ -147,19 +147,9 @@ static int mpu_configure_regions_from_dt(uint8_t *reg_index)
 			region_conf = _BUILD_REGION_CONF(region[idx], REGION_IO_ATTR);
 			break;
 #endif
-#ifdef REGION_DEVICE_ATTR
-		case DT_MEM_ARM_MPU_DEVICE:
-			region_conf = _BUILD_REGION_CONF(region[idx], REGION_DEVICE_ATTR);
-			break;
-#endif
 #ifdef REGION_EXTMEM_ATTR
 		case DT_MEM_ARM_MPU_EXTMEM:
 			region_conf = _BUILD_REGION_CONF(region[idx], REGION_EXTMEM_ATTR);
-			break;
-#endif
-#ifdef REGION_RAM_WT_ATTR
-		case DT_MEM_ARM_MPU_RAM_WT:
-			region_conf = _BUILD_REGION_CONF(region[idx], REGION_RAM_WT_ATTR);
 			break;
 #endif
 		default:
@@ -210,11 +200,11 @@ static int mpu_configure_region(const uint8_t index,
 	!defined(CONFIG_MPU_GAP_FILLING)
 /* This internal function programs a set of given MPU regions
  * over a background memory area, optionally performing a
- * coherence check of the memory regions to be programmed.
+ * sanity check of the memory regions to be programmed.
  */
 static int mpu_configure_regions(const struct z_arm_mpu_partition
 	regions[], uint8_t regions_num, uint8_t start_reg_index,
-	bool do_coherence_check)
+	bool do_sanity_check)
 {
 	int i;
 	int reg_index = start_reg_index;
@@ -225,9 +215,9 @@ static int mpu_configure_regions(const struct z_arm_mpu_partition
 		}
 		/* Non-empty region. */
 
-		if (do_coherence_check &&
+		if (do_sanity_check &&
 				(!mpu_partition_is_valid(&regions[i]))) {
-			LOG_ERR("Partition %u: coherence check failed.", i);
+			LOG_ERR("Partition %u: sanity check failed.", i);
 			return -EINVAL;
 		}
 
@@ -620,7 +610,7 @@ int z_arm_mpu_init(void)
 #endif
 #endif /* CONFIG_NULL_POINTER_EXCEPTION_DETECTION_MPU */
 
-	/* Coherence check for number of regions in Cortex-M0+, M3, and M4. */
+	/* Sanity check for number of regions in Cortex-M0+, M3, and M4. */
 #if defined(CONFIG_CPU_CORTEX_M0PLUS) || \
 	defined(CONFIG_CPU_CORTEX_M3) || \
 	defined(CONFIG_CPU_CORTEX_M4)

@@ -6,10 +6,4 @@ description: VexRiscv core with the standard configuration as used by LiteX
 
 compatible: "litex,vexriscv-standard"
 
-include: spinalhdl,vexriscv.yaml
-
-properties:
-  i-cache-line-size:
-    default: 32
-  d-cache-line-size:
-    default: 32
+include: riscv,cpus.yaml

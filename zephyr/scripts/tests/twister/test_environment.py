@@ -7,13 +7,15 @@
 Tests for environment.py classes' methods
 """
 
-import os
-import shutil
-from contextlib import nullcontext
 from unittest import mock
-
+import os
 import pytest
+import shutil
+
+from contextlib import nullcontext
+
 import twisterlib.environment
+
 
 TESTDATA_1 = [
     (
@@ -536,7 +538,7 @@ TESTDATA_6 = [
         'Using \'dummy toolchain\' toolchain.'
     ),
     (
-        {'returncode': 1, "returnmsg": "something went wrong"},
+        {'returncode': 1},
         2,
         None
     ),
@@ -570,7 +572,7 @@ def test_get_toolchain(caplog, script_result, exit_value, expected_log):
             twisterlib.environment.TwisterEnv,
             'run_cmake_script',
             mock.Mock(return_value=script_result)), \
-         pytest.raises(SystemExit, match='2') \
+         pytest.raises(SystemExit) \
             if exit_value is not None else nullcontext() as exit_info:
         twister_env.get_toolchain()
 

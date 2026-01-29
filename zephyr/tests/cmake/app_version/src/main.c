@@ -8,7 +8,8 @@
 
 #include <zephyr/ztest.h>
 #include <zephyr/kernel_version.h>
-#include <zephyr/app_version.h>
+
+#include "app_version.h"
 
 ZTEST(app_version, test_basic_ints)
 {

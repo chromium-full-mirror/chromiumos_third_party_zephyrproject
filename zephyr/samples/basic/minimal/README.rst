@@ -17,7 +17,6 @@ The following configuration files are available:
 * :file:`no-preempt.conf`: Disable preemption
 * :file:`no-timers.conf`: Disable timers
 * :file:`arm.conf`: Arm-specific disabling of features
-* :file:`no-sw-isr-table.conf`: Disable software isr table generation
 
 Building and measuring ROM size
 *******************************

@@ -15,6 +15,7 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/mesh.h>
 
+#include "mesh.h"
 #include "net.h"
 #include "rpl.h"
 #include "transport.h"

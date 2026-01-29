@@ -14,9 +14,6 @@ LOG_MODULE_REGISTER(spi_cc23x0, CONFIG_SPI_LOG_LEVEL);
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/irq.h>
-#include <zephyr/pm/device.h>
-#include <zephyr/pm/device_runtime.h>
-#include <zephyr/pm/policy.h>
 #include <zephyr/sys/util.h>
 
 #include <driverlib/clkctl.h>
@@ -310,8 +307,6 @@ static int spi_cc23x0_transceive(const struct device *dev,
 	};
 #endif
 
-	pm_policy_device_power_lock_get(dev);
-
 	spi_context_lock(ctx, false, NULL, NULL, config);
 
 	ret = spi_cc23x0_configure(dev, config);
@@ -344,22 +339,16 @@ static int spi_cc23x0_transceive(const struct device *dev,
 	block_cfg_rx.dest_addr_adj = DMA_ADDR_ADJ_INCREMENT;
 	block_cfg_rx.block_size = SPI_CC23_DFS * data->tx_len_left;
 
-	ret = pm_device_runtime_get(cfg->dma_dev);
-	if (ret) {
-		LOG_ERR("Failed to resume DMA (%d)", ret);
-		goto int_disable;
-	}
-
 	ret = dma_config(cfg->dma_dev, cfg->dma_channel_tx, &dma_cfg_tx);
 	if (ret) {
-		LOG_ERR("Failed to configure DMA TX channel (%d)", ret);
-		goto dma_suspend;
+		LOG_ERR("Failed to configure DMA TX channel");
+		goto int_disable;
 	}
 
 	ret = dma_config(cfg->dma_dev, cfg->dma_channel_rx, &dma_cfg_rx);
 	if (ret) {
-		LOG_ERR("Failed to configure DMA RX channel (%d)", ret);
-		goto dma_suspend;
+		LOG_ERR("Failed to configure DMA RX channel");
+		goto int_disable;
 	}
 
 	/* Disable DMA triggers */
@@ -375,7 +364,7 @@ static int spi_cc23x0_transceive(const struct device *dev,
 	ret = spi_context_wait_for_completion(&data->ctx);
 	if (ret) {
 		LOG_ERR("SPI transfer failed (%d)", ret);
-		goto dma_suspend;
+		goto int_disable;
 	}
 
 	spi_context_update_tx(ctx, SPI_CC23_DFS, data->tx_len_left);
@@ -383,11 +372,6 @@ static int spi_cc23x0_transceive(const struct device *dev,
 
 	LOG_DBG("SPI transfer completed");
 
-dma_suspend:
-	ret = pm_device_runtime_put(cfg->dma_dev);
-	if (ret) {
-		LOG_ERR("Failed to suspend DMA (%d)", ret);
-	}
 int_disable:
 	SPIDisableInt(cfg->base, SPI_CC23_INT_MASK);
 #else
@@ -404,7 +388,6 @@ int_disable:
 
 ctx_release:
 	spi_context_release(ctx, ret);
-	pm_policy_device_power_lock_put(dev);
 	return ret;
 }
 
@@ -463,29 +446,6 @@ static int spi_cc23x0_init(const struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_DEVICE
-
-static int spi_cc23x0_pm_action(const struct device *dev, enum pm_device_action action)
-{
-	const struct spi_cc23x0_config *cfg = dev->config;
-	struct spi_cc23x0_data *data = dev->data;
-
-	switch (action) {
-	case PM_DEVICE_ACTION_SUSPEND:
-		SPIDisable(cfg->base);
-		CLKCTLDisable(CLKCTL_BASE, CLKCTL_SPI0);
-		return 0;
-	case PM_DEVICE_ACTION_RESUME:
-		/* Force SPI to be reconfigured at next transfer */
-		data->ctx.config = NULL;
-		return 0;
-	default:
-		return -ENOTSUP;
-	}
-}
-
-#endif /* CONFIG_PM_DEVICE */
-
 #ifdef CONFIG_SPI_CC23X0_DMA_DRIVEN
 #define SPI_CC23X0_DMA_INIT(n)						\
 	.dma_dev = DEVICE_DT_GET(TI_CC23X0_DT_INST_DMA_CTLR(n, tx)),	\
@@ -499,7 +459,6 @@ static int spi_cc23x0_pm_action(const struct device *dev, enum pm_device_action 
 
 #define SPI_CC23X0_INIT(n)						\
 	PINCTRL_DT_INST_DEFINE(n);					\
-	PM_DEVICE_DT_INST_DEFINE(n, spi_cc23x0_pm_action);		\
 									\
 	static void spi_irq_config_func_##n(void)			\
 	{								\
@@ -525,7 +484,7 @@ static int spi_cc23x0_pm_action(const struct device *dev, enum pm_device_action 
 									\
 	DEVICE_DT_INST_DEFINE(n,					\
 			      spi_cc23x0_init,				\
-			      PM_DEVICE_DT_INST_GET(n),			\
+			      NULL,					\
 			      &spi_cc23x0_data_##n,			\
 			      &spi_cc23x0_config_##n,			\
 			      POST_KERNEL,				\

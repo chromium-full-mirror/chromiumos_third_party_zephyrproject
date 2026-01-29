@@ -1,7 +1,6 @@
 # Copyright 2024 NXP
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=duplicate-code
 
 import logging
 import re
@@ -32,7 +31,7 @@ def fixture_initialize(request, shell: Shell, dut: DeviceAdapter):
     assert hci is not None
 
     shell.exec_command("bt init")
-    lines = dut.readlines_until(regex="Bluetooth initialized")
+    lines = dut.readlines_until("Bluetooth initialized")
     regex = r'Identity: *(?P<bd_addr>([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2}) *\((.*?)\))'
     bd_addr = None
     for line in lines:

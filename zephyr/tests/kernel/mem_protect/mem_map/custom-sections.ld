@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
-	. = ALIGN(CONFIG_MMU_PAGE_SIZE);
-	__test_mem_map_start = .;
-
+SECTION_DATA_PROLOGUE(TEST_MEM_MAP,,SUBALIGN(CONFIG_MMU_PAGE_SIZE))
+{
 	/* transplanted_function() must be first */
 	KEEP(*(".test_mem_map.transplanted_function*"));
 	KEEP(*(".test_mem_map.*"));
 
-	. = ALIGN(CONFIG_MMU_PAGE_SIZE);
-	__test_mem_map_end = .;
+} GROUP_DATA_LINK_IN(RAMABLE_REGION, ROMABLE_REGION)
+
+PROVIDE(__test_mem_map_start = ADDR(TEST_MEM_MAP));
+PROVIDE(__test_mem_map_end = __test_mem_map_start + SIZEOF(TEST_MEM_MAP));

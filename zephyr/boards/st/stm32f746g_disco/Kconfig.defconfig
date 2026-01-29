@@ -5,8 +5,15 @@
 
 if BOARD_STM32F746G_DISCO
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
+
+config INPUT
+	default y if LVGL
 
 if DISPLAY
 
@@ -16,5 +23,8 @@ config MEMC
 	default y
 
 endif # DISPLAY
+
+config DISK_DRIVER_SDMMC
+	default y if DISK_DRIVERS
 
 endif # BOARD_STM32F746G_DISCO

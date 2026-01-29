@@ -2,6 +2,8 @@
 
 zephyr_library()
 
+zephyr_library_compile_definitions(NO_POSIX_CHEATS)
+
 find_package(PkgConfig REQUIRED)
 pkg_search_module(SDL2 REQUIRED sdl2)
 

@@ -43,6 +43,9 @@ Requirements
 Building and Running
 ********************
 
+This sample can be found under :zephyr_file:`samples/subsys/shell/shell_module`
+in the Zephyr tree.
+
 The sample can be built for several platforms.
 
 Emulation Targets

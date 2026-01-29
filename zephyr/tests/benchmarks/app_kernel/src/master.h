@@ -11,7 +11,6 @@
 
 #include <zephyr/kernel.h>
 
-#include <inttypes.h>
 #include <stdio.h>
 
 #include "receiver.h"
@@ -26,7 +25,7 @@
 #include <zephyr/timing/timing.h>
 
 /* printf format defines. */
-#define FORMAT "| %-65s|%10"PRIu64"|\n"
+#define FORMAT "| %-65s|%10u|\n"
 
 /* length of the output line */
 #define SLINE_LEN 256

@@ -62,8 +62,8 @@ def workflow_delay(repo, pr):
 def main(argv):
     args = parse_args(argv)
 
-    auth = github.Auth.Token(os.environ.get('GITHUB_TOKEN', None))
-    gh = github.Github(auth=auth)
+    token = os.environ.get('GITHUB_TOKEN', None)
+    gh = github.Github(token)
 
     print_rate_limit(gh, args.org)
 
@@ -79,7 +79,7 @@ def main(argv):
     for label in pr.get_labels():
         print(f"label: {label.name}")
 
-        if label.name in DNM_LABELS or label.name.startswith("block:"):
+        if label.name in DNM_LABELS:
             print(f"Pull request is labeled as \"{label.name}\".")
             fail = True
 

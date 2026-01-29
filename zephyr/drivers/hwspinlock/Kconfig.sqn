@@ -11,7 +11,6 @@ config SQN_HWSPINLOCK
 	  Enable HW spinlock for SQN
 
 if SQN_HWSPINLOCK
-
 config SQN_HWSPINLOCK_RELAX_TIME
 	int "Sequans HW spinlock relax time"
 	default 50

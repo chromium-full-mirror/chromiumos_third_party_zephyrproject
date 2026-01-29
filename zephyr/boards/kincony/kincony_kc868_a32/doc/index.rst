@@ -4,11 +4,8 @@ Overview
 ********
 
 Kincony KC868-A32 is a home automation relay module based on the
-Espressif ESP32 ESP-WROOM-32 module with all its inherent capabilities
+Espressif ESP-WROOM-32 module with all its inherent capabilities
 (Wi-Fi, Bluetooth, etc.)
-
-Hardware
-********
 
 The features include the following:
 
@@ -23,25 +20,58 @@ The features include the following:
 - RESET and DOWNLOAD buttons
 - Powered by 12V DC
 
-.. include:: ../../../espressif/common/soc-esp32-features.rst
-   :start-after: espressif-soc-esp32-features
+System requirements
+===================
 
-System Requirements
-*******************
+Prerequisites
+-------------
 
-.. include:: ../../../espressif/common/system-requirements.rst
-   :start-after: espressif-system-requirements
+Espressif HAL requires WiFi and Bluetooth binary blobs in order work. Run the command
+below to retrieve those files.
 
-Programming and Debugging
-*************************
+.. code-block:: console
+
+   west blobs fetch hal_espressif
+
+.. note::
+
+   It is recommended running the command above after :file:`west update`.
+
+Building & Flashing
+-------------------
 
 .. zephyr:board-supported-runners::
 
-.. include:: ../../../espressif/common/building-flashing.rst
-   :start-after: espressif-building-flashing
+Build and flash applications as usual (see :ref:`build_an_application` and
+:ref:`application_run` for more details).
 
-.. include:: ../../../espressif/common/board-variants.rst
-   :start-after: espressif-board-variants
+.. zephyr-app-commands::
+   :zephyr-app: samples/hello_world
+   :board: kincony_kc868_a32/esp32/procpu
+   :goals: build
+
+The usual ``flash`` target will work with the ``kincony_kc868_a32`` board
+configuration. Here is an example for the :zephyr:code-sample:`hello_world`
+application.
+
+.. zephyr-app-commands::
+   :zephyr-app: samples/hello_world
+   :board: kincony_kc868_a32/esp32/procpu
+   :goals: flash
+
+Open the serial monitor using the following command:
+
+.. code-block:: shell
+
+   west espressif monitor
+
+After the board has automatically reset and booted, you should see the following
+message in the monitor:
+
+.. code-block:: console
+
+   ***** Booting Zephyr OS vx.x.x-xxx-gxxxxxxxxxxxx *****
+   Hello World! kincony_kc868_a32
 
 Enabling Ethernet
 *****************

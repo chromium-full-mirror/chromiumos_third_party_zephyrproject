@@ -10,7 +10,6 @@
 
 &flash0 {
 	reg = <0x00000000 DT_SIZE_K(4096)>;
-
 	partitions {
 		compatible = "fixed-partitions";
 

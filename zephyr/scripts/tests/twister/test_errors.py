@@ -7,10 +7,11 @@ Tests for the error classes
 """
 
 import os
-from pathlib import Path
-
 import pytest
-from twisterlib.error import ConfigurationError, StatusAttributeError
+
+from pathlib import Path
+from twisterlib.error import StatusAttributeError
+from twisterlib.error import ConfigurationError
 from twisterlib.harness import Test
 
 

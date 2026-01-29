@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 RESOURCES_DIR = Path(__file__).parent / "static"
 
-
 def setup(app: Sphinx) -> dict[str, Any]:
     app.config.html_static_path.append(RESOURCES_DIR.as_posix())
 

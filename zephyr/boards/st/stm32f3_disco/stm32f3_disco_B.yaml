@@ -6,7 +6,6 @@ toolchain:
   - zephyr
   - gnuarmemb
 ram: 40
-flash: 256
 supported:
   - gpio
   - i2c

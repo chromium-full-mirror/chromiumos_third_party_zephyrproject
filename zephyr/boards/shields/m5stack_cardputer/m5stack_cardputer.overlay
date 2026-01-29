@@ -33,7 +33,7 @@
 
 			width = <135>;
 			height = <240>;
-			x-offset = <52>;
+			x-offset = <53>;
 			y-offset = <40>;
 
 			vcom = <0x28>;

@@ -6,7 +6,6 @@ toolchain:
   - zephyr
   - gnuarmemb
 ram: 32
-flash: 256
 supported:
   - watchdog
   - counter

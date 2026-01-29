@@ -9,7 +9,8 @@
 
 #define DT_DRV_COMPAT andestech_qspi_nor_xip
 
-#include <andes_csr.h>
+#include "soc_v5.h"
+
 #include <errno.h>
 #include <string.h>
 #include <zephyr/kernel.h>
@@ -36,7 +37,7 @@ LOG_MODULE_REGISTER(flash_andes_xip, CONFIG_FLASH_LOG_LEVEL);
 #define ANDES_ACCESS_WRITE BIT(1)
 
 /* Set max write size to page size. */
-#define ANDES_PAGE_SIZE 256
+#define PAGE_SIZE 256
 
 #define MMISC_CTL_BRPE_EN BIT(3)
 
@@ -338,7 +339,7 @@ static __ramfunc int do_write(const struct device *dev, off_t addr, const void *
 		}
 
 		/* Get the adequate size to send*/
-		to_write = MIN(ANDES_PAGE_SIZE - (addr_curr % ANDES_PAGE_SIZE), size_remainig);
+		to_write = MIN(PAGE_SIZE - (addr_curr % PAGE_SIZE), size_remainig);
 		ret = flash_andes_qspi_xip_cmd_addr_write(dev, SPI_NOR_CMD_PP_1_1_4, addr_curr, src,
 							  to_write);
 		flash_andes_qspi_xip_wait_until_ready(dev);

@@ -650,20 +650,20 @@ static int eth_intel_igc_tx_data(const struct device *dev, struct net_pkt *pkt)
 /**
  * @brief Identify the address family of received packets as per header type.
  */
-static net_sa_family_t eth_intel_igc_get_sa_family(uint8_t *rx_buf)
+static sa_family_t eth_intel_igc_get_sa_family(uint8_t *rx_buf)
 {
 	struct net_eth_hdr *eth_hdr = (struct net_eth_hdr *)rx_buf;
 
-	switch (net_ntohs(eth_hdr->type)) {
+	switch (ntohs(eth_hdr->type)) {
 	case NET_ETH_PTYPE_IP:
-		return NET_AF_INET;
+		return AF_INET;
 	case NET_ETH_PTYPE_IPV6:
-		return NET_AF_INET6;
+		return AF_INET6;
 	default:
 		break;
 	}
 
-	return NET_AF_UNSPEC;
+	return AF_UNSPEC;
 }
 
 /**

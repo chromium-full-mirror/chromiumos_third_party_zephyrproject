@@ -4,11 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-title: STM32 DCMI (Digital Camera Memory Interface)
-
 description: |
-    The STM32 DCMI (Digital Camera Memory Interface) allows
-    capturing data via a parallel interface (DVP).
+    STM32 Digital Camera Memory Interface (DCMI).
 
     Example of node configuration at board level:
 

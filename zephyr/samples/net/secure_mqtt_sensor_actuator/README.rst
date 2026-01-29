@@ -1,6 +1,6 @@
 .. zephyr:code-sample:: secure-mqtt-sensor-actuator
    :name: Secure MQTT Sensor/Actuator
-   :relevant-api: mqtt_socket sensor_interface json
+   :relevant-api: mqtt_socket sensor_interface
 
    Implement an MQTT-based IoT sensor/actuator device
 

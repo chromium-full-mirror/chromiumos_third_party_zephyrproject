@@ -23,7 +23,6 @@ int main(void)
 	k_timepoint_t next_scene_switch;
 	lv_demo_render_scene_t cur_scene = LV_DEMO_RENDER_SCENE_FILL;
 #endif /* CONFIG_LV_Z_DEMO_RENDER_SCENE_DYNAMIC */
-	int ret;
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
@@ -62,12 +61,7 @@ int main(void)
 #endif
 	lvgl_unlock();
 
-	ret = display_blanking_off(display_dev);
-	if (ret < 0 && ret != -ENOSYS) {
-		LOG_ERR("Failed to turn blanking off (error %d)", ret);
-		return 0;
-	}
-
+	display_blanking_off(display_dev);
 #ifdef CONFIG_LV_Z_MEM_POOL_SYS_HEAP
 	lvgl_print_heap_info(false);
 #else

@@ -11,6 +11,7 @@
 #define ULL_LLCP_UNITTEST
 
 #include <zephyr/bluetooth/hci.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/slist.h>
 #include <zephyr/sys/util.h>
 #include "hal/ccm.h"
@@ -55,7 +56,7 @@ static void hci_setup(void *data)
 	ull_conn_init();
 
 	conn_from_pool = ll_conn_acquire();
-	zassert_not_null(conn_from_pool, "Could not allocate connection memory");
+	zassert_not_null(conn_from_pool, "Could not allocate connection memory", NULL);
 
 	test_setup(conn_from_pool);
 }
@@ -82,7 +83,7 @@ static void hci_setup(void *data)
  */
 ZTEST(hci_fex, test_hci_feat_exchange_central_loc)
 {
-	uint8_t err;
+	uint64_t err;
 	uint64_t set_featureset[] = {
 		DEFAULT_FEATURE,
 		DEFAULT_FEATURE };
@@ -113,7 +114,7 @@ ZTEST(hci_fex, test_hci_feat_exchange_central_loc)
 		/* Initiate a Feature Exchange Procedure via HCI */
 		err = ll_feature_req_send(conn_handle);
 
-		zassert_equal(err, BT_HCI_ERR_SUCCESS, "Error: %u", err);
+		zassert_equal(err, BT_HCI_ERR_SUCCESS, "Error: %d", err);
 
 		event_prepare(conn_from_pool);
 

@@ -351,7 +351,7 @@ int openthread_init(void)
 	} else {
 		otIp6SetReceiveFilterEnabled(openthread_instance, true);
 
-#if defined(CONFIG_OPENTHREAD_NAT64_TRANSLATOR) && !defined(CONFIG_OPENTHREAD_ZEPHYR_BORDER_ROUTER)
+#if defined(CONFIG_OPENTHREAD_NAT64_TRANSLATOR)
 
 		otIp4Cidr nat64_cidr;
 
@@ -365,7 +365,7 @@ int openthread_init(void)
 			LOG_ERR("Failed to parse NAT64 CIDR");
 			return -EIO;
 		}
-#endif /* CONFIG_OPENTHREAD_NAT64_TRANSLATOR && !CONFIG_OPENTHREAD_ZEPHYR_BORDER_ROUTER */
+#endif /* CONFIG_OPENTHREAD_NAT64_TRANSLATOR */
 
 		error = otSetStateChangedCallback(openthread_instance, &ot_state_changed_handler,
 						  NULL);
@@ -494,25 +494,13 @@ void openthread_set_receive_cb(openthread_receive_cb cb, void *context)
 		openthread_mutex_lock();
 		otIp6SetReceiveCallback(openthread_instance, cb, context);
 
-		openthread_mutex_unlock();
-	}
-}
-
-#if defined(CONFIG_OPENTHREAD_ZEPHYR_BORDER_ROUTER_NAT64_TRANSLATOR)
-void openthread_set_nat64_receive_cb(openthread_receive_cb cb, void *context)
-{
-	__ASSERT(cb != NULL, "NAT64 receive callback is not set");
-	__ASSERT(openthread_instance != NULL, "OpenThread instance is not initialized");
-
-	if (!IS_ENABLED(CONFIG_OPENTHREAD_COPROCESSOR)) {
-		openthread_mutex_lock();
-
+#if defined(CONFIG_OPENTHREAD_NAT64_TRANSLATOR)
 		otNat64SetReceiveIp4Callback(openthread_instance, cb, context);
+#endif /* CONFIG_OPENTHREAD_NAT64_TRANSLATOR */
 
 		openthread_mutex_unlock();
 	}
 }
-#endif /* CONFIG_OPENTHREAD_NAT64_TRANSLATOR && CONFIG_NET_IPV4 */
 
 void openthread_mutex_lock(void)
 {

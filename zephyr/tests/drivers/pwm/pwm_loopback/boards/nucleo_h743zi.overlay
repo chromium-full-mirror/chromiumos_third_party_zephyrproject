@@ -18,7 +18,6 @@
 /* 32-Bit timers */
 &timers2 {
 	status = "okay";
-
 	pwm2: pwm {
 		status = "okay";
 		pinctrl-0 = <&tim2_ch4_pa3>; /* CN9 PIN1 A0 */
@@ -28,7 +27,6 @@
 
 &timers5 {
 	status = "okay";
-
 	pwm5: pwm {
 		status = "okay";
 		pinctrl-0 = <&tim5_ch1_pa0>; /* CN11 PIN28 */

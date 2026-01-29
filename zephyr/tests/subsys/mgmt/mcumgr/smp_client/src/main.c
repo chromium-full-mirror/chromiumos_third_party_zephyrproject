@@ -32,6 +32,7 @@ int smp_client_res_cb(struct net_buf *nb, void *user_data)
 
 ZTEST(smp_client, test_buf_alloc)
 {
+	struct smp_client_object smp_client;
 	struct net_buf *buf[5];
 
 	/* Allocate all 4 buffer's and verify that 5th fail */

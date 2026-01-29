@@ -14,6 +14,10 @@
 #include <zephyr/net/websocket.h>
 #include <zephyr/sys/slist.h>
 
+#if __POSIX_VISIBLE < 200809
+char    *strdup(const char *);
+#endif
+
 /* case-insensitive */
 #define CISTR20	20
 #define CISTR25	25
@@ -167,6 +171,7 @@ struct ocpp_session {
 	uint8_t idcon;
 	int idtxn;
 	int resp_status;
+	int uid;
 	sys_snode_t node;
 	struct ocpp_info *ctx;
 };

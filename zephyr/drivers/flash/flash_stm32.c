@@ -395,7 +395,10 @@ static struct flash_stm32_priv flash_data = {
 	 * on the presence of 'clocks' property.
 	 */
 #if DT_INST_NODE_HAS_PROP(0, clocks)
-	.pclken = STM32_DT_INST_CLOCK_INFO(0),
+	.pclken = {
+		.enr = DT_INST_CLOCKS_CELL(0, bits),
+		.bus = DT_INST_CLOCKS_CELL(0, bus),
+	}
 #endif
 };
 

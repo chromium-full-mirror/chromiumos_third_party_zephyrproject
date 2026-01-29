@@ -12,7 +12,6 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from platform import system as platform_system
 
 from colorama import Fore
 from twisterlib.statuses import TwisterStatus
@@ -303,7 +302,7 @@ class Reporting:
             report_options = self.env.non_default_options()
 
         report = {}
-        report["environment"] = {"os": platform_system(),
+        report["environment"] = {"os": os.name,
                                  "zephyr_version": version,
                                  "toolchain": self.env.toolchain,
                                  "commit_date": self.env.commit_date,

@@ -1,7 +1,6 @@
 # Copyright 2024 NXP
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=duplicate-code
 
 import logging
 import re
@@ -32,7 +31,7 @@ def fixture_initialize(request, shell: Shell, dut: DeviceAdapter):
     assert hci is not None
 
     lines = shell.exec_command("bt init")
-    lines = dut.readlines_until(regex="Settings Loaded")
+    lines = dut.readlines_until("Settings Loaded")
     regex = r'Identity: *(?P<bd_addr>(.*?):(.*?):(.*?):(.*?):(.*?):(.*?) *\((.*?)\))'
     bd_addr = None
     for line in lines:

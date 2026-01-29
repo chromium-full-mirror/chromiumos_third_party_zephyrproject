@@ -100,13 +100,11 @@ Openthread applications
    :zephyr-app: samples/net/sockets/echo_server
    :board: frdm_mcxw72/mcxw727c/cpu0
    :goals: build
-   :gen-args: -DEXTRA_CONF_FILE=overlay-ot.conf
 
 .. zephyr-app-commands::
    :zephyr-app: samples/net/sockets/echo_client
    :board: frdm_mcxw72/mcxw727c/cpu0
    :goals: build
-   :gen-args: -DEXTRA_CONF_FILE=overlay-ot.conf
 
 Application Flashing
 ====================
@@ -191,9 +189,11 @@ The NBU files can be found in : ``<zephyr workspace>/modules/hal/nxp/zephyr/blob
 Troubleshooting
 ===============
 
-.. include:: ../../common/segger-ecc-systemview.rst.inc
+.. include:: ../../common/segger-ecc-systemview.rst
+   :start-after: segger-ecc-systemview
 
-.. include:: ../../common/board-footer.rst.inc
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 References
 **********

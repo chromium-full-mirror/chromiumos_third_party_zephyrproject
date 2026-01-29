@@ -124,7 +124,8 @@ static int pm_action(const struct device *dev, enum pm_device_action action)
 	int ret;
 
 	if (config->power_gpio.port == NULL) {
-		return 0;
+		LOG_ERR("PM not supported");
+		return -ENOTSUP;
 	}
 
 	switch (action) {

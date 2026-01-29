@@ -13,17 +13,22 @@ endif # I2C_DW
 config USB_SELF_POWERED
 	default n
 
-configdefault PHY_INIT_PRIORITY
+config PHY_INIT_PRIORITY
 	default 82
+	depends on NET_L2_ETHERNET && ETH_DRIVER
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
 
 if ETH_LAN865X
 
-configdefault NET_IF_MAX_IPV4_COUNT
+config NET_IF_MAX_IPV4_COUNT
 	default 2
 
 endif # ETH_LAN865X
+
+endif # NETWORKING
 
 endif # BOARD_PICO_SPE

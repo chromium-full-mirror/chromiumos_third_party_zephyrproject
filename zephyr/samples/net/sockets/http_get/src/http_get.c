@@ -17,12 +17,6 @@
 
 #else
 
-#include <zephyr/posix/netinet/in.h>
-#include <zephyr/posix/sys/socket.h>
-#include <zephyr/posix/arpa/inet.h>
-#include <zephyr/posix/unistd.h>
-#include <zephyr/posix/netdb.h>
-
 #include <zephyr/net/socket.h>
 #include <zephyr/kernel.h>
 
@@ -89,10 +83,8 @@ int main(void)
 	}
 
 #if 0
-	struct addrinfo *temp_res = res;
-
-	for (; temp_res; temp_res = temp_res->ai_next) {
-		dump_addrinfo(temp_res);
+	for (; res; res = res->ai_next) {
+		dump_addrinfo(res);
 	}
 #endif
 

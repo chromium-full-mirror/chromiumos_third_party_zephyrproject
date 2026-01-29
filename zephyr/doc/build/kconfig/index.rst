@@ -25,7 +25,6 @@ tips and best practices for writing :file:`Kconfig` files.
    :maxdepth: 1
 
    menuconfig.rst
-   tracing.rst
    setting.rst
    tips.rst
    preprocessor-functions.rst

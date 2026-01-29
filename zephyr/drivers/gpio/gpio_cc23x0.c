@@ -12,7 +12,6 @@
 #include <zephyr/irq.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/gpio/gpio_utils.h>
-#include <zephyr/pm/device.h>
 
 #include <driverlib/clkctl.h>
 #include <driverlib/gpio.h>
@@ -48,10 +47,6 @@ static int gpio_cc23x0_config(const struct device *port, gpio_pin_t pin, gpio_fl
 		config |= IOC_IOC0_PULLCTL_PULL_DOWN;
 	} else {
 		config |= IOC_IOC0_PULLCTL_PULL_DIS;
-	}
-
-	if (flags & GPIO_INT_WAKEUP) {
-		config |= IOC_IOC0_WUENSB;
 	}
 
 	if (!(flags & GPIO_SINGLE_ENDED)) {
@@ -247,24 +242,6 @@ static void gpio_cc23x0_isr(const struct device *dev)
 	gpio_fire_callbacks(&data->callbacks, dev, status);
 }
 
-#ifdef CONFIG_PM_DEVICE
-static int gpio_cc23x0_pm_action(const struct device *dev, enum pm_device_action action)
-{
-	switch (action) {
-	case PM_DEVICE_ACTION_RESUME:
-		CLKCTLEnable(CLKCTL_BASE, CLKCTL_GPIO);
-		break;
-	case PM_DEVICE_ACTION_SUSPEND:
-		CLKCTLDisable(CLKCTL_BASE, CLKCTL_GPIO);
-		break;
-	default:
-		return -ENOTSUP;
-	}
-
-	return 0;
-}
-#endif /* CONFIG_PM_DEVICE */
-
 static int gpio_cc23x0_init(const struct device *dev)
 {
 	/* Enable GPIO domain clock */
@@ -300,8 +277,5 @@ static const struct gpio_cc23x0_config gpio_cc23x0_config_0 = {
 
 static struct gpio_cc23x0_data gpio_cc23x0_data_0;
 
-PM_DEVICE_DT_DEFINE(0, gpio_cc23x0_pm_action);
-
-DEVICE_DT_INST_DEFINE(0, gpio_cc23x0_init, PM_DEVICE_DT_GET(0), &gpio_cc23x0_data_0,
-		      &gpio_cc23x0_config_0, PRE_KERNEL_1,
-		      CONFIG_GPIO_INIT_PRIORITY, &gpio_cc23x0_driver_api);
+DEVICE_DT_INST_DEFINE(0, gpio_cc23x0_init, NULL, &gpio_cc23x0_data_0, &gpio_cc23x0_config_0,
+		      PRE_KERNEL_1, CONFIG_GPIO_INIT_PRIORITY, &gpio_cc23x0_driver_api);

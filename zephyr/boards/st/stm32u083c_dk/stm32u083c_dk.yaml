@@ -16,5 +16,5 @@ supported:
   - pwm
   - usart
   - tsc
-ram: 32
+ram: 40
 flash: 256

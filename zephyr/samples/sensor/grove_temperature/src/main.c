@@ -11,6 +11,7 @@
 
 #ifdef CONFIG_GROVE_LCD_RGB
 #include <zephyr/drivers/misc/grove_lcd/grove_lcd.h>
+#include <stdio.h>
 #include <string.h>
 #endif
 

@@ -24,6 +24,4 @@ supported:
   - usb_device
   - watchdog
   - hwinfo
-  - flash
-  - memc
 vendor: nxp

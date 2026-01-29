@@ -22,6 +22,6 @@ testing:
     - cmm
     - LED
     - nfc
-ram: 320
+ram: 256
 flash: 64
 vendor: st

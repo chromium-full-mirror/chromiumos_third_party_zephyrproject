@@ -30,6 +30,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #include <zephyr/net/ethernet.h>
 #include <net_private.h>
 #include <zephyr/net/net_core.h>
+#include <zephyr/net/net_pkt.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -256,7 +257,7 @@ static void eswifi_scan(struct eswifi_dev *eswifi)
 static int eswifi_connect(struct eswifi_dev *eswifi)
 {
 	char connect[] = "C0\r";
-	struct net_in_addr addr;
+	struct in_addr addr;
 	char *rsp;
 	int err;
 

@@ -6,8 +6,12 @@
 
 if BOARD_STM32H745I_DISCO
 
-configdefault NET_L2_ETHERNET
+if NETWORKING
+
+config NET_L2_ETHERNET
 	default y
+
+endif # NETWORKING
 
 config MEMC
 	default y if DISPLAY

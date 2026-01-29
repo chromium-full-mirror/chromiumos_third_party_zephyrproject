@@ -8,7 +8,6 @@ supported:
   - adc
   - gpio
   - i2c
-  - i2s
   - watchdog
   - uart
   - dma
@@ -16,6 +15,4 @@ supported:
   - spi
   - counter
   - entropy
-  - crypto
-  - retained_mem
 vendor: espressif

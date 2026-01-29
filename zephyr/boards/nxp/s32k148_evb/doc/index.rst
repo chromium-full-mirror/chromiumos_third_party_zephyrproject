@@ -149,7 +149,8 @@ Use the following settings with your serial terminal of choice (minicom, putty, 
 - Parity: None
 - Stop bits: 1
 
-.. include:: ../../common/board-footer.rst.inc
+.. include:: ../../common/board-footer.rst
+   :start-after: nxp-board-footer
 
 References
 **********

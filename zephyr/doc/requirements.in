@@ -1,5 +1,4 @@
-# DOC: additional dependencies required to generate docs.
-#      Follow the "Getting Started" guide first.
+# DOC: used to generate docs
 
 sphinx<8.3.0
 sphinx_rtd_theme~=3.0
@@ -29,6 +28,3 @@ anytree
 
 # Used to generate API coverage reports
 coverxygen
-
-# Used by Kconfig extension
-python-dotenv
