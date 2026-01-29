@@ -13,7 +13,7 @@
 #include <zephyr/irq.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
-#include <bsp_reset.h>
+#include <cold_start.h>
 
 #include <r_rtc.h>
 #include <soc.h>
@@ -156,11 +156,11 @@ static int rtc_renesas_ra_init(const struct device *dev)
 	}
 
 #if defined(CONFIG_RENESAS_RA_BATTERY_BACKUP_MANUAL_CONFIGURE)
-	if (R_BSP_ResetStatusGet() & BSP_RESET_TYPE_VBATPOR) {
+	if (is_backup_domain_reset_happen()) {
 		R_RTC_ClockSourceSet(&data->fsp_ctrl);
 	}
 #else
-	if (R_BSP_ResetStatusGet() & BSP_RESET_TYPE_POR) {
+	if (is_power_on_reset_happen()) {
 		R_RTC_ClockSourceSet(&data->fsp_ctrl);
 	}
 #endif /* CONFIG_RENESAS_RA_BATTERY_BACKUP_MANUAL_CONFIGURE */

@@ -20,7 +20,7 @@ int scmi_pinctrl_settings_configure(struct scmi_pinctrl_settings *settings)
 
 	proto = &SCMI_PROTOCOL_NAME(SCMI_PROTOCOL_PINCTRL);
 
-	/* input validation */
+	/* sanity checks */
 	if (!settings) {
 		return -EINVAL;
 	}

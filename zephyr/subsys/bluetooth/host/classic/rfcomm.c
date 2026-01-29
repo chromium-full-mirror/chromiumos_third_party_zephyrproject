@@ -2,7 +2,6 @@
 
 /*
  * Copyright (c) 2016 Intel Corporation
- * Copyright 2024-2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1862,24 +1861,15 @@ static int rfcomm_accept(struct bt_conn *conn, struct bt_l2cap_server *server,
 
 void bt_rfcomm_init(void)
 {
-	__maybe_unused int err;
-
-	static bool initialized;
 	static struct bt_l2cap_server server = {
 		.psm       = BT_L2CAP_PSM_RFCOMM,
 		.accept    = rfcomm_accept,
 		.sec_level = BT_SECURITY_L1,
 	};
-
-	if (initialized) {
-		return;
-	}
+	__maybe_unused int err;
 
 	err = bt_l2cap_br_server_register(&server);
-	if ((err != 0) && (err != -EEXIST)) {
+	if (err != 0) {
 		LOG_ERR("Failed to register L2CAP server for RFCOMM (err %d)", err);
-		return;
 	}
-
-	initialized = true;
 }

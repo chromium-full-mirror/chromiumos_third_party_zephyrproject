@@ -258,6 +258,8 @@ static void tcp_recv_cb(struct net_context *context, struct net_pkt *pkt,
 static int cmd_net_tcp_connect(const struct shell *sh, size_t argc, char *argv[])
 {
 #if defined(CONFIG_NET_TCP) && defined(CONFIG_NET_NATIVE_TCP)
+	int arg = 0;
+
 	/* tcp connect <ip> port */
 	char *endptr;
 	char *ip;
@@ -269,21 +271,21 @@ static int cmd_net_tcp_connect(const struct shell *sh, size_t argc, char *argv[]
 		return -ENOEXEC;
 	}
 
-	if (argv[1] == NULL) {
+	if (!argv[++arg]) {
 		PR_WARNING("Peer IP address missing.\n");
 		return -ENOEXEC;
 	}
 
-	ip = argv[1];
+	ip = argv[arg];
 
-	if (argv[2] == NULL) {
+	if (!argv[++arg]) {
 		PR_WARNING("Peer port missing.\n");
 		return -ENOEXEC;
 	}
 
-	port = strtol(argv[2], &endptr, 10);
+	port = strtol(argv[arg], &endptr, 10);
 	if (*endptr != '\0') {
-		PR_WARNING("Invalid port %s\n", argv[2]);
+		PR_WARNING("Invalid port %s\n", argv[arg]);
 		return -ENOEXEC;
 	}
 
@@ -299,6 +301,7 @@ static int cmd_net_tcp_connect(const struct shell *sh, size_t argc, char *argv[]
 static int cmd_net_tcp_send(const struct shell *sh, size_t argc, char *argv[])
 {
 #if defined(CONFIG_NET_TCP) && defined(CONFIG_NET_NATIVE_TCP)
+	int arg = 0;
 	int ret;
 	struct net_shell_user_data user_data;
 
@@ -308,15 +311,15 @@ static int cmd_net_tcp_send(const struct shell *sh, size_t argc, char *argv[])
 		return -ENOEXEC;
 	}
 
-	if (argv[1] == NULL) {
+	if (!argv[++arg]) {
 		PR_WARNING("No data to send.\n");
 		return -ENOEXEC;
 	}
 
 	user_data.sh = sh;
 
-	ret = net_context_send(tcp_ctx, (uint8_t *)argv[1],
-			       strlen(argv[1]), tcp_sent_cb,
+	ret = net_context_send(tcp_ctx, (uint8_t *)argv[arg],
+			       strlen(argv[arg]), tcp_sent_cb,
 			       TCP_TIMEOUT, &user_data);
 	if (ret < 0) {
 		PR_WARNING("Cannot send msg (%d)\n", ret);

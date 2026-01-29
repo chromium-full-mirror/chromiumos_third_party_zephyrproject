@@ -21,7 +21,6 @@
 		led2 = &blue_led;
 		sw0 = &user_button_2;
 		sw1 = &user_button_3;
-		watchdog0 = &wwdt0;
 	};
 
 	chosen {
@@ -159,24 +158,6 @@
 	status = "okay";
 };
 
-&lpi2c0 {
-	status = "okay";
-	pinctrl-0 = <&pinmux_lpi2c0>;
-	pinctrl-names = "default";
-};
-
-&lpi2c1 {
-	status = "okay";
-	pinctrl-0 = <&pinmux_lpi2c1>;
-	pinctrl-names = "default";
-};
-
-&lpspi1 {
-	status = "okay";
-	pinctrl-0 = <&pinmux_lpspi1>;
-	pinctrl-names = "default";
-};
-
 &lptmr0 {
 	status = "okay";
 };
@@ -186,8 +167,4 @@
 	current-speed = <115200>;
 	pinctrl-0 = <&pinmux_lpuart2>;
 	pinctrl-names = "default";
-};
-
-&wwdt0 {
-	status = "okay";
 };

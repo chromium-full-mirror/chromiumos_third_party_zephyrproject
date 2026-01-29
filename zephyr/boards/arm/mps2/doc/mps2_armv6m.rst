@@ -61,7 +61,33 @@ ARM V2M MPS2 AN383 provides the following hardware components:
 Supported Features
 ==================
 
-* Refer to :zephyr:board:`mps2` for details.
+The ``mps2/an383`` board target supports the following hardware features:
+
++-----------+------------+-------------------------------------+
+| Interface | Controller | Driver/Component                    |
++===========+============+=====================================+
+| NVIC      | on-chip    | nested vector interrupt controller  |
++-----------+------------+-------------------------------------+
+| SYSTICK   | on-chip    | systick                             |
++-----------+------------+-------------------------------------+
+| UART      | on-chip    | serial port-polling;                |
+|           |            | serial port-interrupt               |
++-----------+------------+-------------------------------------+
+| GPIO      | on-chip    | gpio                                |
++-----------+------------+-------------------------------------+
+| WATCHDOG  | on-chip    | watchdog                            |
++-----------+------------+-------------------------------------+
+| TIMER     | on-chip    | counter                             |
++-----------+------------+-------------------------------------+
+| DUALTIMER | on-chip    | counter                             |
++-----------+------------+-------------------------------------+
+
+Other hardware features are not currently supported by the port.
+See the `V2M MPS2 Website`_ for a complete list of V2M MPS2 board hardware
+features.
+
+The default configuration can be found in
+:zephyr_file:`boards/arm/mps2/mps2_an383_defconfig`
 
 Interrupt Controller
 ====================

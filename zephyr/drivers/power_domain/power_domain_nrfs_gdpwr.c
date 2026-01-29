@@ -255,7 +255,7 @@ static int domain_init(const struct device *dev)
 }
 
 #define DOMAIN_NODE_SYMNAME(node, sym) \
-	CONCAT(domain, _, sym, DT_NODE_CHILD_IDX(node))
+	_CONCAT_4(domain, _, sym, DT_NODE_CHILD_IDX(node))
 
 #define DOMAIN_NODE_TO_GDPWR_ENUM(node) \
 	_CONCAT(GDPWR_GD_, DT_NODE_FULL_NAME_UPPER_TOKEN(node))

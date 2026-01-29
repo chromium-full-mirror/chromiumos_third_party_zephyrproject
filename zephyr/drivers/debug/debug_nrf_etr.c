@@ -22,11 +22,6 @@
 #include <dmm.h>
 #include <nrfx_tbm.h>
 #include <stdio.h>
-
-#ifdef CONFIG_DEBUG_NRF_ETR_BACKEND_RTT
-#include <SEGGER_RTT.h>
-#endif
-
 LOG_MODULE_REGISTER(cs_etr_tbm);
 
 #define UART_NODE DT_CHOSEN(zephyr_console)
@@ -84,7 +79,7 @@ static uint32_t etr_rd_idx;
 /* Counts number of new messages completed in the current formatter frame decoding. */
 static uint32_t new_msg_cnt;
 
-static bool volatile use_blocking;
+static bool volatile use_async_uart;
 
 static struct k_sem uart_sem;
 static const struct device *uart_dev = DEVICE_DT_GET(UART_NODE);
@@ -154,101 +149,27 @@ static shell_transport_handler_t shell_handler;
 static void *shell_context;
 #endif
 
-#ifdef CONFIG_DEBUG_NRF_ETR_BACKEND_RTT
-
-#define RTT_LOCK() \
-	COND_CODE_0(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER, (SEGGER_RTT_LOCK()), ())
-
-#define RTT_UNLOCK() \
-	COND_CODE_0(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER, (SEGGER_RTT_UNLOCK()), ())
-
-static uint8_t rtt_buf[COND_CODE_0(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER, (1),
-				(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER_SIZE))];
-
-static volatile bool rtt_host_present;
-
-static void rtt_on_failed_write(int retry_cnt, bool in_panic)
-{
-	if (retry_cnt == 0) {
-		rtt_host_present = false;
-	} else if (in_panic) {
-		k_busy_wait(USEC_PER_MSEC * CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_RETRY_DELAY_MS);
-	} else {
-		k_msleep(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_RETRY_DELAY_MS);
-	}
-}
-
-static void rtt_on_write(int retry_cnt, bool in_panic)
-{
-	rtt_host_present = true;
-	if (use_blocking) {
-		/* In panic mode block on each write until host reads it. This
-		 * way it is ensured that if system resets all messages are read
-		 * by the host. While pending on data being read by the host we
-		 * must also detect situation where host is disconnected.
-		 */
-		while (SEGGER_RTT_HasDataUp(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER)) {
-			rtt_on_failed_write(retry_cnt--, in_panic);
-		}
-	}
-
-}
-
-static void rtt_write(uint8_t *data, size_t length, bool in_panic)
-{
-	int ret = 0;
-	int retry_cnt = CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_RETRY_CNT;
-
-	do {
-		if (!in_panic) {
-			RTT_LOCK();
-			ret = SEGGER_RTT_WriteSkipNoLock(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER,
-							 data, length);
-			RTT_UNLOCK();
-		} else {
-			ret = SEGGER_RTT_WriteSkipNoLock(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER,
-							 data, length);
-		}
-
-		if (ret) {
-			rtt_on_write(retry_cnt, in_panic);
-		} else if (rtt_host_present) {
-			retry_cnt--;
-			rtt_on_failed_write(retry_cnt, in_panic);
-		} else {
-		}
-	} while ((ret == 0) && rtt_host_present);
-}
-#endif /* CONFIG_DEBUG_NRF_ETR_BACKEND_RTT */
-
 static int log_output_func(uint8_t *buf, size_t size, void *ctx)
 {
-	ARG_UNUSED(ctx);
+	if (use_async_uart) {
+		int err;
+		static uint8_t *tx_buf = (uint8_t *)frame_buf0;
 
-	if (IS_ENABLED(CONFIG_DEBUG_NRF_ETR_BACKEND_UART)) {
-		if (use_blocking) {
-			for (int i = 0; i < size; i++) {
-				uart_poll_out(uart_dev, buf[i]);
-			}
-		} else {
-			int err;
-			static uint8_t *tx_buf = (uint8_t *)frame_buf0;
+		err = k_sem_take(&uart_sem, K_FOREVER);
+		__ASSERT_NO_MSG(err >= 0);
 
-			err = k_sem_take(&uart_sem, K_FOREVER);
-			__ASSERT_NO_MSG(err >= 0);
+		memcpy(tx_buf, buf, size);
 
-			memcpy(tx_buf, buf, size);
+		err = uart_tx(uart_dev, tx_buf, size, SYS_FOREVER_US);
+		__ASSERT_NO_MSG(err >= 0);
 
-			err = uart_tx(uart_dev, tx_buf, size, SYS_FOREVER_US);
-			__ASSERT_NO_MSG(err >= 0);
-
-			tx_buf = (tx_buf == (uint8_t *)frame_buf0) ?
-				(uint8_t *)frame_buf1 : (uint8_t *)frame_buf0;
+		tx_buf = (tx_buf == (uint8_t *)frame_buf0) ?
+			(uint8_t *)frame_buf1 : (uint8_t *)frame_buf0;
+	} else {
+		for (int i = 0; i < size; i++) {
+			uart_poll_out(uart_dev, buf[i]);
 		}
 	}
-#ifdef CONFIG_DEBUG_NRF_ETR_BACKEND_RTT
-	rtt_write(buf, size, use_blocking);
-#endif
 
 	return size;
 }
@@ -607,16 +528,16 @@ static void dump_frame(uint8_t *buf)
 {
 	int err;
 
-	if (use_blocking) {
-		for (int i = 0; i < CORESIGHT_TRACE_FRAME_SIZE; i++) {
-			uart_poll_out(uart_dev, buf[i]);
-		}
-	} else {
+	if (use_async_uart) {
 		err = k_sem_take(&uart_sem, K_FOREVER);
 		__ASSERT_NO_MSG(err >= 0);
 
 		err = uart_tx(uart_dev, buf, CORESIGHT_TRACE_FRAME_SIZE, SYS_FOREVER_US);
 		__ASSERT_NO_MSG(err >= 0);
+	} else {
+		for (int i = 0; i < CORESIGHT_TRACE_FRAME_SIZE; i++) {
+			uart_poll_out(uart_dev, buf[i]);
+		}
 	}
 }
 
@@ -672,7 +593,7 @@ static void process(void)
 			}
 		} else {
 			dump_frame((uint8_t *)frame_buf);
-			frame_buf = (!use_blocking && (frame_buf == frame_buf0)) ?
+			frame_buf = (use_async_uart && (frame_buf == frame_buf0)) ?
 						frame_buf1 : frame_buf0;
 		}
 	}
@@ -728,7 +649,7 @@ void debug_nrf_etr_flush(void)
 	/* Set flag which forces uart to use blocking polling out instead of
 	 * asynchronous API.
 	 */
-	use_blocking = true;
+	use_async_uart = false;
 	uint32_t k = irq_lock();
 
 	/* Repeat arbitrary number of times to ensure that all that is flushed. */
@@ -833,23 +754,17 @@ static void tbm_event_handler(nrf_tbm_event_t event)
 
 int etr_process_init(void)
 {
-#ifdef CONFIG_DEBUG_NRF_ETR_BACKEND_RTT
-	if (CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER > 0) {
-		SEGGER_RTT_ConfigUpBuffer(CONFIG_DEBUG_NRF_ETR_BACKEND_RTT_BUFFER, "stm_logger",
-					  rtt_buf, sizeof(rtt_buf),
-					  SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-	}
-#endif
 	int err;
 
-	if (IS_ENABLED(CONFIG_DEBUG_NRF_ETR_BACKEND_UART)) {
-		err = uart_callback_set(uart_dev, uart_event_handler, NULL);
-		use_blocking = (err != 0);
-		k_sem_init(&uart_sem, 1, 1);
-	}
+	k_sem_init(&uart_sem, 1, 1);
+
+	err = uart_callback_set(uart_dev, uart_event_handler, NULL);
+	use_async_uart = (err == 0);
+
 	static const nrfx_tbm_config_t config = {.size = wsize_mask};
 
 	nrfx_tbm_init(&config, tbm_event_handler);
+
 	IRQ_CONNECT(DT_IRQN(DT_NODELABEL(tbm)), DT_IRQ(DT_NODELABEL(tbm), priority),
 			    nrfx_isr, nrfx_tbm_irq_handler, 0);
 	irq_enable(DT_IRQN(DT_NODELABEL(tbm)));

@@ -174,7 +174,6 @@ struct pinnacle_config {
 
 	enum pinnacle_sensitivity sensitivity;
 	bool relative_mode;
-	bool sleep_mode_enable;
 	uint8_t idle_packets_count;
 
 	bool clipping_enabled;
@@ -762,22 +761,6 @@ static int pinnacle_init(const struct device *dev)
 		return -ENODEV;
 	}
 
-	/* Clear CC */
-	rc = pinnacle_write(dev, PINNACLE_REG_STATUS1, 0);
-	if (rc < 0) {
-		LOG_ERR("Failed to clear CC from STATUS1 register (%d)", rc);
-		return rc;
-	}
-
-	k_usleep(50);
-	/* Datasheet: RESET bit is read-only, reality: write 1 for software reset */
-	rc = pinnacle_write(dev, PINNACLE_REG_SYS_CONFIG1, PINNACLE_SYS_CONFIG1_RESET);
-
-	if (rc < 0) {
-		LOG_ERR("Failed to write reset to SYS_CONFIG1 (%d)", rc);
-		return rc;
-	}
-
 	/* Wait until the calibration is completed (SW_CC is asserted) */
 	ret = WAIT_FOR(pinnacle_read(dev, PINNACLE_REG_STATUS1, &value) == 0 &&
 		       (value & PINNACLE_STATUS1_SW_CC) == PINNACLE_STATUS1_SW_CC,
@@ -785,7 +768,7 @@ static int pinnacle_init(const struct device *dev)
 		       PINNACLE_CALIBRATION_AWAIT_DELAY_POLL_US,
 		       k_sleep(K_USEC(PINNACLE_CALIBRATION_AWAIT_DELAY_POLL_US)));
 	if (!ret) {
-		LOG_ERR("Failed to wait for calibration completion");
+		LOG_ERR("Failed to wait for calibration complition");
 		return -EIO;
 	}
 
@@ -803,12 +786,7 @@ static int pinnacle_init(const struct device *dev)
 		return -EIO;
 	}
 
-	value = 0x00;
-	if (config->sleep_mode_enable) {
-		value |= PINNACLE_SYS_CONFIG1_LOW_POWER_MODE;
-	}
-
-	rc = pinnacle_write(dev, PINNACLE_REG_SYS_CONFIG1, value);
+	rc = pinnacle_write(dev, PINNACLE_REG_SYS_CONFIG1, 0x00);
 	if (rc) {
 		LOG_ERR("Failed to write SysConfig1");
 		return rc;
@@ -902,7 +880,6 @@ static int pinnacle_init(const struct device *dev)
 		.relative_mode = DT_INST_ENUM_IDX(inst, data_mode),                                \
 		.sensitivity = DT_INST_ENUM_IDX(inst, sensitivity),                                \
 		.idle_packets_count = DT_INST_PROP(inst, idle_packets_count),                      \
-		.sleep_mode_enable = DT_INST_PROP(inst, sleep_mode_enable),                        \
 		.clipping_enabled = DT_INST_PROP(inst, clipping_enable),                           \
 		.active_range_x_min = DT_INST_PROP(inst, active_range_x_min),                      \
 		.active_range_x_max = DT_INST_PROP(inst, active_range_x_max),                      \

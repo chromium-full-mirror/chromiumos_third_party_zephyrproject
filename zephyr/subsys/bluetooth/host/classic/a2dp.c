@@ -4,7 +4,7 @@
 
 /*
  * Copyright (c) 2015-2016 Intel Corporation
- * Copyright 2021,2024-2025 NXP
+ * Copyright 2021,2024 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1463,25 +1463,23 @@ static struct bt_avdtp_event_cb avdtp_cb = {
 	.accept = a2dp_accept,
 };
 
-void bt_a2dp_init(void)
+int bt_a2dp_init(void)
 {
-	__maybe_unused int err;
-
-	static bool initialized;
-
-	if (initialized) {
-		return;
-	}
+	int err;
 
 	/* Register event handlers with AVDTP */
 	err = bt_avdtp_register(&avdtp_cb);
-	if ((err < 0) && (err != -EALREADY)) {
-		LOG_ERR("A2DP registration failed (err %d)", err);
-		return;
+	if (err < 0) {
+		LOG_ERR("A2DP registration failed");
+		return err;
+	}
+
+	ARRAY_FOR_EACH(connection, i) {
+		memset(&connection[i], 0, sizeof(struct bt_a2dp));
 	}
 
 	LOG_DBG("A2DP Initialized successfully.");
-	initialized = true;
+	return 0;
 }
 
 struct bt_a2dp *bt_a2dp_connect(struct bt_conn *conn)

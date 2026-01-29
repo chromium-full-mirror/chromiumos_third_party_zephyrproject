@@ -228,19 +228,10 @@ static void arp_request_timeout(struct k_work *work)
 	k_mutex_unlock(&arp_mutex);
 }
 
-static inline bool is_same_subnet(uint32_t addr1,
-				  uint32_t addr2,
-				  uint32_t netmask)
-{
-	return ((addr1 & netmask) == (addr2 & netmask));
-}
-
 static inline struct net_in_addr *if_get_addr(struct net_if *iface,
-					      const uint8_t *own_addr,
-					      const struct net_in_addr *dst_addr)
+					  const uint8_t *addr)
 {
 	struct net_if_ipv4 *ipv4 = iface->config.ip.ipv4;
-	struct net_in_addr *fall_back = NULL;
 
 	if (!ipv4) {
 		return NULL;
@@ -250,23 +241,14 @@ static inline struct net_in_addr *if_get_addr(struct net_if *iface,
 		if (ipv4->unicast[i].ipv4.is_used &&
 		    ipv4->unicast[i].ipv4.address.family == NET_AF_INET &&
 		    ipv4->unicast[i].ipv4.addr_state == NET_ADDR_PREFERRED &&
-		    ((own_addr == NULL) ||
+		    (!addr ||
 		     net_ipv4_addr_cmp_raw(
-				own_addr, ipv4->unicast[i].ipv4.address.in_addr.s4_addr))) {
-			if ((dst_addr == NULL) ||
-			    is_same_subnet(dst_addr->s_addr,
-					   ipv4->unicast[i].ipv4.address.in_addr.s_addr,
-					   ipv4->unicast[i].netmask.s_addr)) {
-				/* Use preferred address on the same subnet as destination */
-				return &ipv4->unicast[i].ipv4.address.in_addr;
-			} else if (fall_back == NULL) {
-				/* Use address as fallback, if no match for subnet is found */
-				fall_back = &ipv4->unicast[i].ipv4.address.in_addr;
-			}
+				addr, ipv4->unicast[i].ipv4.address.in_addr.s4_addr))) {
+			return &ipv4->unicast[i].ipv4.address.in_addr;
 		}
 	}
 
-	return fall_back;
+	return NULL;
 }
 
 static inline struct net_pkt *arp_prepare(struct net_if *iface,
@@ -357,7 +339,7 @@ static inline struct net_pkt *arp_prepare(struct net_if *iface,
 	} else if (!entry) {
 		my_addr = (struct net_in_addr *)NET_IPV4_HDR(pending)->src;
 	} else {
-		my_addr = if_get_addr(entry->iface, (const uint8_t *)current_ip, next_addr);
+		my_addr = if_get_addr(entry->iface, (const uint8_t *)current_ip);
 	}
 
 	if (my_addr) {
@@ -870,7 +852,7 @@ enum net_verdict net_arp_input(struct net_pkt *pkt,
 		}
 
 		/* Someone wants to know our ll address */
-		addr = if_get_addr(net_pkt_iface(pkt), arp_hdr->dst_ipaddr, NULL);
+		addr = if_get_addr(net_pkt_iface(pkt), arp_hdr->dst_ipaddr);
 		if (!addr) {
 			/* Not for us so drop the packet silently */
 			return NET_DROP;

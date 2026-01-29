@@ -2162,32 +2162,32 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_i3c_ibi_cmds,
 #ifdef CONFIG_I3C_TARGET
 	SHELL_CMD_ARG(hj, &dsub_i3c_device_name,
-		      SHELL_HELP("Send IBI HJ",
-				 "<device>"),
+		      "Send IBI HJ\n"
+		      "Usage: ibi hj <device>",
 		      cmd_i3c_ibi_hj, 2, 0),
 	SHELL_CMD_ARG(tir, &dsub_i3c_device_name,
-		      SHELL_HELP("Send IBI TIR",
-				 "<device> [<byte1>, ...]"),
+		      "Send IBI TIR\n"
+		      "Usage: ibi tir <device> [<byte1>, ...]",
 		      cmd_i3c_ibi_tir, 2, MAX_I3C_BYTES),
 #ifdef CONFIG_I3C_CONTROLLER
 	SHELL_CMD_ARG(cr, &dsub_i3c_device_name,
-		      SHELL_HELP("Send IBI CR",
-				 "<device>"),
+		      "Send IBI CR\n"
+		      "Usage: ibi cr <device>",
 		      cmd_i3c_ibi_cr, 2, 0),
 #endif /* CONFIG_I3C_CONTROLLER */
 #endif /* CONFIG_I3C_TARGET */
 #ifdef CONFIG_I3C_CONTROLLER
 	SHELL_CMD_ARG(hj_response, &dsub_i3c_device_name,
-		      SHELL_HELP("Set IBI HJ Response",
-				 "<device> <\"ack\"/\"nack\">"),
+		      "Set IBI HJ Response\n"
+		      "Usage: ibi hj_response <device> <\"ack\"/\"nack\">",
 		      cmd_i3c_ibi_hj_response, 3, 0),
 	SHELL_CMD_ARG(enable, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Enable receiving IBI from target",
-				 "<device> <target>"),
+		      "Enable receiving IBI from target\n"
+		      "Usage: ibi enable <device> <target>",
 		      cmd_i3c_ibi_enable, 3, 0),
 	SHELL_CMD_ARG(disable, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Disable receiving IBI from target",
-				 "<device> <target>"),
+		      "Disable receiving IBI from target\n"
+		      "Usage: ibi disable <device> <target>",
 		      cmd_i3c_ibi_disable, 3, 0),
 #endif /* CONFIG_I3C_CONTROLLER */
 	SHELL_SUBCMD_SET_END /* Array terminated. */
@@ -2199,12 +2199,12 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_i3c_hdr_ddr_cmds,
 	SHELL_CMD_ARG(write, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send HDR DDR Write",
-				 "<device> <target> <7b cmd> [<byte1>, ...]"),
+		      "Send HDR DDR Write\n"
+		      "Usage: hdr ddr write <device> <target> <7b cmd> [<byte1>, ...]",
 		      cmd_i3c_hdr_ddr_write, 4, MAX_I3C_BYTES),
 	SHELL_CMD_ARG(read, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send HDR DDR Read",
-				 "<device> <target> <7b cmd> <bytes>"),
+		      "Send HDR DDR Read\n"
+		      "Usage: hdr ddr read <device> <target> <7b cmd> <bytes>",
 		      cmd_i3c_hdr_ddr_read, 5, 0),
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
@@ -2213,8 +2213,8 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_i3c_hdr_cmds,
 	SHELL_CMD_ARG(ddr, &sub_i3c_hdr_ddr_cmds,
-		      SHELL_HELP("Send HDR DDR",
-				 "<sub cmd>"),
+		      "Send HDR DDR\n"
+		      "Usage: hdr ddr <sub cmd>",
 		      NULL, 2, 0),
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
@@ -2223,164 +2223,164 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_i3c_ccc_cmds,
 	SHELL_CMD_ARG(rstdaa_dc, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC RSTDAA",
-				 "<device> <target>"),
+		      "Send CCC RSTDAA\n"
+		      "Usage: ccc rstdaa_dc <device> <target>",
 		      cmd_i3c_ccc_rstdaa_dc, 3, 0),
 	SHELL_CMD_ARG(rstdaa, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC RSTDAA",
-				 "<device>"),
+		      "Send CCC RSTDAA\n"
+		      "Usage: ccc rstdaa <device>",
 		      cmd_i3c_ccc_rstdaa, 2, 0),
 	SHELL_CMD_ARG(entdaa, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENTDAA",
-				 "<device>"),
+		      "Send CCC ENTDAA\n"
+		      "Usage: ccc entdaa <device>",
 		      cmd_i3c_ccc_entdaa, 2, 0),
 	SHELL_CMD_ARG(setaasa, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC SETAASA",
-				 "<device>"),
+		      "Send CCC SETAASA\n"
+		      "Usage: ccc setaasa <device>",
 		      cmd_i3c_ccc_setaasa, 2, 0),
 	SHELL_CMD_ARG(setdasa, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC SETDASA",
-				 "<device> <target> <dynamic address>"),
+		      "Send CCC SETDASA\n"
+		      "Usage: ccc setdasa <device> <target> <dynamic address>",
 		      cmd_i3c_ccc_setdasa, 4, 0),
 	SHELL_CMD_ARG(setnewda, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC SETNEWDA",
-				 "<device> <target> <dynamic address>"),
+		      "Send CCC SETNEWDA\n"
+		      "Usage: ccc setnewda <device> <target> <dynamic address>",
 		      cmd_i3c_ccc_setnewda, 4, 0),
 	SHELL_CMD_ARG(getbcr, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETBCR",
-				 "<device> <target>"),
+		      "Send CCC GETBCR\n"
+		      "Usage: ccc getbcr <device> <target>",
 		      cmd_i3c_ccc_getbcr, 3, 0),
 	SHELL_CMD_ARG(getdcr, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETDCR",
-				 "<device> <target>"),
+		      "Send CCC GETDCR\n"
+		      "Usage: ccc getdcr <device> <target>",
 		      cmd_i3c_ccc_getdcr, 3, 0),
 	SHELL_CMD_ARG(getpid, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETPID",
-				 "<device> <target>"),
+		      "Send CCC GETPID\n"
+		      "Usage: ccc getpid <device> <target>",
 		      cmd_i3c_ccc_getpid, 3, 0),
 	SHELL_CMD_ARG(getmrl, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETMRL",
-				 "<device> <target>"),
+		      "Send CCC GETMRL\n"
+		      "Usage: ccc getmrl <device> <target>",
 		      cmd_i3c_ccc_getmrl, 3, 0),
 	SHELL_CMD_ARG(getmwl, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETMWL",
-				 "<device> <target>"),
+		      "Send CCC GETMWL\n"
+		      "Usage: ccc getmwl <device> <target>",
 		      cmd_i3c_ccc_getmwl, 3, 0),
 	SHELL_CMD_ARG(setmrl, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC SETMRL",
-				 "<device> <target> <max read length> [<max ibi length>]"),
+		      "Send CCC SETMRL\n"
+		      "Usage: ccc setmrl <device> <target> <max read length> [<max ibi length>]",
 		      cmd_i3c_ccc_setmrl, 4, 1),
 	SHELL_CMD_ARG(setmwl, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC SETMWL",
-				 "<device> <target> <max write length>"),
+		      "Send CCC SETMWL\n"
+		      "Usage: ccc setmwl <device> <target> <max write length>",
 		      cmd_i3c_ccc_setmwl, 4, 0),
 	SHELL_CMD_ARG(setmrl_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC SETMRL BC",
-				 "<device> <max read length> [<max ibi length>]"),
+		      "Send CCC SETMRL BC\n"
+		      "Usage: ccc setmrl_bc <device> <max read length> [<max ibi length>]",
 		      cmd_i3c_ccc_setmrl_bc, 3, 1),
 	SHELL_CMD_ARG(setmwl_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC SETMWL BC",
-				 "<device> <max write length>"),
+		      "Send CCC SETMWL BC\n"
+		      "Usage: ccc setmwl_bc <device> <max write length>",
 		      cmd_i3c_ccc_setmwl_bc, 3, 0),
 #ifdef CONFIG_I3C_TARGET
 	SHELL_CMD_ARG(deftgts, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC DEFTGTS",
-				 "<device>"),
+		      "Send CCC DEFTGTS\n"
+		      "Usage: ccc deftgts <device>",
 		      cmd_i3c_ccc_deftgts, 2, 0),
 #endif
 	SHELL_CMD_ARG(enttm, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENTTM",
-				 "<device> <defining byte>"),
+		      "Send CCC ENTTM\n"
+		      "Usage: ccc enttm <device> <defining byte>",
 		      cmd_i3c_ccc_enttm, 3, 0),
 	SHELL_CMD_ARG(rstact, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC RSTACT",
-				 "<device> <target> <\"set\"/\"get\"> <defining byte>"),
+		      "Send CCC RSTACT\n"
+		      "Usage: ccc rstact <device> <target> <\"set\"/\"get\"> <defining byte>",
 		      cmd_i3c_ccc_rstact, 5, 0),
 #ifdef CONFIG_I3C_TARGET
 	SHELL_CMD_ARG(getacccr, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETACCCR",
-				 "<device> <target>"),
+		      "Send CCC GETACCCR\n"
+		      "Usage: ccc getacccr <device> <target>",
 		      cmd_i3c_ccc_getacccr, 3, 0),
 #endif /* CONFIG_I3C_TARGET */
 	SHELL_CMD_ARG(rstact_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC RSTACT BC",
-				 "<device> <defining byte>"),
+		      "Send CCC RSTACT BC\n"
+		      "Usage: ccc rstact_bc <device> <defining byte>",
 		      cmd_i3c_ccc_rstact_bc, 3, 0),
 	SHELL_CMD_ARG(enec_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENEC BC",
-				 "<device> <defining byte>"),
+		      "Send CCC ENEC BC\n"
+		      "Usage: ccc enec_bc <device> <defining byte>",
 		      cmd_i3c_ccc_enec_bc, 3, 0),
 	SHELL_CMD_ARG(disec_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC DISEC BC",
-				 "<device> <defining byte>"),
+		      "Send CCC DISEC BC\n"
+		      "Usage: ccc disec_bc <device> <defining byte>",
 		      cmd_i3c_ccc_disec_bc, 3, 0),
 	SHELL_CMD_ARG(enec, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC ENEC",
-				 "<device> <target> <defining byte>"),
+		      "Send CCC ENEC\n"
+		      "Usage: ccc enec <device> <target> <defining byte>",
 		      cmd_i3c_ccc_enec, 4, 0),
 	SHELL_CMD_ARG(disec, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC DISEC",
-				 "<device> <target> <defining byte>"),
+		      "Send CCC DISEC\n"
+		      "Usage: ccc disec <device> <target> <defining byte>",
 		      cmd_i3c_ccc_disec, 4, 0),
 	SHELL_CMD_ARG(entas0_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENTAS0 BC",
-				 "<device>"),
+		      "Send CCC ENTAS0 BC\n"
+		      "Usage: ccc entas0 <device>",
 		      cmd_i3c_ccc_entas0_bc, 2, 0),
 	SHELL_CMD_ARG(entas1_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENTAS1 BC",
-				 "<device>"),
+		      "Send CCC ENTAS1 BC\n"
+		      "Usage: ccc entas1 <device>",
 		      cmd_i3c_ccc_entas1_bc, 2, 0),
 	SHELL_CMD_ARG(entas2_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENTAS2 BC",
-				 "<device>"),
+		      "Send CCC ENTAS2 BC\n"
+		      "Usage: ccc entas2 <device>",
 		      cmd_i3c_ccc_entas2_bc, 2, 0),
 	SHELL_CMD_ARG(entas3_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC ENTAS3 BC",
-				 "<device>"),
+		      "Send CCC ENTAS3 BC\n"
+		      "Usage: ccc entas3 <device>",
 		      cmd_i3c_ccc_entas3_bc, 2, 0),
 	SHELL_CMD_ARG(entas0, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC ENTAS0",
-				 "<device> <target>"),
+		      "Send CCC ENTAS0\n"
+		      "Usage: ccc entas0 <device> <target>",
 		      cmd_i3c_ccc_entas0, 3, 0),
 	SHELL_CMD_ARG(entas1, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC ENTAS1",
-				 "<device> <target>"),
+		      "Send CCC ENTAS1\n"
+		      "Usage: ccc entas1 <device> <target>",
 		      cmd_i3c_ccc_entas1, 3, 0),
 	SHELL_CMD_ARG(entas2, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC ENTAS2",
-				 "<device> <target>"),
+		      "Send CCC ENTAS2\n"
+		      "Usage: ccc entas2 <device> <target>",
 		      cmd_i3c_ccc_entas2, 3, 0),
 	SHELL_CMD_ARG(entas3, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC ENTAS3",
-				 "<device> <target>"),
+		      "Send CCC ENTAS3\n"
+		      "Usage: ccc entas3 <device> <target>",
 		      cmd_i3c_ccc_entas3, 3, 0),
 	SHELL_CMD_ARG(getstatus, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETSTATUS",
-				 "<device> <target> [<defining byte>]"),
+		      "Send CCC GETSTATUS\n"
+		      "Usage: ccc getstatus <device> <target> [<defining byte>]",
 		      cmd_i3c_ccc_getstatus, 3, 1),
 	SHELL_CMD_ARG(getcaps, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETCAPS",
-				 "<device> <target> [<defining byte>]"),
+		      "Send CCC GETCAPS\n"
+		      "Usage: ccc getcaps <device> <target> [<defining byte>]",
 		      cmd_i3c_ccc_getcaps, 3, 1),
 	SHELL_CMD_ARG(getmxds, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETMXDS",
-				 "<device> <target> [<defining byte>]"),
+		      "Send CCC GETMXDS\n"
+		      "Usage: ccc getmxds <device> <target> [<defining byte>]",
 		      cmd_i3c_ccc_getmxds, 3, 1),
 	SHELL_CMD_ARG(setbuscon, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC SETBUSCON",
-				 "<device> <context> [<optional bytes>]"),
+		      "Send CCC SETBUSCON\n"
+		      "Usage: ccc setbuscon <device> <context> [<optional bytes>]",
 		      cmd_i3c_ccc_setbuscon, 3, MAX_I3C_BYTES - 1),
 	SHELL_CMD_ARG(getvendor, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC GETVENDOR",
-				 "<device> <target> <id> [<defining byte>]"),
+		      "Send CCC GETVENDOR\n"
+		      "Usage: ccc getvendor <device> <target> <id> [<defining byte>]",
 		      cmd_i3c_ccc_getvendor, 4, 1),
 	SHELL_CMD_ARG(setvendor, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Send CCC SETVENDOR",
-				 "<device> <target> <id> [<bytes>]"),
+		      "Send CCC SETVENDOR\n"
+		      "Usage: ccc setvendor <device> <target> <id> [<bytes>]",
 		      cmd_i3c_ccc_setvendor, 4, MAX_I3C_BYTES),
 	SHELL_CMD_ARG(setvendor_bc, &dsub_i3c_device_name,
-		      SHELL_HELP("Send CCC SETVENDOR BC",
-				 "<device> <id> [<bytes>]"),
+		      "Send CCC SETVENDOR BC\n"
+		      "Usage: ccc setvendor_bc <device> <id> [<bytes>]",
 		      cmd_i3c_ccc_setvendor_bc, 3, MAX_I3C_BYTES),
 	SHELL_SUBCMD_SET_END /* Array terminated. */
 );
@@ -2391,70 +2391,70 @@ SHELL_STATIC_SUBCMD_SET_CREATE(
 	sub_i3c_cmds,
 #ifdef CONFIG_I3C_CONTROLLER
 	SHELL_CMD_ARG(info, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Get I3C device info",
-				 "<device> [<target>]"),
+		      "Get I3C device info\n"
+		      "Usage: info <device> [<target>]",
 		      cmd_i3c_info, 2, 1),
 	SHELL_CMD_ARG(speed, &dsub_i3c_device_name,
-		      SHELL_HELP("Set I3C device speed",
-				 "<device> <speed> [<od_min high_ns>] [<od_min low_ns>]"),
+		      "Set I3C device speed\n"
+		      "Usage: speed <device> <speed> [<od_min high_ns>] [<od_min low_ns>]",
 		      cmd_i3c_speed, 3, 2),
 	SHELL_CMD_ARG(recover, &dsub_i3c_device_name,
-		      SHELL_HELP("Recover I3C bus",
-				 "<device>"),
+		      "Recover I3C bus\n"
+		      "Usage: recover <device>",
 		      cmd_i3c_recover, 2, 0),
 	SHELL_CMD_ARG(read, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Read bytes from an I3C device",
-				 "<device> <target> <reg> [<bytes>]"),
+		      "Read bytes from an I3C device\n"
+		      "Usage: read <device> <target> <reg> [<bytes>]",
 		      cmd_i3c_read, 4, 1),
 	SHELL_CMD_ARG(read_byte, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Read a byte from an I3C device",
-				 "<device> <target> <reg>"),
+		      "Read a byte from an I3C device\n"
+		      "Usage: read_byte <device> <target> <reg>",
 		      cmd_i3c_read_byte, 4, 0),
 	SHELL_CMD_ARG(write, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Write bytes to an I3C device",
-				 "<device> <target> <reg> [<byte1>, ...]"),
+		      "Write bytes to an I3C device\n"
+		      "Usage: write <device> <target> <reg> [<byte1>, ...]",
 		      cmd_i3c_write, 4, MAX_I3C_BYTES),
 	SHELL_CMD_ARG(write_byte, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Write a byte to an I3C device",
-				 "<device> <target> <reg> <value>"),
+		      "Write a byte to an I3C device\n"
+		      "Usage: write_byte <device> <target> <reg> <value>",
 		      cmd_i3c_write_byte, 5, 0),
 	SHELL_CMD_ARG(i3c_attach, &dsub_i3c_device_list_name,
-		      SHELL_HELP("Attach I3C device from the bus",
-				 "<device> <target>"),
+		      "Attach I3C device from the bus\n"
+		      "Usage: i3c_attach <device> <target>",
 		      cmd_i3c_attach, 3, 0),
 	SHELL_CMD_ARG(i3c_reattach, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Reattach I3C device from the bus",
-				 "<device> <target> [<old dynamic address>]"),
+		      "Reattach I3C device from the bus\n"
+		      "Usage: i3c_reattach <device> <target> [<old dynamic address>]",
 		      cmd_i3c_reattach, 3, 1),
 	SHELL_CMD_ARG(i3c_detach, &dsub_i3c_device_attached_name,
-		      SHELL_HELP("Detach I3C device from the bus",
-				 "<device> <target>"),
+		      "Detach I3C device from the bus\n"
+		      "Usage: i3c_detach <device> <target>",
 		      cmd_i3c_detach, 3, 0),
 	SHELL_CMD_ARG(i2c_attach, &dsub_i3c_device_name,
-		      SHELL_HELP("Attach I2C device from the bus",
-				 "<device> <addr>"),
+		      "Attach I2C device from the bus\n"
+		      "Usage: i2c_attach <device> <addr>",
 		      cmd_i3c_i2c_attach, 3, 0),
 	SHELL_CMD_ARG(i2c_detach, &dsub_i3c_device_name,
-		      SHELL_HELP("Detach I2C device from the bus",
-				 "<device> <addr>"),
+		      "Detach I2C device from the bus\n"
+		      "Usage: i2c_detach <device> <addr>",
 		      cmd_i3c_i2c_detach, 3, 0),
 	SHELL_CMD_ARG(i2c_scan, &dsub_i3c_device_name,
-		      SHELL_HELP("Scan I2C devices",
-				 "<device>"),
+		      "Scan I2C devices\n"
+		      "Usage: i2c_scan <device>",
 		      cmd_i3c_i2c_scan, 2, 0),
 	SHELL_CMD_ARG(ccc, &sub_i3c_ccc_cmds,
-		      SHELL_HELP("Send I3C CCC",
-				 "<sub cmd>"),
+		      "Send I3C CCC\n"
+		      "Usage: ccc <sub cmd>",
 		      NULL, 3, 0),
 	SHELL_CMD_ARG(hdr, &sub_i3c_hdr_cmds,
-		      SHELL_HELP("Send I3C HDR",
-				 "<sub cmd>"),
+		      "Send I3C HDR\n"
+		      "Usage: hdr <sub cmd>",
 		      NULL, 3, 0),
 #endif /* CONFIG_I3C_CONTROLLER */
 #ifdef CONFIG_I3C_USE_IBI
 	SHELL_CMD_ARG(ibi, &sub_i3c_ibi_cmds,
-		      SHELL_HELP("Send I3C IBI",
-				 "<sub cmd>"),
+		      "Send I3C IBI\n"
+		      "Usage: ibi <sub cmd>",
 		      NULL, 3, 0),
 #endif /* CONFIG_I3C_USE_IBI */
 	SHELL_SUBCMD_SET_END /* Array terminated. */

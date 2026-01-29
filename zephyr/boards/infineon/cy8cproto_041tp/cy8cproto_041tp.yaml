@@ -15,5 +15,5 @@ toolchain:
 supported:
   - uart
   - clock_control
-  - pinctrl
+  - pin_ctrl
 vendor: infineon

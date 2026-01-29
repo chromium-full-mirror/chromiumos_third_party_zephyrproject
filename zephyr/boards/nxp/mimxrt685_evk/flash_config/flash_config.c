@@ -6,7 +6,7 @@
  */
 #include "flash_config.h"
 
-#if defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1)
+#if defined(BOOT_HEADER_ENABLE) && (BOOT_HEADER_ENABLE == 1)
 __attribute__((section(".flash_conf"), used))
 
 const flexspi_nor_config_t flexspi_config = {
@@ -135,4 +135,4 @@ const flexspi_nor_config_t flexspi_config = {
 	.flash_state_ctx = 0x07008100u,
 };
 
-#endif /* defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1) */
+#endif /* BOOT_HEADER_ENABLE */

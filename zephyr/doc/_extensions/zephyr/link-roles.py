@@ -119,8 +119,7 @@ def modulelink(default_module=None, format="blob"):
             )
 
         if module == config.link_roles_manifest_project:
-            docname = inliner.document.settings.env.docname
-            p = Path(docname)
+            p = Path(source).relative_to(inliner.document.settings.env.srcdir)
             if (
                 not any(
                     p.match(glob)

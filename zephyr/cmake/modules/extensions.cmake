@@ -3,7 +3,6 @@
 include_guard(GLOBAL)
 
 include(user_cache)
-include(yaml)
 
 # Dependencies on CMake modules from the CMake distribution.
 include(CheckCCompilerFlag)

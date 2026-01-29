@@ -415,9 +415,9 @@ const struct flash_parameters *flash_wb0x_get_parameters(
 /* Gives the total logical device size in bytes and return 0. */
 static int flash_wb0x_get_size(const struct device *dev, uint64_t *size)
 {
-	struct flash_wb0x_data *data = dev->data;
+	ARG_UNUSED(dev);
 
-	*size = (uint64_t)data->flash_size;
+	*size = (uint64_t)LL_GetFlashSize() * 1024U;
 
 	return 0;
 }

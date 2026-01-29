@@ -11,7 +11,6 @@ import textwrap
 from pathlib import Path
 
 from west.commands import WestCommand
-
 from zephyr_ext_common import ZEPHYR_BASE
 
 sys.path.append(os.fspath(Path(__file__).parent.parent))

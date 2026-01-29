@@ -551,6 +551,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x42174000 0x4000>;
 			clocks = <&clock NXP_S32_LPE_FLEXCAN_PE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -561,6 +562,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x40290000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN0_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -571,6 +573,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x40294000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN1_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -581,6 +584,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x40298000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN2_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -591,6 +595,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x4029c000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN3_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -601,6 +606,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x402a0000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN4_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -611,6 +617,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x402a4000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN5_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -621,6 +628,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x402a8000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN6_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -631,6 +639,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x402ac000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN7_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -641,6 +650,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x406b0000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN8_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -651,6 +661,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x406b4000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN9_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -661,6 +672,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x406ac000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN10_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -671,6 +683,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x4089c000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN11_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -681,6 +694,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x408a0000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN12_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -691,6 +705,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x408a4000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN13_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -701,6 +716,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x408a8000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN14_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -711,6 +727,7 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x408ac000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN15_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
@@ -721,78 +738,10 @@
 			compatible = "nxp,flexcan-fd", "nxp,flexcan";
 			reg = <0x408b0000 0x4000>;
 			clocks = <&clock NXP_S32_FLEXCAN16_PE_NOGATE_CLK>;
+			clk-source = <0>;
 			number-of-mb = <96>;
 			number-of-mb-fd = <21>;
 			interrupt-names = "ored", "ored_0_96_mb";
-		};
-
-		lpe_lpi2c: i2c@42178000 {
-			compatible = "nxp,lpi2c";
-			reg = <0x42178000 0x4000>;
-			clocks = <&clock NXP_S32_LPE_LPI2C_CLK>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
-		lpi2c0: i2c@400d4000 {
-			compatible = "nxp,lpi2c";
-			reg = <0x400d4000 0x4000>;
-			clocks = <&clock NXP_S32_LPI2C0_CLK>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
-		lpi2c1: i2c@406bc000 {
-			compatible = "nxp,lpi2c";
-			reg = <0x406bc000 0x4000>;
-			clocks = <&clock NXP_S32_LPI2C1_CLK>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
-		lpi2c2: i2c@406c0000 {
-			compatible = "nxp,lpi2c";
-			reg = <0x406c0000 0x4000>;
-			clocks = <&clock NXP_S32_LPI2C2_CLK>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
-		lpi2c3: i2c@408b4000 {
-			compatible = "nxp,lpi2c";
-			reg = <0x408b4000 0x4000>;
-			clocks = <&clock NXP_S32_LPI2C3_CLK>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			status = "disabled";
-		};
-
-		lpe_ftm: ftm@42158000 {
-			compatible = "nxp,ftm-pwm";
-			reg = <0x42158000 0x4000>;
-			clocks = <&clock NXP_S32_LPE_FTM_IPG_CLK>;
-			prescaler = <1>;
-			#pwm-cells = <3>;
-			status = "disabled";
-		};
-
-		lpe_swt: watchdog@4207c000 {
-			compatible = "nxp,s32-swt";
-			reg = <0x4207c000 0x4000>;
-			clocks = <&clock NXP_S32_SAFE_CLK>;
-			service-mode = "fixed";
-			status = "disabled";
-		};
-
-		swt_startup: watchdog@404a8000 {
-			compatible = "nxp,s32-swt";
-			reg = <0x404a8000 0x4000>;
-			clocks = <&clock NXP_S32_SWT_STARTUP_IPG_COUNTER_CLK>;
-			service-mode = "fixed";
 			status = "disabled";
 		};
 
@@ -815,176 +764,6 @@
 			reg = <0x4213c000 0x4000>;
 			#io-channel-cells = <1>;
 			status = "disabled";
-		};
-
-		emios0: emios@406a0000 {
-			compatible = "nxp,s32-emios";
-			reg = <0x406a0000 0x4000>;
-			clocks = <&clock NXP_S32_EMIOS0_IPG_CLK>;
-			interrupt-names = "0_5", "0_4", "0_3",
-					  "0_2", "0_1", "0_0";
-			internal-cnt = <0xFFFFFF>;
-			global-timebase-provider = <&emios0>;
-			status = "disabled";
-
-			master_bus {
-				emios0_bus_a: emios0_bus_a {
-					channel = <23>;
-					bus-type = "BUS_A";
-					channel-mask = <0x07FFFFF>;
-					status = "disabled";
-				};
-
-				emios0_bus_b: emios0_bus_b {
-					channel = <0>;
-					bus-type = "BUS_B";
-					channel-mask = <0x00000FE>;
-					status = "disabled";
-				};
-
-				emios0_bus_c: emios0_bus_c {
-					channel = <8>;
-					bus-type = "BUS_C";
-					channel-mask = <0x0000FE00>;
-					status = "disabled";
-				};
-
-				emios0_bus_d: emios0_bus_d {
-					channel = <16>;
-					bus-type = "BUS_D";
-					channel-mask = <0x00FE0000>;
-					status = "disabled";
-				};
-
-				emios0_bus_f: emios0_bus_f {
-					channel = <22>;
-					bus-type = "BUS_F";
-					channel-mask = <0x0BFFFFF>;
-					status = "disabled";
-				};
-			};
-
-			pwm {
-				compatible = "nxp,s32-emios-pwm";
-				#pwm-cells = <3>;
-				status = "disabled";
-			};
-		};
-
-		emios1: emios@40890000 {
-			compatible = "nxp,s32-emios";
-			reg = <0x40890000 0x4000>;
-			clocks = <&clock NXP_S32_EMIOS1_IPG_CLK>;
-			interrupt-names = "0_5", "0_4", "0_3",
-					  "0_2", "0_1", "0_0";
-			internal-cnt = <0xFFFFFF>;
-			global-timebase-provider = <&emios1>;
-			status = "disabled";
-
-			master_bus {
-				emios1_bus_a: emios1_bus_a {
-					channel = <23>;
-					bus-type = "BUS_A";
-					channel-mask = <0x07FFFFF>;
-					status = "disabled";
-				};
-
-				emios1_bus_b: emios1_bus_b {
-					channel = <0>;
-					bus-type = "BUS_B";
-					channel-mask = <0x00000FE>;
-					status = "disabled";
-				};
-
-				emios1_bus_c: emios1_bus_c {
-					channel = <8>;
-					bus-type = "BUS_C";
-					channel-mask = <0x0000FE00>;
-					status = "disabled";
-				};
-
-				emios1_bus_d: emios1_bus_d {
-					channel = <16>;
-					bus-type = "BUS_D";
-					channel-mask = <0x00FE0000>;
-					status = "disabled";
-				};
-
-				emios1_bus_f: emios1_bus_f {
-					channel = <22>;
-					channel-mask = <0x0BFFFFF>;
-					bus-type = "BUS_F";
-					status = "disabled";
-				};
-			};
-
-			pwm {
-				compatible = "nxp,s32-emios-pwm";
-				#pwm-cells = <3>;
-				status = "disabled";
-			};
-		};
-
-		emios2: emios@40894000 {
-			compatible = "nxp,s32-emios";
-			reg = <0x40894000 0x4000>;
-			clocks = <&clock NXP_S32_EMIOS2_IPG_CLK>;
-			interrupt-names = "0_5", "0_4", "0_3",
-					  "0_2", "0_1", "0_0";
-			internal-cnt = <0xFFFFFF>;
-			global-timebase-provider = <&emios2>;
-			status = "disabled";
-
-			master_bus {
-				emios2_bus_a: emios2_bus_a {
-					channel = <23>;
-					bus-type = "BUS_A";
-					channel-mask = <0x07FFFFF>;
-					status = "disabled";
-				};
-
-				emios2_bus_b: emios2_bus_b {
-					channel = <0>;
-					bus-type = "BUS_B";
-					channel-mask = <0x00000FE>;
-					status = "disabled";
-				};
-
-				emios2_bus_c: emios2_bus_c {
-					channel = <8>;
-					bus-type = "BUS_C";
-					channel-mask = <0x0000FE00>;
-					status = "disabled";
-				};
-
-				emios2_bus_d: emios2_bus_d {
-					channel = <16>;
-					bus-type = "BUS_D";
-					channel-mask = <0x00FE0000>;
-					status = "disabled";
-				};
-
-				emios2_bus_f: emios2_bus_f {
-					channel = <22>;
-					bus-type = "BUS_F";
-					channel-mask = <0x0BFFFFF>;
-					status = "disabled";
-				};
-			};
-
-			pwm {
-				compatible = "nxp,s32-emios-pwm";
-				#pwm-cells = <3>;
-				status = "disabled";
-			};
-		};
-
-		canxl: can@6a01b000 {
-			compatible = "nxp,s32-canxl";
-			reg = <0x6a01b000 0x1000>;
-			reg-names = "sic";
-			status = "disabled";
-			clocks = <&clock NXP_S32_CAN_PE_CLK>;
 		};
 	};
 };

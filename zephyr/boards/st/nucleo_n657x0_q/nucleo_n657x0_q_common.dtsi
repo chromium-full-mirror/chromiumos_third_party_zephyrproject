@@ -314,7 +314,3 @@ csi_interface: &dcmipp {
 		csi_ep_in: endpoint {};
 	};
 };
-
-&rng {
-	status = "okay";
-};

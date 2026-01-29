@@ -5,7 +5,7 @@
  */
 #include "flash_config.h"
 
-#if defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1)
+#if defined(BOOT_HEADER_ENABLE) && (BOOT_HEADER_ENABLE == 1)
 __attribute__((section(".flash_conf"), used))
 
 const fc_static_platform_config_t flash_config = {
@@ -139,4 +139,4 @@ const fc_static_platform_config_t flash_config = {
 #endif
 };
 
-#endif /* defined(CONFIG_NXP_IMXRT_BOOT_HEADER) && (CONFIG_NXP_IMXRT_BOOT_HEADER == 1) */
+#endif /* BOOT_HEADER_ENABLE */

@@ -59,12 +59,11 @@ static int sbs_cmd_reg_read(const struct device *dev, uint8_t reg_addr, uint16_t
 static int sbs_cmd_reg_write(const struct device *dev, uint8_t reg_addr, uint16_t val)
 {
 	const struct sbs_gauge_config *config = dev->config;
-	uint8_t buf[3];
+	uint8_t buf[2];
 
-	buf[0] = reg_addr;
-	sys_put_le16(val, &buf[1]);
+	sys_put_le16(val, buf);
 
-	return i2c_write_dt(&config->i2c, buf, sizeof(buf));
+	return i2c_burst_write_dt(&config->i2c, reg_addr, buf, sizeof(buf));
 }
 
 static int sbs_cmd_buffer_read(const struct device *dev, uint8_t reg_addr, char *buffer,

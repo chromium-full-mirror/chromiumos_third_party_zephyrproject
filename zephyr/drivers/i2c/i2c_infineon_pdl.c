@@ -163,10 +163,6 @@ static void ifx_master_event_handler(void *callback_arg, uint32_t event)
 		k_sem_give(&data->transfer_sem);
 	}
 
-	if (data->p_target_config == NULL) {
-		return;
-	}
-
 	if (0 != (CY_SCB_I2C_SLAVE_READ_EVENT & event)) {
 		if (data->p_target_config->callbacks->read_requested) {
 			data->p_target_config->callbacks->read_requested(data->p_target_config,
@@ -322,7 +318,6 @@ static int ifx_cat1_i2c_configure(const struct device *dev, uint32_t dev_config)
 	const struct ifx_cat1_i2c_config *config = dev->config;
 	cy_en_scb_i2c_status_t rslt;
 	int ret;
-	bool is_target_mode = false;
 
 	if (dev_config != 0) {
 		switch (I2C_SPEED_GET(dev_config)) {
@@ -348,13 +343,9 @@ static int ifx_cat1_i2c_configure(const struct device *dev, uint32_t dev_config)
 
 		if (dev_config & I2C_MODE_CONTROLLER) {
 			_i2c_default_config.i2cMode = CY_SCB_I2C_MASTER;
-			is_target_mode = false;
 		} else {
 			_i2c_default_config.i2cMode = CY_SCB_I2C_SLAVE;
-			is_target_mode = true;
 		}
-	} else {
-		is_target_mode = (_i2c_default_config.i2cMode == CY_SCB_I2C_SLAVE);
 	}
 
 	/* Acquire semaphore (block I2C operation for another thread) */
@@ -365,16 +356,7 @@ static int ifx_cat1_i2c_configure(const struct device *dev, uint32_t dev_config)
 
 	_i2c_default_config.slaveAddress = data->slave_address;
 
-	if (is_target_mode) {
-		_i2c_default_config.slaveAddressMask = 0;
-		_i2c_default_config.ackGeneralAddr = false;
-	}
-
-	/* De-initialize SCB before re-configuring (required when switching modes) */
-	Cy_SCB_I2C_Disable(config->base, &data->context);
-	Cy_SCB_I2C_DeInit(config->base);
-
-	/* Configure the I2C resource */
+	/* Configure the I2C resource to be master */
 	rslt = Cy_SCB_I2C_Init(config->base, &_i2c_default_config, &data->context);
 	if (rslt != CY_SCB_I2C_SUCCESS) {
 		LOG_ERR("I2C configure failed with err 0x%x", rslt);
@@ -385,13 +367,10 @@ static int ifx_cat1_i2c_configure(const struct device *dev, uint32_t dev_config)
 #ifdef USE_I2C_SET_PERI_DIVIDER
 	_i2c_set_peri_divider(dev, CAT1_I2C_SPEED_STANDARD_HZ,
 			      (_i2c_default_config.i2cMode == CY_SCB_I2C_SLAVE));
+
 #endif
 
-#if defined(CONFIG_SOC_FAMILY_INFINEON_PSOC4)
-	Cy_SCB_I2C_Enable(config->base, &data->context);
-#else
 	Cy_SCB_I2C_Enable(config->base);
-#endif
 	irq_enable(config->irq_num);
 
 	/* Register an I2C event callback handler */
@@ -596,7 +575,7 @@ static int ifx_cat1_i2c_init(const struct device *dev)
 
 	config->irq_config_func(dev);
 
-	return ifx_cat1_i2c_configure(dev, I2C_MODE_CONTROLLER | I2C_SPEED_SET(I2C_SPEED_STANDARD));
+	return 0;
 }
 
 void _i2c_free(const struct device *dev)

@@ -5,7 +5,6 @@
 /*
  * Copyright (c) 2015-2016 Intel Corporation
  * Copyright (C) 2024 Xiaomi Corporation
- * Copyright 2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -719,18 +718,12 @@ int bt_avctp_server_register(struct bt_avctp_server *server)
 	return err;
 }
 
-void bt_avctp_init(void)
+int bt_avctp_init(void)
 {
-	static bool initialized;
-
-	if (initialized) {
-		return;
-	}
-
-	initialized = true;
-
 	LOG_DBG("Initializing AVCTP");
 	/* Locking semaphore initialized to 1 (unlocked) */
 	k_sem_init(&avctp_lock, 1, 1);
 	k_work_init_delayable(&avctp_tx_work, avctp_tx_processor);
+
+	return 0;
 }

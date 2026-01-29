@@ -9,7 +9,7 @@ Overview
 The Renesas US159 DA14531EVZ carries a `DA14531MOD`_ Bluetooth LE module
 in a `Digilent Pmod`_ |trade| form factor.
 
-.. figure:: renesas_us159_da14531evz.webp
+.. figure:: us159-da14531evz-pmod.webp
    :align: center
    :alt: Renesas US159 DA14531EVZ Pmod
 

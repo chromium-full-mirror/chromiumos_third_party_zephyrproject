@@ -2315,7 +2315,7 @@ static enum net_verdict tcp_recv(struct net_conn *net_conn,
 	if (th_flags(th) & SYN && !(th_flags(th) & ACK)) {
 		struct tcp *conn_old = ((struct net_context *)user_data)->tcp;
 
-		if (conn_old == NULL || tcp_backlog_is_full(conn_old)) {
+		if (tcp_backlog_is_full(conn_old)) {
 			/* If the connection backlog is full, ignore the SYN
 			 * packet (same behavior as on Linux). Retransmitted SYN
 			 * attempts may be successful later.
@@ -3289,7 +3289,7 @@ static enum net_verdict tcp_in(struct tcp *conn, struct net_pkt *pkt)
 			}
 		}
 #endif
-		NET_ASSERT((conn->send_data_total == 0) || (conn->send_win == 0) ||
+		NET_ASSERT((conn->send_data_total == 0) ||
 			   k_work_delayable_is_pending(&conn->send_data_timer),
 			   "conn: %p, Missing a subscription "
 				"of the send_data queue timer", conn);
@@ -4759,16 +4759,10 @@ static void close_tcp_conn(struct tcp *conn, void *user_data)
 		return;
 	}
 
-	if (conn->state == TCP_CLOSED) {
-		return;
-	}
-
 	/* net_tcp_put() will handle decrementing refcount on stack's behalf */
 	if (net_context_get_state(context) != NET_CONTEXT_LISTENING) {
 		net_tcp_put(context, true);
 	} else {
-		k_mutex_lock(&conn->lock, K_FOREVER);
-
 		if (context->conn_handler) {
 			net_conn_unregister(context->conn_handler);
 			context->conn_handler = NULL;
@@ -4776,10 +4770,7 @@ static void close_tcp_conn(struct tcp *conn, void *user_data)
 
 		if (conn->accept_cb != NULL) {
 			conn->accept_cb(conn->context, NULL, 0, -ENETDOWN, context->user_data);
-			conn->accept_cb = NULL;
 		}
-
-		k_mutex_unlock(&conn->lock);
 	}
 }
 

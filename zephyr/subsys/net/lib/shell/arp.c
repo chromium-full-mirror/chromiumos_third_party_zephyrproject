@@ -47,12 +47,13 @@ static int cmd_net_arp(const struct shell *sh, size_t argc, char *argv[])
 {
 #if defined(CONFIG_NET_ARP)
 	struct net_shell_user_data user_data;
+	int arg = 1;
 #endif
 
 	ARG_UNUSED(argc);
 
 #if defined(CONFIG_NET_ARP)
-	if (argv[1] == NULL) {
+	if (!argv[arg]) {
 		/* ARP cache content */
 		int count = 0;
 

@@ -13,8 +13,4 @@ supported:
   - adc
   - can
   - gpio
-  - pwm
-  - counter
-  - i2c
-  - watchdog
 vendor: nxp

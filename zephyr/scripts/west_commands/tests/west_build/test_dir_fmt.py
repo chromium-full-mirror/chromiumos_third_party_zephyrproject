@@ -9,7 +9,6 @@ from argparse import Namespace
 from pathlib import Path
 
 import pytest
-
 from build import Build
 
 ROOT = Path(Path.cwd().anchor)

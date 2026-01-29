@@ -36,21 +36,15 @@ static inline int z_vrfy_dai_config_set(const struct device *dev,
 					size_t size)
 {
 	uint8_t bespoke_cfg_kernel[DAI_MAX_BESPOKE_CFG_SIZE];
-	struct dai_config cfg_kernel;
 
 	if (size > DAI_MAX_BESPOKE_CFG_SIZE) {
 		return -EINVAL;
 	}
 
 	K_OOPS(K_SYSCALL_DRIVER_DAI(dev, config_set));
-	K_OOPS(k_usermode_from_copy(&cfg_kernel, cfg, sizeof(cfg_kernel)));
+	K_OOPS(k_usermode_from_copy(bespoke_cfg_kernel, bespoke_cfg, size));
 
-	if (bespoke_cfg) {
-		K_OOPS(k_usermode_from_copy(bespoke_cfg_kernel, bespoke_cfg, size));
-	}
-
-	return z_impl_dai_config_set(dev, &cfg_kernel,
-				     bespoke_cfg ? bespoke_cfg_kernel : NULL, size);
+	return z_impl_dai_config_set(dev, cfg, bespoke_cfg_kernel, size);
 }
 #include <zephyr/syscalls/dai_config_set_mrsh.c>
 
@@ -139,7 +133,7 @@ static inline int z_vrfy_dai_config_update(const struct device *dev,
 {
 	uint8_t bespoke_cfg_kernel[DAI_MAX_BESPOKE_CFG_SIZE];
 
-	if (!bespoke_cfg || size > DAI_MAX_BESPOKE_CFG_SIZE) {
+	if (size > DAI_MAX_BESPOKE_CFG_SIZE) {
 		return -EINVAL;
 	}
 

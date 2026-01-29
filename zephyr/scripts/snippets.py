@@ -31,13 +31,12 @@ import jsonschema
 # Marker type for an 'append:' configuration. Maps variables
 # to the list of values to append to them.
 Appends = Dict[str, List[str]]
-BoardRevisionAppends = Dict[str, Dict[str, List[str]]]
 
 def _new_append():
     return defaultdict(list)
 
 def _new_board2appends():
-    return defaultdict(lambda: defaultdict(_new_append))
+    return defaultdict(_new_append)
 
 @dataclass
 class Snippet:
@@ -46,7 +45,7 @@ class Snippet:
 
     name: str
     appends: Appends = field(default_factory=_new_append)
-    board2appends: Dict[str, BoardRevisionAppends] = field(default_factory=_new_board2appends)
+    board2appends: Dict[str, Appends] = field(default_factory=_new_board2appends)
 
     def process_data(self, pathobj: Path, snippet_data: dict, sysbuild: bool):
         '''Process the data in a snippet.yml file, after it is loaded into a
@@ -69,16 +68,10 @@ class Snippet:
             if board.startswith('/') and not board.endswith('/'):
                 _err(f"snippet file {pathobj}: board {board} starts with '/', so "
                      "it must end with '/' to use a regular expression")
-            for revision, appenddata in settings.get('revisions', {}).items():
-                for variable, value in appenddata.get('append', {}).items():
-                    if (sysbuild is True and variable[0:3] == 'SB_') or \
-                    (sysbuild is False and variable[0:3] != 'SB_'):
-                        self.board2appends[board][revision][variable].append(
-                            append_value(variable, value))
             for variable, value in settings.get('append', {}).items():
                 if (sysbuild is True and variable[0:3] == 'SB_') or \
                 (sysbuild is False and variable[0:3] != 'SB_'):
-                    self.board2appends[board][""][variable].append(
+                    self.board2appends[board][variable].append(
                         append_value(variable, value))
 
 class Snippets(UserDict):
@@ -180,19 +173,7 @@ if("${{BOARD}}${{BOARD_QUALIFIERS}}" MATCHES "^{board_re}$")
 # Appends for board '{board}'
 if("${{BOARD}}${{BOARD_QUALIFIERS}}" STREQUAL "{board}")
 '''
-
-        # Output board variables first then board revision variables
-        output += self.output_appends(appends[""], 1)
-
-        for revision in appends:
-            if revision != "":
-                output += f'''\
-  # Appends for revision '{revision}'
-  if("${{BOARD_REVISION}}" STREQUAL "{revision}")
-'''
-                output += self.output_appends(appends[revision], 2)
-                output += '  endif()\n'
-
+        output += self.output_appends(appends, 1)
         output += 'endif()\n'
         return output
 

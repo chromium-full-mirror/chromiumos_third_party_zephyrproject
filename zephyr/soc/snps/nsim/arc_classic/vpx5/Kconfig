@@ -3,4 +3,3 @@
 
 config SOC_SERIES_NSIM_VPX5
 	select ARC
-	select CPU_HAS_MPU

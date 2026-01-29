@@ -290,7 +290,6 @@ int pm_device_runtime_get(const struct device *dev)
 		pm->base.usage--;
 		if (domain != NULL) {
 			(void)pm_device_runtime_put(domain);
-			atomic_clear_bit(&dev->pm_base->flags, PM_DEVICE_FLAG_PD_CLAIMED);
 		}
 		goto unlock;
 	}

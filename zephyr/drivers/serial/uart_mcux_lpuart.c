@@ -1,5 +1,5 @@
 /*
- * Copyright 2017,2021,2023-2026 NXP
+ * Copyright 2017,2021,2023-2025 NXP
  * Copyright (c) 2020 Softube
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -741,22 +741,16 @@ static int mcux_lpuart_tx(const struct device *dev, const uint8_t *buf, size_t l
 
 	unsigned int key = irq_lock();
 
-	/* If a previous transfer is still in progress, the async UART API requires -EBUSY. */
+	/* Check for an ongiong transfer and abort if it is pending */
 	struct dma_status status;
 	const int get_status_result = dma_get_status(config->tx_dma_config.dma_dev,
 						     config->tx_dma_config.dma_channel,
 						     &status);
 
-	if (get_status_result < 0) {
+	if (get_status_result < 0 || status.busy) {
 		irq_unlock(key);
-		LOG_ERR("Failed to get DMA(Tx) status (%d)", get_status_result);
-		return get_status_result;
-	}
-
-	if (status.busy) {
-		irq_unlock(key);
-		LOG_DBG("UART TX busy (DMA ch %u)", config->tx_dma_config.dma_channel);
-		return -EBUSY;
+		LOG_ERR("Unable to submit UART DMA Transfer.");
+		return get_status_result < 0 ? get_status_result : -EBUSY;
 	}
 
 	int ret;
@@ -1160,14 +1154,9 @@ static int mcux_lpuart_configure_init(const struct device *dev, const struct uar
 		return -ENODEV;
 	}
 
-	ret = clock_control_configure(config->clock_dev, config->clock_subsys, NULL);
-	if (ret != 0) {
-		/* Check if error is due to lack of support */
-		if (ret != -ENOSYS) {
-			/* Real error occurred */
-			LOG_ERR("Failed to configure clock: %d", ret);
-			return ret;
-		}
+	if (clock_control_get_rate(config->clock_dev, config->clock_subsys,
+				   &clock_freq)) {
+		return -EINVAL;
 	}
 
 	LPUART_GetDefaultConfig(&uart_config);
@@ -1180,13 +1169,6 @@ static int mcux_lpuart_configure_init(const struct device *dev, const struct uar
 	ret = clock_control_on(config->clock_dev, config->clock_subsys);
 	if (ret) {
 		return ret;
-	}
-
-	ret = clock_control_get_rate(config->clock_dev, config->clock_subsys,
-								&clock_freq);
-	if (ret) {
-		LOG_ERR("Failed to get clock rate: %d", ret);
-		return -EINVAL;
 	}
 
 	LPUART_Init(config->base, &uart_config, clock_freq);

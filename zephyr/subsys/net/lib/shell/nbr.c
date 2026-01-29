@@ -16,7 +16,7 @@ static int cmd_net_nbr_rm(const struct shell *sh, size_t argc, char *argv[])
 	struct net_in6_addr addr;
 	int ret;
 
-	if (argv[1] == NULL) {
+	if (!argv[1]) {
 		PR_WARNING("Neighbor IPv6 address missing.\n");
 		return -ENOEXEC;
 	}

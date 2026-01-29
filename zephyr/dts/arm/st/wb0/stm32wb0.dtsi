@@ -24,7 +24,6 @@
 	chosen {
 		zephyr,flash-controller = &flash;
 		zephyr,bt-hci = &bt_hci_wb0;
-		zephyr,entropy = &rng;
 	};
 
 	cpus {

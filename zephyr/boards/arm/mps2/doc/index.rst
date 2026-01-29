@@ -7,7 +7,4 @@ the links below to get more information about each board target.
 * :ref:`mps2_armv6m_board`
 * :ref:`mps2_armv7m_board`
 
-Supported Features
-===================
-
 .. zephyr:board-supported-hw::

@@ -31,17 +31,6 @@ LOG_MODULE_REGISTER(nxp_sar_adc, CONFIG_ADC_LOG_LEVEL);
 #define NXP_SAR_ADC_HAS_GROUP2_REGS 0
 #endif
 
-/* Some NXP SAR ADC variants don't implement MCR[ADCLKSEL].
- * Guard both the mask and the value macro so the driver can compile across SoCs.
- */
-#if defined(ADC_MCR_ADCLKSEL_MASK) && defined(ADC_MCR_ADCLKSEL)
-#define NXP_SAR_ADC_MCR_ADCLKSEL_MASK ADC_MCR_ADCLKSEL_MASK
-#define NXP_SAR_ADC_MCR_ADCLKSEL(x)   ADC_MCR_ADCLKSEL(x)
-#else
-#define NXP_SAR_ADC_MCR_ADCLKSEL_MASK 0U
-#define NXP_SAR_ADC_MCR_ADCLKSEL(x)   0U
-#endif
-
 struct nxp_sar_adc_config {
 	ADC_Type *base;
 	const struct device *clock_dev;
@@ -351,8 +340,8 @@ static void adc_context_update_buffer_pointer(struct adc_context *ctx, bool repe
 	}
 }
 
-static int nxp_sar_adc_read_async(const struct device *dev, const struct adc_sequence *sequence,
-				  struct k_poll_signal *async)
+/* Configure sequence resolution, buffer, oversampling. Then submit to context. */
+static int nxp_sar_adc_read(const struct device *dev, const struct adc_sequence *sequence)
 {
 	struct nxp_sar_adc_data *data = dev->data;
 
@@ -408,7 +397,7 @@ static int nxp_sar_adc_read_async(const struct device *dev, const struct adc_seq
 	}
 #endif
 
-	adc_context_lock(&data->ctx, async ? true : false, async);
+	adc_context_lock(&data->ctx, false, NULL);
 	data->buffer = sequence->buffer;
 	adc_context_start_read(&data->ctx, sequence);
 	int err = adc_context_wait_for_completion(&data->ctx);
@@ -416,11 +405,6 @@ static int nxp_sar_adc_read_async(const struct device *dev, const struct adc_seq
 	adc_context_release(&data->ctx, err);
 
 	return err;
-}
-
-static int nxp_sar_adc_read(const struct device *dev, const struct adc_sequence *sequence)
-{
-	return nxp_sar_adc_read_async(dev, sequence, NULL);
 }
 
 /* Configure an ADC channel from a struct 'adc_dt_spec'. Mapping from logical
@@ -476,9 +460,9 @@ static int nxp_sar_adc_init(const struct device *dev)
 	}
 
 	base->MCR = ((base->MCR & ~(ADC_MCR_OWREN_MASK | ADC_MCR_ACKO_MASK |
-		      NXP_SAR_ADC_MCR_ADCLKSEL_MASK)) | ADC_MCR_OWREN(config->overwrite ? 1U : 0U) |
+		      ADC_MCR_ADCLKSEL_MASK)) | ADC_MCR_OWREN(config->overwrite ? 1U : 0U) |
 		      ADC_MCR_ACKO(config->auto_clock_off ? 1U : 0U) |
-		      NXP_SAR_ADC_MCR_ADCLKSEL(config->conv_clk_freq_div_factor));
+		      ADC_MCR_ADCLKSEL(config->conv_clk_freq_div_factor));
 
 	/* Disable global and all channels' interrupt. */
 	base->IMR = 0U;
@@ -534,9 +518,6 @@ static int nxp_sar_adc_init(const struct device *dev)
 static const struct adc_driver_api nxp_sar_adc_api = {
 	.channel_setup = nxp_sar_adc_channel_setup,
 	.read = nxp_sar_adc_read,
-#ifdef CONFIG_ADC_ASYNC
-	.read_async = nxp_sar_adc_read_async,
-#endif
 };
 
 #if IS_ENABLED(CONFIG_ADC_NXP_SAR_ADC_INTERRUPT)

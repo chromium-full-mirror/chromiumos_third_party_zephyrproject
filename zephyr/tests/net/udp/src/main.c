@@ -61,7 +61,9 @@ struct net_udp_context {
 
 int net_udp_dev_init(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	struct net_udp_context *net_udp_context = dev->data;
+
+	net_udp_context = net_udp_context;
 
 	return 0;
 }

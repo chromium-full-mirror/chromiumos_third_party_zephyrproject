@@ -7,8 +7,6 @@ Zephyr development and evolution is a group effort, and to simplify
 maintenance and enhancements there are some general policies that should
 be followed when developing a new capability or interface.
 
-All public API must be documented using Doxygen. See :ref:`doxygen_style` for details.
-
 Using Callbacks
 ***************
 
@@ -101,9 +99,9 @@ practices should be followed.
   other content the feature-specific code should be conditionally
   processed using ``#ifdef CONFIG_MYFEATURE``.
 
-See :ref:`doxygen_conditional_code` for details on
-how to ensure conditional code is visible to Doxygen and included in the
-public API documentation.
+The Kconfig flag used to enable the feature should be added to the
+``PREDEFINED`` variable in :file:`doc/zephyr.doxyfile.in` to ensure the
+conditional API and functions appear in generated documentation.
 
 Return Codes
 ************

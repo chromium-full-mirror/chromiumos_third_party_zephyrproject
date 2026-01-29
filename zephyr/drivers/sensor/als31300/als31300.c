@@ -198,8 +198,7 @@ static DEVICE_API(sensor, als31300_api) = {
 static int als31300_configure_device(const struct device *dev)
 {
 	const struct als31300_config *cfg = dev->config;
-	/* All bits to 0 = Active Mode */
-	uint8_t reg27_value[5] = {ALS31300_REG_VOLATILE_27, 0x00, 0x00, 0x00, 0x00};
+	uint32_t reg27_value = 0x00000000; /* All bits to 0 = Active Mode */
 	int ret;
 
 	LOG_INF("Configuring ALS31300 to Active Mode...");
@@ -210,7 +209,8 @@ static int als31300_configure_device(const struct device *dev)
 	 * Bits [6:4] = 0 → Low-power count = 0.5ms (doesn't matter in Active Mode)
 	 * Bits [31:7] = 0 → Reserved (should be 0)
 	 */
-	ret = i2c_write_dt(&cfg->i2c, reg27_value, sizeof(reg27_value));
+	ret = i2c_burst_write_dt(&cfg->i2c, ALS31300_REG_VOLATILE_27, (uint8_t *)&reg27_value,
+				 sizeof(reg27_value));
 	if (ret < 0) {
 		LOG_ERR("Failed to write to register 0x27: %d", ret);
 		return ret;

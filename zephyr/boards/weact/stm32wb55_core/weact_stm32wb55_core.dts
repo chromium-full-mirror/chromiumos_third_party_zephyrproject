@@ -27,7 +27,7 @@
 		compatible = "gpio-leds";
 
 		blue_led: led_0 {
-			gpios = <&gpioe 4 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
 			label = "User LED";
 		};
 	};
@@ -37,7 +37,7 @@
 
 		boot_button: button_0 {
 			label = "BOOT";
-			gpios = <&gpioh 3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+			gpios = <&gpioe 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 			zephyr,code = <INPUT_KEY_0>;
 		};
 	};

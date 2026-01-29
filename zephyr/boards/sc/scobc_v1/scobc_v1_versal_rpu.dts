@@ -6,7 +6,6 @@
 
 /dts-v1/;
 #include <arm/xilinx/versal_rpu.dtsi>
-#include <freq.h>
 
 / {
 	model = "SC-OBC Module V1 Versal Cortex-R5F";
@@ -22,10 +21,16 @@
 &uart1 {
 	status = "okay";
 	current-speed = <115200>;
-	clock-frequency = <DT_FREQ_M(100)>;
+	clock-frequency = <100000000>;
+};
+
+&uart0 {
+	status = "okay";
+	current-speed = <115200>;
+	clock-frequency = <100000000>;
 };
 
 &ttc0 {
 	status = "okay";
-	clock-frequency = <DT_FREQ_M(150)>;
+	clock-frequency = <150000000>;
 };

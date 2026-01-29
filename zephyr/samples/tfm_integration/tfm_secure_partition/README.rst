@@ -33,8 +33,7 @@ files inside "partition".
 Building and Running
 ********************
 
-This sample can be built with either :kconfig:option:`CONFIG_TFM_IPC` or :kconfig:option:`CONFIG_TFM_SFN`,
-since it contains code for both.
+This sample can be built with or without CONFIG_TFM_IPC, since it contains code for both.
 
 On Target
 =========

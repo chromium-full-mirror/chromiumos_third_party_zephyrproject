@@ -89,8 +89,6 @@ static psa_status_t tfm_dp_secret_digest_ipc(psa_msg_t *msg)
 				    (void *)msg->handle);
 }
 
-#if CONFIG_TFM_SPM_BACKEND_IPC == 1
-#pragma message "Dummy partition SPM backend: IPC"
 static void dp_signal_handle(psa_signal_t signal, dp_func_t pfn)
 {
 	psa_status_t status;
@@ -129,15 +127,3 @@ psa_status_t tfm_dp_req_mngr_init(void)
 
 	return PSA_ERROR_SERVICE_FAILURE;
 }
-#elif CONFIG_TFM_SPM_BACKEND_SFN == 1
-#pragma message "Dummy partition SPM backend: SFN"
-psa_status_t tfm_dp_secret_digest_sfn(const psa_msg_t *msg)
-{
-	if (msg->type == PSA_IPC_CONNECT || msg->type == PSA_IPC_DISCONNECT) {
-		return PSA_SUCCESS;
-	}
-	return tfm_dp_secret_digest_ipc((psa_msg_t *)msg);
-}
-#else
-#error "No SPM backend selected"
-#endif

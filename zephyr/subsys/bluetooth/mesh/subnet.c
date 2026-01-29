@@ -22,6 +22,7 @@
 #include "common/bt_str.h"
 
 #include "crypto.h"
+#include "mesh.h"
 #include "net.h"
 #include "lpn.h"
 #include "friend.h"

@@ -218,10 +218,8 @@ static void configure_rng(void)
 #ifdef STM32_CONDRST_SUPPORT
 	uint32_t desired_nist_cfg = DT_INST_PROP_OR(0, nist_config, 0U);
 	uint32_t desired_htcr = DT_INST_PROP_OR(0, health_test_config, 0U);
-	uint32_t desired_nscr = DT_INST_PROP_OR(0, noise_source_control, 0U);
 	uint32_t cur_nist_cfg = 0U;
 	uint32_t cur_htcr = 0U;
-	uint32_t cur_nscr = 0U;
 
 #if DT_INST_NODE_HAS_PROP(0, nist_config)
 	/*
@@ -244,32 +242,27 @@ static void configure_rng(void)
 	cur_htcr = LL_RNG_GetHealthConfig(rng);
 #endif /* health_test_config */
 
-#if DT_INST_NODE_HAS_PROP(0, noise_source_control)
-	cur_nscr = LL_RNG_GetNoiseConfig(rng);
-#endif /* noise_source_control */
-
-	if (cur_nist_cfg != desired_nist_cfg || cur_htcr != desired_htcr ||
-	    cur_nscr != desired_nscr) {
+	if (cur_nist_cfg != desired_nist_cfg || cur_htcr != desired_htcr) {
 		stm32_reg_modify_bits(&rng->CR, cur_nist_cfg, desired_nist_cfg | RNG_CR_CONDRST);
 
 #if DT_INST_NODE_HAS_PROP(0, health_test_config)
 #if DT_INST_NODE_HAS_PROP(0, health_test_magic)
-		/* On certain series, a magic value must be written first as
-		 * health configuration before the actual configuration value.
-		 */
 		LL_RNG_SetHealthConfig(rng, DT_INST_PROP(0, health_test_magic));
 #endif /* health_test_magic */
 		LL_RNG_SetHealthConfig(rng, desired_htcr);
 #endif /* health_test_config */
 
-#if DT_INST_NODE_HAS_PROP(0, noise_source_control)
-		LL_RNG_SetNoiseConfig(rng, DT_INST_PROP(0, noise_source_control));
-#endif /* noise_source_control */
-
+#if defined(CONFIG_SOC_SERIES_STM32L4X)
+		LL_RNG_ResetConditioningResetBit(rng);
+		/* Wait for conditioning reset process to be completed */
+		while (LL_RNG_IsResetConditioningBitSet(rng) == 1) {
+		}
+#else
 		LL_RNG_DisableCondReset(rng);
 		/* Wait for conditioning reset process to be completed */
 		while (LL_RNG_IsEnabledCondReset(rng) == 1) {
 		}
+#endif /* CONFIG_SOC_SERIES_STM32L4X */
 	}
 #endif /* STM32_CONDRST_SUPPORT */
 
@@ -319,14 +312,23 @@ static int recover_seed_error(RNG_TypeDef *rng)
 {
 	uint32_t count_timeout = 0;
 
-	LL_RNG_EnableCondReset(rng);
-	LL_RNG_DisableCondReset(rng);
+#if defined(CONFIG_SOC_SERIES_STM32L4X)
+		LL_RNG_SetConditioningResetBit(rng);
+		LL_RNG_ResetConditioningResetBit(rng);
+#else
+		LL_RNG_EnableCondReset(rng);
+		LL_RNG_DisableCondReset(rng);
+#endif /* CONFIG_SOC_SERIES_STM32L4X */
 
 	/* When reset process is done cond reset bit is read 0
 	 * This typically takes: 2 AHB clock cycles + 2 RNG clock cycles.
 	 */
 
+#if defined(CONFIG_SOC_SERIES_STM32L4X)
+	while (LL_RNG_IsResetConditioningBitSet(rng) ||
+#else
 	while (LL_RNG_IsEnabledCondReset(rng) ||
+#endif /* CONFIG_SOC_SERIES_STM32L4X */
 		ll_rng_is_active_seis(rng) ||
 		ll_rng_is_active_secs(rng)) {
 		count_timeout++;
@@ -951,5 +953,5 @@ DEVICE_DT_INST_DEFINE(0,
 		    entropy_stm32_rng_init,
 		    PM_DEVICE_DT_INST_GET(0),
 		    &entropy_stm32_rng_data, &entropy_stm32_rng_config,
-		    STM32_TRNG_INIT_LEVEL, CONFIG_ENTROPY_INIT_PRIORITY,
+		    PRE_KERNEL_1, CONFIG_ENTROPY_INIT_PRIORITY,
 		    &entropy_stm32_rng_api);

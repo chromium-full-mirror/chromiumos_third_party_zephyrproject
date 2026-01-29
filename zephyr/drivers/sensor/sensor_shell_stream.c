@@ -90,8 +90,6 @@ int cmd_sensor_stream(const struct shell *sh, size_t argc, char *argv[])
 		iodev_sensor_shell_trigger.trigger = SENSOR_TRIG_FIFO_FULL;
 	} else if (strcmp("tap", argv[3]) == 0) {
 		iodev_sensor_shell_trigger.trigger = SENSOR_TRIG_TAP;
-	} else if (strcmp("timer", argv[3]) == 0) {
-		iodev_sensor_shell_trigger.trigger = SENSOR_TRIG_TIMER;
 	} else {
 		shell_error(sh, "Invalid trigger (%s)", argv[3]);
 		return -EINVAL;

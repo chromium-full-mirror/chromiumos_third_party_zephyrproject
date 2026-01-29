@@ -1610,8 +1610,6 @@ flagged.
         "STACK_SIZE",  # Used as an example in the Kconfig docs
         "STD_CPP",  # Referenced in CMake comment
         "TEST1",
-        "TFM_SPM_BACKEND_IPC",  # Used in TFM sample dummy partition - belongs to TFM
-        "TFM_SPM_BACKEND_SFN",  # Used in TFM sample dummy partition - belongs to TFM
         # Defined in modules/hal_nxp/mcux/mcux-sdk-ng/basic.cmake.
         # It is used by MCUX SDK cmake functions to add content
         # based on current toolchain.
@@ -2481,11 +2479,9 @@ class Ruff(ComplianceTest):
     doc = "Check python files with ruff."
 
     def run(self):
-        if (ruff := shutil.which("ruff")) is None:
-            raise FileNotFoundError("ruff is not installed")
         try:
             subprocess.run(
-                f"{ruff} check --output-format=json",
+                "ruff check --output-format=json",
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
@@ -2493,23 +2489,12 @@ class Ruff(ComplianceTest):
                 cwd=GIT_TOP,
             )
         except subprocess.CalledProcessError as ex:
-            try:
-                output = ex.output.decode("utf-8")
-            except UnicodeDecodeError as exc:
-                print("Decode error:", exc)
-                raise
-            try:
-                messages = json.loads(output)
-            except json.decoder.JSONDecodeError:
-                print(
-                    "Cannot parse output from ruff check, output is not valid JSON format:\n"
-                    f"{output}"
-                )
-                raise
+            output = ex.output.decode("utf-8")
+            messages = json.loads(output)
             for m in messages:
                 self.fmtd_failure(
                     "error",
-                    f'Python lint error ({m.get("code")}) see {m.get("url")} ',
+                    f'Python lint error ({m.get("code")}) see {m.get("url")}',
                     m.get("filename"),
                     line=m.get("location", {}).get("row"),
                     col=m.get("location", {}).get("column"),
@@ -2524,7 +2509,7 @@ class Ruff(ComplianceTest):
 
             try:
                 subprocess.run(
-                    f"{ruff} format --force-exclude --diff {file}",
+                    f"ruff format --force-exclude --diff {file}",
                     check=True,
                     shell=True,
                     cwd=GIT_TOP,

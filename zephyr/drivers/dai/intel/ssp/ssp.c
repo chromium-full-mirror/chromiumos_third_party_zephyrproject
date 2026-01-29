@@ -859,7 +859,7 @@ static void dai_ssp_pm_runtime_dis_ssp_power(struct dai_intel_ssp *dp, uint32_t 
 static void dai_ssp_program_channel_map(struct dai_intel_ssp *dp,
 		const struct dai_config *cfg, uint32_t ssp_index, const void *spec_config)
 {
-#if defined(CONFIG_SOC_ACE20_LNL)
+#if defined(CONFIG_SOC_INTEL_ACE20_LNL)
 	ARG_UNUSED(spec_config);
 	uint16_t pcmsycm = cfg->link_config;
 	 /* Set upper slot number from configuration */
@@ -918,7 +918,7 @@ static void dai_ssp_program_channel_map(struct dai_intel_ssp *dp,
 	ARG_UNUSED(cfg);
 	ARG_UNUSED(ssp_index);
 	ARG_UNUSED(spec_config);
-#endif /* CONFIG_SOC_ACE20_LNL */
+#endif /* CONFIG_SOC_INTEL_ACE20_LNL */
 }
 
 /* empty SSP transmit FIFO */
@@ -2549,17 +2549,12 @@ static const struct dai_properties *dai_ssp_get_properties(const struct device *
 }
 
 static int dai_ssp_get_properties_copy(const struct device *dev,
-				       enum dai_dir dir, int stream_id,
-				       struct dai_properties *prop)
+				enum dai_dir dir, int stream_id, struct dai_properties *prop)
 {
 	const struct dai_properties *kernel_prop = dai_ssp_get_properties(dev, dir, stream_id);
 
 	if (!prop) {
 		return -EINVAL;
-	}
-
-	if (!kernel_prop) {
-		return -ENOENT;
 	}
 
 	memcpy(prop, kernel_prop, sizeof(*kernel_prop));

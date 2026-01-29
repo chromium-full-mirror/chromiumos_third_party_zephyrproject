@@ -115,7 +115,9 @@ struct net_test_context {
 
 int net_test_init(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	struct net_test_context *net_test_context = dev->data;
+
+	net_test_context = net_test_context;
 
 	return 0;
 }

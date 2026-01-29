@@ -9,11 +9,6 @@
 #include <stdlib.h>
 #include "tests.h"
 
-#ifndef CONFIG_INTEL_ADSP_IPC_OLD_INTERFACE
-#include <zephyr/ipc/ipc_service.h>
-#include <zephyr/ipc/backends/intel_adsp_host_ipc.h>
-#endif
-
 #ifdef CONFIG_INTEL_ADSP_IPC_OLD_INTERFACE
 
 static volatile uint32_t old_host_dt;
@@ -32,15 +27,15 @@ struct intel_adsp_ipc_ept_priv_data test_priv_data;
 
 void clock_ipc_receive_cb(const void *data, size_t len, void *priv)
 {
-	struct intel_adsp_ipc_ept_priv_data *tpd =
-		(struct intel_adsp_ipc_ept_priv_data *)priv;
-	const uint32_t *msg = (const uint32_t *)data;
+	if (len == INTEL_ADSP_IPC_CB_MSG) {
+		const struct intel_adsp_ipc_msg *msg = (const struct intel_adsp_ipc_msg *)data;
+		struct intel_adsp_ipc_ept_priv_data *tpd =
+			(struct intel_adsp_ipc_ept_priv_data *)priv;
 
-	zassert_equal(len, sizeof(uint32_t) * 2, "unexpected IPC message length");
-	zassert_not_null(data, "IPC payload pointer is NULL");
+		tpd->priv = (void *)msg->data;
 
-	/* Store returned timestamp from the extended payload word. */
-	tpd->priv = (void *)(uintptr_t)msg[1];
+		tpd->cb_ret = INTEL_ADSP_IPC_CB_RET_OKAY;
+	}
 }
 
 struct ipc_ept_cfg clock_ipc_ept_cfg = {

@@ -25,10 +25,13 @@ config MIPI_DBI_STM32_FMC_MEM_BARRIER
 if DISPLAY
 
 choice ST7789V_PIXEL_FORMAT
-	default ST7789V_RGB565X
+	default ST7789V_BGR565
 endchoice
 
 endif # DISPLAY
+
+config INPUT
+	default y if LVGL
 
 if INPUT
 

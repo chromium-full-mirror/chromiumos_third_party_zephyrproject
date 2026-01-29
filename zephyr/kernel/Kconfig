@@ -717,12 +717,6 @@ config TIMESLICE_PER_THREAD
 	  a per-thread basis, with an application callback invoked when
 	  a thread reaches the end of its timeslice.
 
-config TIMER_OBSERVER
-	bool "Support extension points for k_timer lifecycle"
-	help
-	  Adds iterable‑section support for observing k_timer events.
-	  Supports extending timer behavior without kernel changes.
-
 endmenu
 
 menu "Other Kernel Object Options"
@@ -1166,9 +1160,8 @@ endif # BOOTARGS
 endmenu
 
 config KERNEL_NO_LTO
-	bool
+	bool "Build selected kernel core files without LTO"
 	depends on LTO
-	depends on XIP
 	help
 	  Some SoCs require kernel code to be placed in RAM, which makes link-time
 	  optimization (LTO) unsuitable for these files (-fno-lto). Disabling LTO
@@ -1177,6 +1170,16 @@ config KERNEL_NO_LTO
 
 	  Running kernel code from RAM can improve execution performance, especially
 	  for timing-critical routines or context switch paths.
+
+if KERNEL_NO_LTO
+config KERNEL_LTO_ALLOWLIST
+	string "List of kernel source files to keep LTO"
+	help
+	  List of kernel source filenames that should retain LTO even when
+	  CONFIG_KERNEL_NO_LTO is enabled.
+	  Example: CONFIG_KERNEL_LTO_ALLOWLIST="init.c errno.c fatal.c"
+
+endif # KERNEL_NO_LTO
 
 rsource "Kconfig.device"
 rsource "Kconfig.vm"

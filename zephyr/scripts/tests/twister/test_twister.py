@@ -15,7 +15,6 @@ import scl
 from twisterlib.error import ConfigurationError
 from twisterlib.testplan import TwisterConfigParser
 
-# pylint: disable=no-name-in-module
 from . import ZEPHYR_BASE
 
 
@@ -76,10 +75,7 @@ def test_testsuite_config_files():
 
     # Check that all conf files have been assembled in the correct order
     assert ";".join(scenario["extra_conf_files"]) == \
-        "conf3;conf4;conf7;conf8"
-
-    assert ";".join(scenario["conf_files"]) == \
-        "conf1;conf2;conf5;conf6"
+        "conf1;conf2;conf3;conf4;conf5;conf6;conf7;conf8"
 
     # Check that all DTC overlay files have been assembled in the correct order
     assert ";".join(scenario["extra_dtc_overlay_files"]) == \

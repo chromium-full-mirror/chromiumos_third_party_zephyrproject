@@ -147,7 +147,7 @@ static int ierb_unlock(const struct device *dev)
 
 #ifdef CONFIG_SOC_MIMX9596
 /* Set LDID */
-static void ierb_init(const struct device *dev)
+static int ierb_init(const struct device *dev)
 {
 	uintptr_t base = DEVICE_MMIO_NAMED_GET(dev, ierb);
 
@@ -173,6 +173,8 @@ static void ierb_init(const struct device *dev)
 	sys_write32(6, base + IERB_VFAUXR(5));
 	/* NETC TIMER */
 	sys_write32(7, base + IERB_T0FAUXR);
+
+	return 0;
 }
 
 static int netcmix_init(const struct device *dev)
@@ -188,9 +190,9 @@ static int netcmix_init(const struct device *dev)
 	return 0;
 }
 #elif defined(CONFIG_SOC_MIMX94398)
-static void ierb_init(const struct device *dev)
+static int ierb_init(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	return 0;
 }
 
 
@@ -238,7 +240,10 @@ static int eth_nxp_imx_netc_blk_init(const struct device *dev)
 		}
 	}
 
-	ierb_init(dev);
+	if (ierb_init(dev) != 0) {
+		LOG_ERR("Failed to initialize IERB");
+		return -EIO;
+	}
 
 	ret = ierb_lock(dev);
 	if (ret) {

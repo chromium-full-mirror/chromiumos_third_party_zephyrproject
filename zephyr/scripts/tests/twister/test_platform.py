@@ -191,12 +191,10 @@ def test_generate_platforms(
         'm0/boards/zephyr/p1/board.yml': """\
 boards:
   - name: p1e1
-    full_name: p1e1
     vendor: zephyr
     socs:
       - name: s1
   - name: p1e2
-    full_name: p1e2
     vendor: zephyr
     socs:
       - name: s1
@@ -213,7 +211,6 @@ variants:
         'm0/boards/zephyr/p2/board.yml': """\
 boards:
   - name: p2
-    full_name: p2
     vendor: zephyr
     socs:
       - name: s1
@@ -229,7 +226,6 @@ testing:
         'm0/boards/arm/p3/board.yml': """\
 board:
   name: p3
-  full_name: p3
   vendor: arm
   revision:
     format: letter
@@ -300,7 +296,6 @@ identifier: p2/s1/v1
 boards:
   - extend: p3
   - name: p4
-    full_name: p4
     vendor: misc
     socs:
       - name: s1

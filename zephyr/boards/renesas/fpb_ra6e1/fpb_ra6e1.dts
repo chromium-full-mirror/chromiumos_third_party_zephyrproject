@@ -93,6 +93,10 @@
 	status = "okay";
 };
 
+&subclk {
+	status = "okay";
+};
+
 &pll {
 	clocks = <&hoco>;
 	div = <2>;

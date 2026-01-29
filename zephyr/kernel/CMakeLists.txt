@@ -197,7 +197,7 @@ endif()
 
 # Optionally build kernel sources without LTO
 if(CONFIG_KERNEL_NO_LTO)
-  set_target_properties(kernel PROPERTIES LTO 0)
+  include(${CMAKE_CURRENT_LIST_DIR}/kernel_no_lto.cmake)
 endif()
 
 add_dependencies(kernel zephyr_generated_headers)

@@ -1,4 +1,4 @@
-.. zephyr:board:: v2m_musca_s1
+.. _v2m_musca_s1_board:
 
 ARM V2M Musca-S1
 ################
@@ -69,7 +69,33 @@ The v2m_musca_s1 board provides the following user push buttons:
 Supported Features
 ===================
 
-.. zephyr:board-supported-hw::
+The v2m_musca_s1 board configuration supports the following hardware features:
+
++-----------+------------+-------------------------------------+
+| Interface | Controller | Driver/Component                    |
++===========+============+=====================================+
+| NVIC      | on-chip    | nested vector interrupt controller  |
++-----------+------------+-------------------------------------+
+| SYSTICK   | on-chip    | systick                             |
++-----------+------------+-------------------------------------+
+| UART      | on-chip    | serial port-polling;                |
+|           |            | serial port-interrupt               |
++-----------+------------+-------------------------------------+
+| PINMUX    | on-chip    | pinmux                              |
++-----------+------------+-------------------------------------+
+| GPIO      | on-chip    | gpio                                |
++-----------+------------+-------------------------------------+
+| TIMER     | on-chip    | timer                               |
++-----------+------------+-------------------------------------+
+| TrustZone | on-chip    | Trusted Firmware-M                  |
++-----------+------------+-------------------------------------+
+
+Other hardware features are not currently supported by the port.
+See the `V2M Musca-S1 Website`_ for a complete list of V2M Musca-S1 board
+hardware features.
+
+The default configuration can be found in the defconfig file:
+:zephyr_file:`boards/arm/v2m_musca_s1/v2m_musca_s1_defconfig`.
 
 Interrupt Controller
 ====================

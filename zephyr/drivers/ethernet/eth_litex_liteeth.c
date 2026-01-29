@@ -35,6 +35,7 @@ struct eth_litex_dev_data {
 	struct net_if *iface;
 	uint8_t mac_addr[6];
 	uint8_t txslot;
+	struct k_mutex tx_mutex;
 	struct k_sem sem_tx_ready;
 };
 
@@ -63,6 +64,7 @@ static int eth_initialize(const struct device *dev)
 	const struct eth_litex_config *config = dev->config;
 	struct eth_litex_dev_data *context = dev->data;
 
+	k_mutex_init(&context->tx_mutex);
 	k_sem_init(&context->sem_tx_ready, 1, 1);
 
 	config->config_func(dev);
@@ -79,6 +81,8 @@ static int eth_tx(const struct device *dev, struct net_pkt *pkt)
 	const struct eth_litex_config *config = dev->config;
 	int ret;
 
+	k_mutex_lock(&context->tx_mutex, K_FOREVER);
+
 	/* get data from packet and send it */
 	len = net_pkt_get_len(pkt);
 	net_pkt_read(pkt,
@@ -91,8 +95,7 @@ static int eth_tx(const struct device *dev, struct net_pkt *pkt)
 	/* wait for the device to be ready to transmit */
 	ret = k_sem_take(&context->sem_tx_ready, MAX_TX_FAILURE);
 	if (ret < 0) {
-		LOG_ERR("TX fifo failed");
-		return -EIO;
+		goto error;
 	};
 	/* start transmitting */
 	litex_write8(1, config->tx_start_addr);
@@ -100,7 +103,13 @@ static int eth_tx(const struct device *dev, struct net_pkt *pkt)
 	/* change slot */
 	context->txslot = (context->txslot + 1) % config->tx_buf_n;
 
+	k_mutex_unlock(&context->tx_mutex);
+
 	return 0;
+error:
+	k_mutex_unlock(&context->tx_mutex);
+	LOG_ERR("TX fifo failed");
+	return -EIO;
 }
 
 static void eth_rx(const struct device *port)

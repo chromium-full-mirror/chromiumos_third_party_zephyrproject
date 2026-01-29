@@ -21,7 +21,4 @@ supported:
   - i2c
   - spi
   - flash
-  - input
-  - pwm
-  - adc
 vendor: bflb

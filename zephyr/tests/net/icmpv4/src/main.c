@@ -141,7 +141,9 @@ struct net_icmpv4_context {
 
 static int net_icmpv4_dev_init(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	struct net_icmpv4_context *net_icmpv4_context = dev->data;
+
+	net_icmpv4_context = net_icmpv4_context;
 
 	return 0;
 }

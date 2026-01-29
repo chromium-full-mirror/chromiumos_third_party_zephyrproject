@@ -390,17 +390,14 @@ static int lan9250_configure(const struct device *dev)
 	/* Configure HMAC control:
 	 *
 	 *   - Automatically strip the pad field on incoming packets
-	 *   - Full duplex
 	 *   - TX enable
 	 *   - RX enable
-	 *   - Pass all multicast frames
-	 *   - Hash filtering disabled
+	 *   - Full duplex
 	 *   - Promiscuous disabled
 	 */
 	lan9250_write_mac_reg(dev, LAN9250_HMAC_CR,
-			      LAN9250_HMAC_CR_PADSTR | LAN9250_HMAC_CR_FDPX |
-			      LAN9250_HMAC_CR_TXEN | LAN9250_HMAC_CR_RXEN |
-			      LAN9250_HMAC_CR_MCPAS);
+			      LAN9250_HMAC_CR_PADSTR | LAN9250_HMAC_CR_TXEN | LAN9250_HMAC_CR_RXEN |
+			      LAN9250_HMAC_CR_FDPX);
 
 	/* Configure TX:
 	 *
@@ -578,8 +575,7 @@ static void lan9250_thread(void *p1, void *p2, void *p3)
 	ARG_UNUSED(p2);
 	ARG_UNUSED(p3);
 
-	const struct device *dev = p1;
-	struct lan9250_runtime *context = dev->data;
+	struct lan9250_runtime *context = p1;
 	uint32_t int_sts;
 	uint16_t tmp;
 	uint32_t ier;
@@ -588,18 +584,18 @@ static void lan9250_thread(void *p1, void *p2, void *p3)
 		k_sem_take(&context->int_sem, K_FOREVER);
 
 		/* Save interrupt enable register value */
-		lan9250_read_sys_reg(dev, LAN9250_INT_EN, &ier);
+		lan9250_read_sys_reg(context->dev, LAN9250_INT_EN, &ier);
 
 		/* Disable interrupts to release the interrupt line */
-		lan9250_write_sys_reg(dev, LAN9250_INT_EN, 0);
+		lan9250_write_sys_reg(context->dev, LAN9250_INT_EN, 0);
 
 		/* Read interrupt status register */
-		lan9250_read_sys_reg(dev, LAN9250_INT_STS, &int_sts);
+		lan9250_read_sys_reg(context->dev, LAN9250_INT_STS, &int_sts);
 
 		if ((int_sts & LAN9250_INT_STS_PHY_INT) != 0) {
 
 			/* Read PHY interrupt source register */
-			lan9250_read_phy_reg(dev, LAN9250_PHY_INTERRUPT_SOURCE, &tmp);
+			lan9250_read_phy_reg(context->dev, LAN9250_PHY_INTERRUPT_SOURCE, &tmp);
 			if (tmp & LAN9250_PHY_INTERRUPT_SOURCE_LINK_UP) {
 				LOG_DBG("LINK UP");
 				net_eth_carrier_on(context->iface);
@@ -610,12 +606,12 @@ static void lan9250_thread(void *p1, void *p2, void *p3)
 		}
 
 		if ((int_sts & LAN9250_INT_STS_RSFL) != 0) {
-			lan9250_write_sys_reg(dev, LAN9250_INT_STS, LAN9250_INT_STS_RSFL);
-			lan9250_rx(dev);
+			lan9250_write_sys_reg(context->dev, LAN9250_INT_STS, LAN9250_INT_STS_RSFL);
+			lan9250_rx(context->dev);
 		}
 
 		/* Re-enable interrupts */
-		lan9250_write_sys_reg(dev, LAN9250_INT_EN, ier);
+		lan9250_write_sys_reg(context->dev, LAN9250_INT_EN, ier);
 	}
 }
 
@@ -623,11 +619,7 @@ static enum ethernet_hw_caps lan9250_get_capabilities(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
-	return ETHERNET_LINK_10BASE | ETHERNET_LINK_100BASE
-#if defined(CONFIG_NET_PROMISCUOUS_MODE)
-		| ETHERNET_PROMISC_MODE
-#endif
-	;
+	return ETHERNET_LINK_10BASE | ETHERNET_LINK_100BASE;
 }
 
 static void lan9250_iface_init(struct net_if *iface)
@@ -648,53 +640,11 @@ static int lan9250_set_config(const struct device *dev, enum ethernet_config_typ
 {
 	struct lan9250_runtime *ctx = dev->data;
 
-	switch (type) {
-	case ETHERNET_CONFIG_TYPE_MAC_ADDRESS:
-		memcpy(ctx->mac_address, config->mac_address.addr,
-		       sizeof(ctx->mac_address));
+	if (type == ETHERNET_CONFIG_TYPE_MAC_ADDRESS) {
+		memcpy(ctx->mac_address, config->mac_address.addr, sizeof(ctx->mac_address));
 		lan9250_set_macaddr(dev);
-
-		LOG_INF("%s MAC set to %02x:%02x:%02x:%02x:%02x:%02x",
-			dev->name,
-			ctx->mac_address[0], ctx->mac_address[1],
-			ctx->mac_address[2], ctx->mac_address[3],
-			ctx->mac_address[4], ctx->mac_address[5]);
-
-		/* register the new mac address with the upper layer */
-		return net_if_set_link_addr(ctx->iface, ctx->mac_address,
-					    sizeof(ctx->mac_address),
+		return net_if_set_link_addr(ctx->iface, ctx->mac_address, sizeof(ctx->mac_address),
 					    NET_LINK_ETHERNET);
-	case ETHERNET_CONFIG_TYPE_PROMISC_MODE:
-		if (IS_ENABLED(CONFIG_NET_PROMISCUOUS_MODE)) {
-			uint32_t reg;
-
-			lan9250_read_mac_reg(dev, LAN9250_HMAC_CR, &reg);
-
-			/* See Table 11-1 from the LAN9250 data sheet */
-			if (config->promisc_mode) {
-				if ((reg & LAN9250_HMAC_CR_PRMS) != 0) {
-					return -EALREADY;
-				}
-
-				reg &= ~LAN9250_HMAC_CR_MCPAS;
-				reg |= LAN9250_HMAC_CR_PRMS;
-				reg &= ~LAN9250_HMAC_CR_HO;
-			} else {
-				if ((reg & LAN9250_HMAC_CR_PRMS) == 0) {
-					return -EALREADY;
-				}
-
-				reg |= LAN9250_HMAC_CR_MCPAS;
-				reg &= ~LAN9250_HMAC_CR_PRMS;
-				reg &= ~LAN9250_HMAC_CR_HO;
-			}
-
-			return lan9250_write_mac_reg(dev, LAN9250_HMAC_CR, reg);
-		}
-
-		break;
-	default:
-		break;
 	}
 
 	return -ENOTSUP;
@@ -712,6 +662,8 @@ static int lan9250_init(const struct device *dev)
 	int ret;
 	const struct lan9250_config *config = dev->config;
 	struct lan9250_runtime *context = dev->data;
+
+	context->dev = dev;
 
 	/* SPI config */
 	if (!spi_is_ready_dt(&config->spi)) {
@@ -781,9 +733,8 @@ static int lan9250_init(const struct device *dev)
 	lan9250_set_macaddr(dev);
 
 	k_thread_create(&context->thread, context->thread_stack,
-			CONFIG_ETH_LAN9250_RX_THREAD_STACK_SIZE,
-			lan9250_thread, (void *)dev, NULL, NULL,
-			K_PRIO_COOP(CONFIG_ETH_LAN9250_RX_THREAD_PRIO), 0, K_NO_WAIT);
+			CONFIG_ETH_LAN9250_RX_THREAD_STACK_SIZE, lan9250_thread, context, NULL,
+			NULL, K_PRIO_COOP(CONFIG_ETH_LAN9250_RX_THREAD_PRIO), 0, K_NO_WAIT);
 
 	LOG_INF("LAN9250 Initialized");
 

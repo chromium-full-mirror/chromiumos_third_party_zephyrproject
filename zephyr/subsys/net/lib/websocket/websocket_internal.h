@@ -11,9 +11,8 @@
  */
 
 #include <zephyr/toolchain/common.h>
-#include <psa/crypto.h>
 
-#define WS_SHA1_OUTPUT_LEN PSA_HASH_LENGTH(PSA_ALG_SHA_1)
+#define WS_SHA1_OUTPUT_LEN 20
 
 /* Min Websocket header length */
 #define MIN_HEADER_LEN 2

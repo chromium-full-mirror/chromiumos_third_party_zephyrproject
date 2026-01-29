@@ -1,7 +1,7 @@
 /*
  * Audio Video Distribution Protocol
  *
- * Copyright 2024-2025 NXP
+ * Copyright 2024 - 2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -2233,12 +2233,8 @@ int bt_avdtp_register(struct bt_avdtp_event_cb *cb)
 {
 	LOG_DBG("");
 
-	if (event_cb == cb) {
+	if (event_cb) {
 		return -EALREADY;
-	}
-
-	if (event_cb != NULL) {
-		return -EEXIST;
 	}
 
 	event_cb = cb;
@@ -2284,11 +2280,9 @@ int bt_avdtp_register_sep(uint8_t media_type, uint8_t sep_type, struct bt_avdtp_
 }
 
 /* init function */
-void bt_avdtp_init(void)
+int bt_avdtp_init(void)
 {
 	int err;
-
-	static bool initialized;
 	static struct bt_l2cap_server avdtp_l2cap = {
 		.psm = BT_L2CAP_PSM_AVDTP,
 		.sec_level = BT_SECURITY_L2,
@@ -2297,18 +2291,13 @@ void bt_avdtp_init(void)
 
 	LOG_DBG("");
 
-	if (initialized) {
-		return;
-	}
-
 	/* Register AVDTP PSM with L2CAP */
 	err = bt_l2cap_br_server_register(&avdtp_l2cap);
-	if ((err < 0) && (err != -EEXIST)) {
+	if (err < 0) {
 		LOG_ERR("AVDTP L2CAP Registration failed %d", err);
-		return;
 	}
 
-	initialized = true;
+	return err;
 }
 
 /* AVDTP Discover Request */

@@ -12,9 +12,6 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/pm/policy.h>
 #include <zephyr/pm/device.h>
-#include <zephyr/drivers/clock_control/clock_control_rts5912.h>
-#include <zephyr/drivers/clock_control.h>
-#include <zephyr/dt-bindings/clock/rts5912_clock.h>
 #include "reg/reg_spi.h"
 
 #define RTS5912_SPI_TIMEOUT_ROUND              100
@@ -24,6 +21,7 @@
 #define RTS5912_SPI_FREQUENCY_REGISTER_MAXIMUM 0xFFFFFFFF
 #define RTS5912_SPI_FREQUENCY_BUS_MAXIMUM      (50000000ul)
 #define RTS5912_SPI_FREQUENCY_BUS_MINIMUM      (15000ul)
+#define RTS5912_PLL_DIV2_FREQUENCY             (50000000ul)
 #define RTS5912_SPI_ADDR_ONLY_MODE             0
 #define RTS5912_SPI_ADDR_AND_DATA_MODE         2
 
@@ -33,15 +31,13 @@ LOG_MODULE_REGISTER(spi_rts5912_spi, CONFIG_SPI_LOG_LEVEL);
 struct spi_rts5912_config {
 	volatile struct spi_reg *const spi_reg_base;
 	const struct pinctrl_dev_config *pcfg;
-	const struct device *clk_dev;
-	struct rts5912_sccon_subsys sccon_cfg;
+	const uint32_t frequency;
 };
 
 struct spi_rts5912_data {
 	struct spi_context ctx;
 	size_t transfer_len;
 	size_t receive_len;
-	uint32_t spi_input_clock_rate;
 };
 
 static int spi_rts5912_configure(const struct device *dev, const struct spi_config *spi_cfg)
@@ -93,11 +89,6 @@ static int spi_rts5912_configure(const struct device *dev, const struct spi_conf
 		return -EINVAL;
 	}
 
-	if (spi_cfg->frequency < RTS5912_SPI_FREQUENCY_BUS_MINIMUM) {
-		LOG_ERR("Can't support frequency %d", spi_cfg->frequency);
-		return -EINVAL;
-	}
-
 	ctx->config = spi_cfg;
 
 	spi->CTRL |= RTS5912_SPI_CTRL_RST_MASK;
@@ -108,10 +99,11 @@ static int spi_rts5912_configure(const struct device *dev, const struct spi_conf
 	spi->CMDN = RTS5912_SPI_ADDR_NUM; /* 7+1bit = 1Byte CMD */
 	spi->ADDR = 0x0;
 	spi->ADDRN = RTS5912_SPI_ADDR_NUM;
-	if (spi_cfg->frequency < RTS5912_SPI_FREQUENCY_BUS_MAXIMUM) {
-		spi->CKDV = ((data->spi_input_clock_rate / 2) / spi_cfg->frequency) - 1;
+	if ((spi_config->frequency < RTS5912_SPI_FREQUENCY_BUS_MAXIMUM) &&
+	    (spi_config->frequency > RTS5912_SPI_FREQUENCY_BUS_MINIMUM)) {
+		spi->CKDV = (RTS5912_PLL_DIV2_FREQUENCY / spi_config->frequency) - 1;
 	} else {
-		spi->CKDV = 0;
+		spi->CKDV = RTS5912_SPI_FREQUENCY_DEFAULT;
 	}
 	spi->CTRL |= RTS5912_SPI_CTRL_RST_MASK;
 
@@ -241,7 +233,6 @@ static int spi_rts5912_spi_init(const struct device *dev)
 {
 	const struct spi_rts5912_config *cfg = dev->config;
 	struct spi_rts5912_data *data = dev->data;
-	uint32_t pll_clock_rate = 0;
 	int ret;
 
 	ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
@@ -255,15 +246,7 @@ static int spi_rts5912_spi_init(const struct device *dev)
 		return ret;
 	}
 
-	ret = clock_control_get_rate(cfg->clk_dev, (clock_control_subsys_t)&cfg->sccon_cfg,
-				     &pll_clock_rate);
-	if (ret) {
-		return ret;
-	}
-
-	data->spi_input_clock_rate = pll_clock_rate;
 	spi_context_unlock_unconditionally(&data->ctx);
-
 	return 0;
 }
 
@@ -277,11 +260,9 @@ static DEVICE_API(spi, spi_rts5912_driver_api) = {
 	static const struct spi_rts5912_config spi_rts5912_cfg_##n = {                             \
 		.spi_reg_base = (volatile struct spi_reg *const)DT_INST_REG_ADDR(n),               \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
-		.clk_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR(n)),                                  \
-		.sccon_cfg = {                                                                     \
-			.clk_grp = DT_INST_CLOCKS_CELL(n, clk_grp),                                \
-			.clk_idx = DT_INST_CLOCKS_CELL(n, clk_idx),                                \
-		}};                                                                                \
+		.frequency =                                                                       \
+			DT_PROP_OR(n, clock_frequency, RTS5912_SPI_FREQUENCY_REGISTER_MAXIMUM),    \
+	};                                                                                         \
                                                                                                    \
 	static struct spi_rts5912_data spi_rts5912_data_##n = {                                    \
 		SPI_CONTEXT_INIT_LOCK(spi_rts5912_data_##n, ctx),                                  \

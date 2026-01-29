@@ -180,12 +180,6 @@
 			gclkperiph-src = "gclk1";
 			gclkperiph-en = <0>;
 		};
-
-		dac {
-			subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_DAC>;
-			gclkperiph-src = "gclk1";
-			gclkperiph-en = <0>;
-		};
 	};
 
 	mclkperiph: mclkperiph {
@@ -213,20 +207,6 @@
 	pinctrl-names = "default";
 	dmas = <&dmac 1 8>, <&dmac 2 9>;
 	dma-names = "rx", "tx";
-	status = "okay";
-};
-
-&sercom6 {
-	compatible = "microchip,sercom-g1-spi";
-
-	dipo = <3>;
-	dopo = <0>;
-
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	pinctrl-0 = <&sercom6_spi_default>;
-	pinctrl-names = "default";
 	status = "okay";
 };
 
@@ -281,10 +261,5 @@
 	/* ADC clock = GCLK / prescaler (60 MHz / 4 = 15 MHz) */
 	prescaler = <4>;
 	pinctrl-0 = <&adc1_default>;
-	pinctrl-names = "default";
-};
-
-&dac {
-	pinctrl-0 = <&dac_default>;
 	pinctrl-names = "default";
 };

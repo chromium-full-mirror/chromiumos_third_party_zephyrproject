@@ -178,15 +178,6 @@
 				channel = <0>;
 				status = "disabled";
 			};
-
-			spi {
-				compatible = "renesas,ra-spi-sci";
-				#address-cells = <1>;
-				#size-cells = <0>;
-				channel = <0>;
-				overrun-character = <0x00>;
-				status = "disabled";
-			};
 		};
 
 		sci1: sci@40118100 {
@@ -206,15 +197,6 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				channel = <1>;
-				status = "disabled";
-			};
-
-			spi {
-				compatible = "renesas,ra-spi-sci";
-				#address-cells = <1>;
-				#size-cells = <0>;
-				channel = <1>;
-				overrun-character = <0x00>;
 				status = "disabled";
 			};
 		};
@@ -238,15 +220,6 @@
 				channel = <3>;
 				status = "disabled";
 			};
-
-			spi {
-				compatible = "renesas,ra-spi-sci";
-				#address-cells = <1>;
-				#size-cells = <0>;
-				channel = <3>;
-				overrun-character = <0x00>;
-				status = "disabled";
-			};
 		};
 
 		sci4: sci@40118400 {
@@ -266,15 +239,6 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				channel = <4>;
-				status = "disabled";
-			};
-
-			spi {
-				compatible = "renesas,ra-spi-sci";
-				#address-cells = <1>;
-				#size-cells = <0>;
-				channel = <4>;
-				overrun-character = <0x00>;
 				status = "disabled";
 			};
 		};
@@ -300,15 +264,6 @@
 				channel = <5>;
 				status = "disabled";
 			};
-
-			spi {
-				compatible = "renesas,ra-spi-sci";
-				#address-cells = <1>;
-				#size-cells = <0>;
-				channel = <5>;
-				overrun-character = <0x00>;
-				status = "disabled";
-			};
 		};
 
 		sci9: sci@40118900 {
@@ -330,15 +285,6 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				channel = <9>;
-				status = "disabled";
-			};
-
-			spi {
-				compatible = "renesas,ra-spi-sci";
-				#address-cells = <1>;
-				#size-cells = <0>;
-				channel = <9>;
-				overrun-character = <0x00>;
 				status = "disabled";
 			};
 		};

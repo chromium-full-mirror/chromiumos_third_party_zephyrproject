@@ -73,7 +73,6 @@ struct rtc_sf32lb_config {
 #endif
 };
 
-#ifdef CONFIG_RTC_ALARM
 static void rtc_irq_handler(const struct device *dev)
 {
 	const struct rtc_sf32lb_config *config = dev->config;
@@ -83,14 +82,15 @@ static void rtc_irq_handler(const struct device *dev)
 	if (isr & RTC_ISR_ALRMF) {
 		sys_clear_bit(config->base + RTC_ISR, RTC_ISR_ALRMF_Pos);
 
-		atomic_set_bit(data->is_pending, 0);
+#ifdef CONFIG_RTC_ALARM
+		atomic_set_bit(&data->is_pending, 0);
 
 		if (data->alarm_cb.cb) {
 			data->alarm_cb.cb(dev, 0, data->alarm_cb.user_data);
 		}
+#endif
 	}
 }
-#endif
 
 static inline int rtc_sf32lb_enter_init_mode(const struct device *dev)
 {
@@ -175,17 +175,7 @@ static int rtc_sf32lb_get_time(const struct device *dev, struct rtc_time *timept
 	reg = sys_read32(config->cfg + SYS_CFG_RTC_DR);
 
 	if (reg & RTC_DR_CB) { /* 20th century */
-		uint8_t year = bcd2bin(FIELD_GET(RTC_DR_YT_Msk | RTC_DR_YU_Msk, reg));
-
-		if (year < 70) {
-			/* Year is 00-69, which should be 2000-2069. Clear CB bit */
-			sys_clear_bit(config->base + RTC_DATER, RTC_DR_CB_Pos);
-
-			timeptr->tm_year = year + 100;
-		} else {
-			/* Year is 70-99, which is 1970-1999. Keep CB bit set */
-			timeptr->tm_year = year;
-		}
+		timeptr->tm_year = bcd2bin(FIELD_GET(RTC_DR_YT_Msk | RTC_DR_YU_Msk, reg));
 	} else {
 		timeptr->tm_year = bcd2bin(FIELD_GET(RTC_DR_YT_Msk | RTC_DR_YU_Msk, reg)) + 100;
 	}
@@ -329,7 +319,7 @@ static int rtc_sf32lb_alarm_is_pending(const struct device *dev, uint16_t id)
 		return -EINVAL;
 	}
 
-	return (int)atomic_test_and_clear_bit(data->is_pending, 0);
+	return (int)atomic_test_and_clear_bit(&data->is_pending, 0);
 }
 
 static int rtc_sf32lb_alarm_set_callback(const struct device *dev, uint16_t id,
@@ -388,8 +378,7 @@ static int rtc_sf32lb_init(const struct device *dev)
 }
 
 #define RTC_SF32LB_DEFINE(n)                                                                       \
-	IF_ENABLED(CONFIG_RTC_ALARM, (                                                             \
-		static void rtc_sf32lb_irq_config_func_##n(void);))                                \
+	static void rtc_sf32lb_irq_config_func_##n(void);                                          \
 	static const struct rtc_sf32lb_config rtc_sf32lb_config_##n = {                            \
 		.base = DT_INST_REG_ADDR(n),                                                       \
 		.cfg = DT_REG_ADDR(DT_INST_PHANDLE(n, sifli_cfg)),                                 \

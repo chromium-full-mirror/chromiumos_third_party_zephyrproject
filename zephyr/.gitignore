@@ -17,7 +17,6 @@
 build*/
 !doc/build/
 !scripts/build
-!share/sysbuild/build
 !tests/drivers/build_all
 !scripts/pylib/build_helpers
 cscope.*

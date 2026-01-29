@@ -9,4 +9,4 @@
  */
 
 /** Device Identification Init. **/
-void bt_did_init(void);
+int bt_did_init(void);

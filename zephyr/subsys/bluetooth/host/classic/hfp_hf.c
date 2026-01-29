@@ -798,7 +798,7 @@ static int clcc_handle(struct at_client *hf_at)
 	uint32_t status;
 	uint32_t mode;
 	uint32_t mpty;
-	const char *number;
+	char *number = NULL;
 	uint32_t type = 0;
 	bool incoming = false;
 	bool new_call = false;
@@ -905,12 +905,12 @@ static int bvra_handle(struct at_client *hf_at)
 	int err;
 	uint32_t activate;
 	uint32_t state;
-	const char *id;
+	char *id;
 	char text_id[BT_HFP_BVRA_TEXT_ID_MAX_LEN + 1];
 	size_t id_len;
 	uint32_t type;
 	uint32_t operation;
-	const char *text;
+	char *text;
 
 	err = at_get_number(hf_at, &activate);
 	if (err < 0) {
@@ -946,7 +946,7 @@ static int bvra_handle(struct at_client *hf_at)
 
 #if defined(CONFIG_BT_HFP_HF_VOICE_RECG_TEXT)
 	id = at_get_raw_string(hf_at, &id_len);
-	if (id == NULL) {
+	if (!id) {
 		LOG_INF("Error getting text ID");
 		return 0;
 	}
@@ -972,13 +972,14 @@ static int bvra_handle(struct at_client *hf_at)
 	}
 
 	text = at_get_string(hf_at);
-	if (text == NULL) {
+	if (!text) {
 		LOG_INF("Error getting text string");
 		return 0;
 	}
 
 	if (bt_hf->textual_representation) {
-		bt_hf->textual_representation(hf, text_id, (uint8_t)type, (uint8_t)operation, text);
+		bt_hf->textual_representation(hf, text_id, (uint8_t)type,
+			(uint8_t)operation, text);
 	}
 #endif /* CONFIG_BT_HFP_HF_VOICE_RECG_TEXT */
 	return 0;
@@ -1482,7 +1483,7 @@ int ring_handle(struct at_client *hf_at)
 int clip_handle(struct at_client *hf_at)
 {
 	struct bt_hfp_hf *hf = CONTAINER_OF(hf_at, struct bt_hfp_hf, at);
-	const char *number;
+	char *number;
 	uint32_t type;
 	int err;
 	struct bt_hfp_hf_call *call;
@@ -1668,7 +1669,7 @@ static int btrh_handle(struct at_client *hf_at)
 static int ccwa_handle(struct at_client *hf_at)
 {
 	struct bt_hfp_hf *hf = CONTAINER_OF(hf_at, struct bt_hfp_hf, at);
-	const char *number;
+	char *number;
 	uint32_t type;
 	int err;
 	struct bt_hfp_hf_call *call;
@@ -1726,7 +1727,7 @@ static int get_chld_feature(const char *name)
 int chld_handle(struct at_client *hf_at)
 {
 	struct bt_hfp_hf *hf = CONTAINER_OF(hf_at, struct bt_hfp_hf, at);
-	const char *value;
+	char *value;
 	uint32_t chld_features = 0;
 	int err;
 
@@ -1738,7 +1739,7 @@ int chld_handle(struct at_client *hf_at)
 
 	while (at_has_next_list(hf_at)) {
 		value = at_get_raw_string(hf_at, NULL);
-		if (value == NULL) {
+		if (!value) {
 			LOG_ERR("Could not get value");
 			goto error;
 		}
@@ -1780,10 +1781,10 @@ static int cnum_handle(struct at_client *hf_at)
 {
 	struct bt_hfp_hf *hf = CONTAINER_OF(hf_at, struct bt_hfp_hf, at);
 	int err;
-	__maybe_unused const char *alpha;
-	const char *number;
+	char *alpha;
+	char *number;
 	uint32_t type;
-	__maybe_unused const char *speed;
+	char *speed;
 	uint32_t service = 4;
 
 	alpha = at_get_raw_string(hf_at, NULL);
@@ -2537,7 +2538,7 @@ static int cops_handle(struct at_client *hf_at)
 	struct bt_hfp_hf *hf = CONTAINER_OF(hf_at, struct bt_hfp_hf, at);
 	uint32_t mode;
 	uint32_t format;
-	const char *operator;
+	char *operator;
 	int err;
 
 	err = at_get_number(hf_at, &mode);
@@ -2613,7 +2614,7 @@ int bt_hfp_hf_get_operator(struct bt_hfp_hf *hf)
 static int binp_handle(struct at_client *hf_at)
 {
 	struct bt_hfp_hf *hf = CONTAINER_OF(hf_at, struct bt_hfp_hf, at);
-	const char *number;
+	char *number;
 
 	number = at_get_string(hf_at);
 

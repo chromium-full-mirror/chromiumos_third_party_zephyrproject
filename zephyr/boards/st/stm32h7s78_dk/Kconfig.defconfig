@@ -10,21 +10,12 @@ if BOARD_STM32H7S78_DK
 configdefault NET_L2_ETHERNET
 	default y
 
-if DISPLAY || VIDEO
+if DISPLAY
 # MEMC needs to be enabled in order to store
-# display frame buffer and video buffer pool to external PSRAM
+# display frame buffer to external PSRAM
 config MEMC
 	default y
-
-if VIDEO
-# Place video buffer pool into the PSRAM
-config VIDEO_BUFFER_POOL_ZEPHYR_REGION
-	default y
-
-config VIDEO_BUFFER_POOL_ZEPHYR_REGION_NAME
-	default "PSRAM"
-endif # VIDEO
-endif # DISPLAY || VIDEO
+endif # DISPLAY
 
 if INPUT
 

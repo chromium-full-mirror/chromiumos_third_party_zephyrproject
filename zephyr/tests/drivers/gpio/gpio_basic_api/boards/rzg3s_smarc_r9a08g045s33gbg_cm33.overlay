@@ -11,11 +11,11 @@
 	};
 };
 
-&tint1 {
+&gpio {
 	status = "okay";
 };
 
 &gpio8 {
-	irqs = <&tint1 3>;
+	irqs = <3 20>;
 	status = "okay";
 };

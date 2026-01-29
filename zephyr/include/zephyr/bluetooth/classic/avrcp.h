@@ -5,20 +5,12 @@
 /*
  * Copyright (c) 2015-2016 Intel Corporation
  * Copyright (C) 2024 Xiaomi Corporation
- * Copyright 2025-2026 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef ZEPHYR_INCLUDE_BLUETOOTH_AVRCP_H_
 #define ZEPHYR_INCLUDE_BLUETOOTH_AVRCP_H_
-
-/**
- * @brief Audio Video Remote Control Profile (AVRCP)
- * @defgroup bt_avrcp Audio Video Remote Control Profile (AVRCP)
- * @ingroup bluetooth
- * @{
- */
 
 #ifdef __cplusplus
 extern "C" {
@@ -2429,9 +2421,5 @@ int bt_avrcp_tg_browsing_general_reject(struct bt_avrcp_tg *tg, uint8_t tid, uin
 #ifdef __cplusplus
 }
 #endif
-
-/**
- * @}
- */
 
 #endif /* ZEPHYR_INCLUDE_BLUETOOTH_AVRCP_H_ */

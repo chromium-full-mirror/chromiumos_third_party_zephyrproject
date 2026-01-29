@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 NXP
+ * Copyright 2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,10 +12,6 @@
 / {
 	model = "NXP i.MX943 A55";
 	compatible = "fsl,mimx943";
-
-	aliases {
-		watchdog0 = &wdog4;
-	};
 
 	chosen {
 		zephyr,console = &lpuart1;
@@ -57,13 +53,13 @@
 
 	phy0: phy@2 {
 		compatible = "ethernet-phy";
-		reg = <0x2>;
+		reg = <0xf>;
 		status = "disabled";
 	};
 
 	phy1: phy@3 {
 		compatible = "ethernet-phy";
-		reg = <0x3>;
+		reg = <0x10>;
 		status = "disabled";
 	};
 
@@ -136,8 +132,4 @@
 &switch_port3 {
 	zephyr,random-mac-address;
 	status = "disabled";
-};
-
-&wdog4 {
-	status = "okay";
 };

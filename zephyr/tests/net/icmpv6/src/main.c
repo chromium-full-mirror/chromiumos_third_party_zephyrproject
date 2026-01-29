@@ -73,7 +73,9 @@ static struct net_icmpv6_context net_icmpv6_context_data;
 
 static int net_icmpv6_dev_init(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	struct net_icmpv6_context *net_icmpv6_context = dev->data;
+
+	net_icmpv6_context = net_icmpv6_context;
 
 	return 0;
 }

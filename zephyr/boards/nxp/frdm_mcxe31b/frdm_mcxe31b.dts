@@ -34,7 +34,6 @@
 		zephyr,console = &lpuart_5;
 		zephyr,edac = &erm0;
 		zephyr,shell-uart = &lpuart_5;
-		zephyr,canbus = &flexcan_0;
 	};
 
 	leds {
@@ -100,10 +99,6 @@
 	clock-frequency = <DT_FREQ_M(160)>;
 };
 
-&edma {
-	status = "okay";
-};
-
 &erm0 {
 	status = "okay";
 };
@@ -124,13 +119,6 @@
 	status = "okay";
 };
 
-&lpuart_2 {
-	pinctrl-0 = <&pinmux_lpuart_2>;
-	pinctrl-names = "default";
-	dmas = <&edma 16 38>, <&edma 17 39>;
-	dma-names = "tx", "rx";
-};
-
 &lpuart_5 {
 	status = "okay";
 	current-speed = <115200>;
@@ -138,12 +126,6 @@
 	pinctrl-names = "default";
 	dmas = <&edma 1 44>, <&edma 2 45>;
 	dma-names = "tx", "rx";
-};
-
-&flexcan_0 {
-	pinctrl-0 = <&pinmux_flexcan_0>;
-	pinctrl-names = "default";
-	status = "okay";
 };
 
 &gpioc_l {
@@ -175,10 +157,6 @@
 	workmode = "crystal";
 	delay = <49>;
 	overdrive = <12>;
-};
-
-&pit_0 {
-	status = "okay";
 };
 
 &pll {
@@ -230,6 +208,3 @@
 &adc_0 {
 	status = "okay";
 };
-
-/* Add lpuart2 label to lpuart_2. */
-lpuart2: &lpuart_2 {};

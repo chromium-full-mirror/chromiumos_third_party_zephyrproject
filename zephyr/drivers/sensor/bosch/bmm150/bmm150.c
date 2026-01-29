@@ -651,8 +651,8 @@ static int pm_action(const struct device *dev, enum pm_device_action action)
 		else {
 			ret = bmm150_trigger_mode_power_ctrl(dev, true);
 		}
-#endif
 		break;
+#endif
 #ifdef CONFIG_PM_DEVICE
 	case PM_DEVICE_ACTION_SUSPEND:
 		ret = bmm150_power_control(dev, 0); /* Suspend */

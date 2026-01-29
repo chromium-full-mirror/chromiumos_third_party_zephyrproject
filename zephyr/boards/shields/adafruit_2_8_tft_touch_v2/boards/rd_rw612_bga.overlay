@@ -5,7 +5,6 @@
  */
 
 #include <zephyr/dt-bindings/spi/spi.h>
-#include <zephyr/dt-bindings/display/panel.h>
 
 / {
 	chosen {
@@ -45,7 +44,7 @@
 		reg = <0>;
 		width = <320>;
 		height = <240>;
-		pixel-format = <PANEL_PIXEL_FORMAT_RGB888>;
+		pixel-format = <ILI9XXX_PIXEL_FORMAT_RGB888>;
 		rotation = <90>;
 		frmctr1 = [00 18];
 		pwctrl1 = [23 00];

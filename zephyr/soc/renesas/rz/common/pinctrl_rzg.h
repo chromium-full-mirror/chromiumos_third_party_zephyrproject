@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024-2025 Renesas Electronics Corporation
+ * Copyright (c) 2024 Renesas Electronics Corporation
  * SPDX-License-Identifier: Apache-2.0
  */
 #ifndef ZEPHYR_SOC_RENESAS_RZ_COMMON_PINCTRL_RZG_H_
@@ -15,24 +15,19 @@ extern "C" {
 #endif
 
 /*Porting*/
-typedef union {
-	uint32_t cfg;
-	struct {
-		uint32_t p_reg: 2;
-		uint32_t pm_reg: 2;
-		uint32_t pupd_reg: 6;
-		uint32_t iolh_reg: 4;
-		uint32_t isel_reg: 2;
-		uint32_t pmc_reg: 2;
-		uint32_t ien_reg: 1;
-		uint32_t filonoff_reg: 1;
-		uint32_t filnum_reg: 2;
-		uint32_t filclksel_reg: 2;
-		uint32_t pfc_reg: 3;
-	} cfg_b;
+typedef struct pinctrl_cfg_data_t {
+	uint32_t reserved: 4;
+	uint32_t pupd_reg: 6;
+	uint32_t iolh_reg: 6;
+	uint32_t pmc_reg: 2;
+	uint32_t ien_reg: 1;
+	uint32_t filonoff_reg: 1;
+	uint32_t filnum_reg: 2;
+	uint32_t filclksel_reg: 2;
+	uint32_t pfc_reg: 3;
 } pinctrl_cfg_data_t;
 
-typedef struct pinctrl_soc_pin {
+typedef struct pinctrl_soc_pin_t {
 	bsp_io_port_pin_t port_pin;
 	pinctrl_cfg_data_t config;
 } pinctrl_soc_pin_t;
@@ -78,13 +73,11 @@ typedef struct pinctrl_soc_pin {
 #define Z_PINCTRL_PINMUX_INIT(node_id, state_prop, idx)                                            \
 	{                                                                                          \
 		.port_pin = RZG_GET_PORT_PIN(DT_PROP_BY_IDX(node_id, state_prop, idx)),            \
-		.config.cfg_b =                                                                    \
+		.config =                                                                          \
 			{                                                                          \
-				.p_reg = 0,                                                        \
-				.pm_reg = 0,                                                       \
+				.reserved = 0,                                                     \
 				.pupd_reg = RZG_GET_PU_PD(node_id),                                \
 				.iolh_reg = DT_PROP(node_id, drive_strength),                      \
-				.isel_reg = 0,                                                     \
 				.pmc_reg = 1,                                                      \
 				.ien_reg = DT_PROP(node_id, input_enable),                         \
 				.filonoff_reg = RZG_FILTER_ON_OFF(node_id),                        \
@@ -97,13 +90,11 @@ typedef struct pinctrl_soc_pin {
 #define Z_PINCTRL_SPECIAL_PINS_INIT(node_id, state_prop, idx)                                      \
 	{                                                                                          \
 		.port_pin = DT_PROP_BY_IDX(node_id, state_prop, idx),                              \
-		.config.cfg_b =                                                                    \
+		.config =                                                                          \
 			{                                                                          \
-				.p_reg = 0,                                                        \
-				.pm_reg = 0,                                                       \
+				.reserved = 0,                                                     \
 				.pupd_reg = RZG_GET_PU_PD(node_id),                                \
 				.iolh_reg = DT_PROP(node_id, drive_strength),                      \
-				.isel_reg = 0,                                                     \
 				.pmc_reg = 0,                                                      \
 				.ien_reg = DT_PROP(node_id, input_enable),                         \
 				.filonoff_reg = RZG_FILTER_ON_OFF(node_id),                        \

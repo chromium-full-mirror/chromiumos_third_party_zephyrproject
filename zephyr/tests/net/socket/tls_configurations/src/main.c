@@ -10,8 +10,13 @@ LOG_MODULE_REGISTER(tls_configuration_sample, LOG_LEVEL_INF);
 #include <errno.h>
 #include <stdio.h>
 
+#include <zephyr/posix/sys/eventfd.h>
+#include <zephyr/posix/poll.h>
+#include <zephyr/posix/arpa/inet.h>
+#include <zephyr/posix/unistd.h>
+#include <zephyr/posix/sys/socket.h>
+
 #include <zephyr/net/socket.h>
-#include <zephyr/net/socket_poll.h>
 #include <zephyr/net/tls_credentials.h>
 #include <zephyr/net/net_if.h>
 #include <zephyr/sys/util.h>
@@ -57,7 +62,7 @@ enum {
 };
 
 static int socket_fd = INVALID_SOCKET;
-static struct zsock_pollfd fds[1];
+static struct pollfd fds[1];
 
 /* Keep the new line because openssl uses that to start processing the incoming data */
 #define TEST_STRING "hello world\n"
@@ -70,7 +75,7 @@ static int wait_for_event(void)
 	/* Wait for event on any socket used. Once event occurs,
 	 * we'll check them all.
 	 */
-	ret = zsock_poll(fds, ARRAY_SIZE(fds), -1);
+	ret = poll(fds, ARRAY_SIZE(fds), -1);
 	if (ret < 0) {
 		LOG_ERR("Error in poll (%d)", errno);
 		return ret;
@@ -86,12 +91,12 @@ static int create_socket(void)
 
 	addr.sin_family = NET_AF_INET;
 	addr.sin_port = net_htons(CONFIG_SERVER_PORT);
-	zsock_inet_pton(NET_AF_INET, "127.0.0.1", &addr.sin_addr);
+	inet_pton(NET_AF_INET, "127.0.0.1", &addr.sin_addr);
 
 #if defined(CONFIG_MBEDTLS_SSL_PROTO_TLS1_3)
-	socket_fd = zsock_socket(addr.sin_family, NET_SOCK_STREAM, IPPROTO_TLS_1_3);
+	socket_fd = socket(addr.sin_family, NET_SOCK_STREAM, IPPROTO_TLS_1_3);
 #else
-	socket_fd = zsock_socket(addr.sin_family, NET_SOCK_STREAM, IPPROTO_TLS_1_2);
+	socket_fd = socket(addr.sin_family, NET_SOCK_STREAM, IPPROTO_TLS_1_2);
 #endif
 	if (socket_fd < 0) {
 		LOG_ERR("Failed to create TLS socket (%d)", errno);
@@ -107,8 +112,8 @@ static int create_socket(void)
 #endif
 	};
 
-	ret = zsock_setsockopt(socket_fd, SOL_TLS, TLS_SEC_TAG_LIST, sec_tag_list,
-			       sizeof(sec_tag_list));
+	ret = setsockopt(socket_fd, SOL_TLS, TLS_SEC_TAG_LIST,
+			sec_tag_list, sizeof(sec_tag_list));
 	if (ret < 0) {
 		LOG_ERR("Failed to set TLS_SEC_TAG_LIST option (%d)", errno);
 		return -errno;
@@ -116,14 +121,15 @@ static int create_socket(void)
 
 	/* HOSTNAME is only required for key exchanges that use a certificate. */
 #if defined(USE_CERTIFICATE)
-	ret = zsock_setsockopt(socket_fd, SOL_TLS, TLS_HOSTNAME, "localhost", sizeof("localhost"));
+	ret = setsockopt(socket_fd, SOL_TLS, TLS_HOSTNAME,
+			 "localhost", sizeof("localhost"));
 	if (ret < 0) {
 		LOG_ERR("Failed to set TLS_HOSTNAME option (%d)", errno);
 		return -errno;
 	}
 #endif
 
-	ret = zsock_connect(socket_fd, (struct net_sockaddr *)&addr, sizeof(addr));
+	ret = connect(socket_fd, (struct net_sockaddr *) &addr, sizeof(addr));
 	if (ret < 0) {
 		LOG_ERR("Cannot connect to TCP remote (%d)", errno);
 		return -errno;
@@ -131,7 +137,7 @@ static int create_socket(void)
 
 	/* Prepare file descriptor for polling */
 	fds[0].fd = socket_fd;
-	fds[0].events = ZSOCK_POLLIN;
+	fds[0].events = POLLIN;
 
 	return ret;
 }
@@ -139,7 +145,7 @@ static int create_socket(void)
 void close_socket(void)
 {
 	if (socket_fd != INVALID_SOCKET) {
-		zsock_close(socket_fd);
+		close(socket_fd);
 	}
 }
 
@@ -208,7 +214,7 @@ int main(void)
 	 */
 	for (int i = 0; i < 2; i++) {
 		LOG_DBG("Send: %s", test_buf);
-		ret = zsock_send(socket_fd, test_buf, data_len, 0);
+		ret = send(socket_fd, test_buf, data_len, 0);
 		if (ret < 0) {
 			LOG_ERR("Error sending test string (%d)", errno);
 			goto exit;
@@ -218,7 +224,7 @@ int main(void)
 
 		wait_for_event();
 
-		ret = zsock_recv(socket_fd, test_buf, data_len, MSG_WAITALL);
+		ret = recv(socket_fd, test_buf, data_len, MSG_WAITALL);
 		if (ret == 0) {
 			LOG_ERR("Server terminated unexpectedly");
 			ret = -EIO;
@@ -228,7 +234,7 @@ int main(void)
 			goto exit;
 		}
 		if (ret != data_len) {
-			LOG_ERR("Sent %zu bytes, but received %d", data_len, ret);
+			LOG_ERR("Sent %d bytes, but received %d", data_len, ret);
 			ret = -EINVAL;
 			goto exit;
 		}

@@ -154,7 +154,7 @@ static int co5300_write(const struct device *dev,
 	uint16_t end_pos;
 	uint8_t cmd_params[4];
 	struct mipi_dsi_msg msg = {0};
-	uint16_t line_each_sent = 0U;
+	uint32_t total_bytes_sent = 0U;
 	int bytes_written = 0;
 	const uint8_t *src;
 	uint32_t tx_size = 0U;
@@ -247,9 +247,10 @@ static int co5300_write(const struct device *dev,
 
 		/* Advance source pointer and decrement remaining */
 		if (local_desc.pitch > local_desc.width) {
-			line_each_sent = bytes_written / (local_desc.width * data->bytes_per_pixel);
-			src += line_each_sent * local_desc.pitch * data->bytes_per_pixel;
-			src += bytes_written % (local_desc.width * data->bytes_per_pixel);
+			total_bytes_sent += bytes_written;
+			src += bytes_written + total_bytes_sent /
+				(local_desc.width * data->bytes_per_pixel) *
+				((local_desc.pitch - local_desc.width) * data->bytes_per_pixel);
 		} else {
 			src += bytes_written;
 		}
@@ -375,7 +376,7 @@ static int co5300_reset(const struct device *dev)
 		}
 
 		k_sleep(K_MSEC(30));
-		ret = gpio_pin_set_dt(&config->reset_gpios, 1);
+		gpio_pin_set_dt(&config->reset_gpios, 1);
 		if (ret < 0) {
 			LOG_ERR("Could not pull reset high (%d)", ret);
 			return ret;

@@ -15,8 +15,6 @@ dut: &usic2ch0 {
 	fifo-start-offset = <0>;
 	fifo-tx-size = <0>;
 	fifo-rx-size = <0>;
-	data-bits = <8>;
-	stop-bits = "1";
 	status = "okay";
 };
 

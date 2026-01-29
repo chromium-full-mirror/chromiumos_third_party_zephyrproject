@@ -1,8 +1,9 @@
 /*
  * Copyright (c) 2024 Kelly Helmut Lord
- * Copyright (c) 2026 Basalte bv
  * SPDX-License-Identifier: Apache-2.0
  */
+#include "zephyr/ztest_assert.h"
+#include <stdlib.h>
 #include <zephyr/ztest.h>
 #include <zephyr/data/cobs.h>
 
@@ -19,21 +20,23 @@ struct cobs_tests_fixture {
 
 static void *cobs_test_setup(void)
 {
-	static struct cobs_tests_fixture fixture;
+	struct cobs_tests_fixture *fixture = malloc(sizeof(struct cobs_tests_fixture));
 
-	fixture.test_data = net_buf_alloc(&test_pool, K_NO_WAIT);
-	fixture.encoded = net_buf_alloc(&test_pool, K_NO_WAIT);
-	fixture.decoded = net_buf_alloc(&test_pool, K_NO_WAIT);
+	zassume_not_null(fixture);
 
-	zassert_not_null(fixture.test_data, "Failed to allocate test_data buffer");
-	zassert_not_null(fixture.encoded, "Failed to allocate encoded buffer");
-	zassert_not_null(fixture.decoded, "Failed to allocate decoded buffer");
+	fixture->test_data = net_buf_alloc(&test_pool, K_NO_WAIT);
+	fixture->encoded = net_buf_alloc(&test_pool, K_NO_WAIT);
+	fixture->decoded = net_buf_alloc(&test_pool, K_NO_WAIT);
 
-	net_buf_reset(fixture.test_data);
-	net_buf_reset(fixture.encoded);
-	net_buf_reset(fixture.decoded);
+	zassert_not_null(fixture->test_data, "Failed to allocate test_data buffer");
+	zassert_not_null(fixture->encoded, "Failed to allocate encoded buffer");
+	zassert_not_null(fixture->decoded, "Failed to allocate decoded buffer");
 
-	return &fixture;
+	net_buf_reset(fixture->test_data);
+	net_buf_reset(fixture->encoded);
+	net_buf_reset(fixture->decoded);
+
+	return fixture;
 }
 
 static void cobs_test_before(void *f)
@@ -49,9 +52,17 @@ static void cobs_test_teardown(void *f)
 {
 	struct cobs_tests_fixture *fixture = (struct cobs_tests_fixture *)f;
 
-	net_buf_unref(fixture->test_data);
-	net_buf_unref(fixture->encoded);
-	net_buf_unref(fixture->decoded);
+	if (fixture->test_data) {
+		net_buf_unref(fixture->test_data);
+	}
+	if (fixture->encoded) {
+		net_buf_unref(fixture->encoded);
+	}
+	if (fixture->decoded) {
+		net_buf_unref(fixture->decoded);
+	}
+
+	free(fixture);
 }
 
 struct cobs_test_item {
@@ -60,20 +71,18 @@ struct cobs_test_item {
 	size_t decoded_len;
 	const uint8_t *encoded;
 	size_t encoded_len;
-	uint32_t flags;
+	uint8_t delimiter;
 };
 
 #define U8(...) (uint8_t[]) __VA_ARGS__
 
-#define COBS_ITEM(d, e, f, n)                                                                      \
-	{                                                                                          \
-		.name = n,                                                                         \
-		.decoded = d,                                                                      \
-		.decoded_len = sizeof(d),                                                          \
-		.encoded = e,                                                                      \
-		.encoded_len = sizeof(e),                                                          \
-		.flags = f,                                                                        \
-	}
+#define COBS_ITEM(d, e, del, n)                                                                    \
+	{.name = n,                                                                                \
+	 .decoded = d,                                                                             \
+	 .decoded_len = sizeof(d),                                                                 \
+	 .encoded = e,                                                                             \
+	 .encoded_len = sizeof(e),                                                                 \
+	 .delimiter = del}
 
 static const struct cobs_test_item cobs_dataset[] = {
 	COBS_ITEM(U8({}), U8({0x01}), COBS_DEFAULT_DELIMITER, "Empty"),
@@ -93,16 +102,12 @@ static const struct cobs_test_item cobs_dataset[] = {
 	COBS_ITEM(U8({'1', '2', '3', '4', '5', 0x00, '6', '7', '8', '9', 0x00}),
 		  U8({0x06, '1', '2', '3', '4', '5', 0x05, '6', '7', '8', '9', 0x01}),
 		  COBS_DEFAULT_DELIMITER, "Trailing zero"),
-	COBS_ITEM(U8({}), U8({0x01 ^ 0x7F}), COBS_FLAG_CUSTOM_DELIMITER(0x7F),
-		  "Empty with custom delimiter 0x7F"),
-	COBS_ITEM(U8({'1'}), U8({0x7D, '1' ^ 0x7F}), COBS_FLAG_CUSTOM_DELIMITER(0x7F),
-		  "One char with custom delimiter 0x7F"),
-	COBS_ITEM(U8({0x7F}), U8({0x7D, 0x00}), COBS_FLAG_CUSTOM_DELIMITER(0x7F),
-		  "One 0x7F delimiter"),
-	COBS_ITEM(U8({0x7F, 0x7F}), U8({0x7C, 0x00, 0x00}), COBS_FLAG_CUSTOM_DELIMITER(0x7F),
-		  "Two 0x7F delimiters"),
-	COBS_ITEM(U8({0x7F, 0x7F, 0x7F}), U8({0x7B, 0x00, 0x00, 0x00}),
-		  COBS_FLAG_CUSTOM_DELIMITER(0x7F), "Three 0x7F delimiters"),
+	COBS_ITEM(U8({}), U8({0x01}), 0x7F, "Empty with custom delimiter 0x7F"),
+	COBS_ITEM(U8({'1'}), U8({0x02, '1'}), 0x7F, "One char with custom delimiter 0x7F"),
+	COBS_ITEM(U8({0x7F}), U8({0x01, 0x01}), 0x7F, "One 0x7F delimiter"),
+	COBS_ITEM(U8({0x7F, 0x7F}), U8({0x01, 0x01, 0x01}), 0x7F, "Two 0x7F delimiters"),
+	COBS_ITEM(U8({0x7F, 0x7F, 0x7F}), U8({0x01, 0x01, 0x01, 0x01}), 0x7F,
+		  "Three 0x7F delimiters"),
 	COBS_ITEM(
 		U8({'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
 		    'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'a', 'b',
@@ -360,12 +365,13 @@ ZTEST_F(cobs_tests, test_encode)
 	int ret;
 
 	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		uint32_t flags = cobs_dataset[idx].flags;
+		uint8_t delimiter = cobs_dataset[idx].delimiter;
 
 		net_buf_add_mem(fixture->test_data, cobs_dataset[idx].decoded,
 				cobs_dataset[idx].decoded_len);
 
-		ret = cobs_encode(fixture->test_data, fixture->encoded, flags);
+		ret = cobs_encode(fixture->test_data, fixture->encoded,
+				  COBS_FLAG_CUSTOM_DELIMITER(delimiter));
 		zassert_ok(ret, "COBS encoding failed for %s", cobs_dataset[idx].name);
 		zassert_equal(cobs_dataset[idx].encoded_len, fixture->encoded->len,
 			      "Encoded length does not match expected for %s",
@@ -383,57 +389,18 @@ ZTEST_F(cobs_tests, test_encode)
 	}
 }
 
-static int cobs_net_buf_cb(const uint8_t *buf, size_t len, void *user_data)
-{
-	struct net_buf *dst = user_data;
-
-	if (net_buf_tailroom(dst) < len) {
-		return -ENOMEM;
-	}
-
-	(void)net_buf_add_mem(dst, buf, len);
-
-	return 0;
-}
-
-ZTEST_F(cobs_tests, test_encode_stream)
-{
-	int ret;
-
-	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		const struct cobs_test_item *test = &cobs_dataset[idx];
-		struct cobs_encoder enc;
-
-		ret = cobs_encoder_init(&enc, cobs_net_buf_cb, fixture->encoded, test->flags);
-		zassert_ok(ret, "encoder init failed for %s (%d)", test->name, ret);
-
-		/* Simulate chunks by sending each byte */
-		for (size_t i = 0; i < test->decoded_len; ++i) {
-			ret = cobs_encoder_write(&enc, &test->decoded[i], 1);
-			zassert_equal(ret, 1, "encoder write failed (%d) for %s", ret, test->name);
-		}
-
-		ret = cobs_encoder_close(&enc);
-		zassert_ok(ret, "encoder close failed for %s (%d)", test->name, ret);
-
-		zassert_equal(test->encoded_len, fixture->encoded->len);
-		zassert_mem_equal(test->encoded, fixture->encoded->data, test->encoded_len);
-
-		net_buf_reset(fixture->encoded);
-	}
-}
-
 ZTEST_F(cobs_tests, test_decode)
 {
 	int ret;
 
 	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		uint32_t flags = cobs_dataset[idx].flags;
+		uint8_t delimiter = cobs_dataset[idx].delimiter;
 
 		net_buf_add_mem(fixture->test_data, cobs_dataset[idx].decoded,
 				cobs_dataset[idx].decoded_len);
 
-		ret = cobs_decode(fixture->encoded, fixture->test_data, flags);
+		ret = cobs_decode(fixture->encoded, fixture->test_data,
+				  COBS_FLAG_CUSTOM_DELIMITER(delimiter));
 		zassert_ok(ret, "COBS decoding failed for %s", cobs_dataset[idx].name);
 		zassert_equal(cobs_dataset[idx].decoded_len, fixture->test_data->len,
 			      "Decoded length does not match expected for %s",
@@ -451,139 +418,19 @@ ZTEST_F(cobs_tests, test_decode)
 	}
 }
 
-ZTEST_F(cobs_tests, test_decode_stream)
-{
-	int ret;
-
-	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		const struct cobs_test_item *test = &cobs_dataset[idx];
-		struct cobs_decoder dec;
-
-		ret = cobs_decoder_init(&dec, cobs_net_buf_cb, fixture->decoded, test->flags);
-		zassert_ok(ret, "decoder init failed for %s (%d)", test->name, ret);
-
-		/* Simulate chunks by sending each byte */
-		for (size_t i = 0; i < test->encoded_len; ++i) {
-			ret = cobs_decoder_write(&dec, &test->encoded[i], 1);
-			zassert_equal(ret, 1, "decoder write failed (%d) for %s", ret, test->name);
-		}
-
-		ret = cobs_decoder_close(&dec);
-		zassert_ok(ret, "decoder close failed for %s (%d)", test->name, ret);
-
-		zassert_equal(test->decoded_len, fixture->decoded->len);
-		zassert_mem_equal(test->decoded, fixture->decoded->data, test->decoded_len);
-
-		net_buf_reset(fixture->decoded);
-	}
-}
-
-static int cobs_forward_to_decoder(const uint8_t *buf, size_t len, void *user_data)
-{
-	struct cobs_decoder *dec = user_data;
-
-	return cobs_decoder_write(dec, buf, len);
-}
-
-ZTEST_F(cobs_tests, test_encode_decode_stream)
-{
-	int ret;
-
-	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		const struct cobs_test_item *test = &cobs_dataset[idx];
-		struct cobs_encoder enc;
-		struct cobs_decoder dec;
-
-		ret = cobs_encoder_init(&enc, cobs_forward_to_decoder, &dec, test->flags);
-		zassert_ok(ret, "encoder init failed for %s (%d)", test->name, ret);
-
-		ret = cobs_decoder_init(&dec, cobs_net_buf_cb, fixture->decoded, test->flags);
-		zassert_ok(ret, "decoder init failed for %s (%d)", test->name, ret);
-
-		ret = cobs_encoder_write(&enc, test->decoded, test->decoded_len);
-		zassert_equal(ret, test->decoded_len, "encoder write failed for %s (%d)",
-			      test->name, ret);
-
-		ret = cobs_encoder_close(&enc);
-		zassert_ok(ret, "encoder close failed for %s (%d)", test->name, ret);
-
-		ret = cobs_decoder_close(&dec);
-		zassert_ok(ret, "decoder close failed for %s (%d)", test->name, ret);
-
-		zassert_equal(test->decoded_len, fixture->decoded->len);
-		zassert_mem_equal(test->decoded, fixture->decoded->data, test->decoded_len);
-
-		net_buf_reset(fixture->decoded);
-	}
-}
-
-static size_t frame_test_idx;
-
-static int cobs_frame_tester(const uint8_t *buf, size_t len, void *user_data)
-{
-	struct net_buf *dst = user_data;
-
-	if (buf == NULL) {
-		const struct cobs_test_item *test = &cobs_dataset[frame_test_idx];
-
-		zassert_equal(test->decoded_len, dst->len);
-		zassert_mem_equal(test->decoded, dst->data, test->decoded_len);
-
-		net_buf_reset(dst);
-		frame_test_idx++;
-		return 0;
-	}
-
-	if (net_buf_tailroom(dst) < len) {
-		return -ENOMEM;
-	}
-
-	(void)net_buf_add_mem(dst, buf, len);
-
-	return 0;
-}
-
-ZTEST_F(cobs_tests, test_decode_stream_frame_complete)
-{
-	struct cobs_encoder enc;
-	struct cobs_decoder dec;
-	int ret;
-
-	/* This test re-uses the same encoder/decoder pair and streams multiple frames */
-
-	ret = cobs_encoder_init(&enc, cobs_forward_to_decoder, &dec, COBS_FLAG_TRAILING_DELIMITER);
-	zassert_ok(ret, "encoder init failed (%d)", ret);
-
-	ret = cobs_decoder_init(&dec, cobs_frame_tester, fixture->decoded,
-				COBS_FLAG_TRAILING_DELIMITER);
-	zassert_ok(ret, "decoder init failed (%d)", ret);
-
-	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		ret = cobs_encoder_write(&enc, cobs_dataset[idx].decoded,
-					 cobs_dataset[idx].decoded_len);
-		zassert_equal(ret, cobs_dataset[idx].decoded_len);
-
-		/* Closing will write a delimiter and reset the state */
-		ret = cobs_encoder_close(&enc);
-		zassert_ok(ret);
-	}
-
-	zassert_equal(frame_test_idx, ARRAY_SIZE(cobs_dataset));
-}
-
 ZTEST_F(cobs_tests, test_encode_trailing_delimiter)
 {
 	int ret;
 
 	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		uint32_t flags = cobs_dataset[idx].flags;
-		uint8_t delimiter = COBS_FLAG_CUSTOM_DELIMITER(flags);
+		uint8_t delimiter = cobs_dataset[idx].delimiter;
 
 		net_buf_add_mem(fixture->test_data, cobs_dataset[idx].decoded,
 				cobs_dataset[idx].decoded_len);
 
 		ret = cobs_encode(fixture->test_data, fixture->encoded,
-				  COBS_FLAG_TRAILING_DELIMITER | flags);
+				  COBS_FLAG_TRAILING_DELIMITER |
+					  COBS_FLAG_CUSTOM_DELIMITER(delimiter));
 		zassert_ok(ret, "COBS encoding failed for %s", cobs_dataset[idx].name);
 		zassert_equal(cobs_dataset[idx].encoded_len + 1, fixture->encoded->len,
 			      "Encoded length does not match expected for %s",
@@ -609,8 +456,7 @@ ZTEST_F(cobs_tests, test_decode_trailing_delimiter)
 	int ret;
 
 	ARRAY_FOR_EACH(cobs_dataset, idx) {
-		uint32_t flags = cobs_dataset[idx].flags;
-		uint8_t delimiter = COBS_FLAG_CUSTOM_DELIMITER(flags);
+		uint8_t delimiter = cobs_dataset[idx].delimiter;
 
 		net_buf_add_mem(fixture->test_data, cobs_dataset[idx].decoded,
 				cobs_dataset[idx].decoded_len);
@@ -618,7 +464,8 @@ ZTEST_F(cobs_tests, test_decode_trailing_delimiter)
 		net_buf_add_u8(fixture->encoded, delimiter);
 
 		ret = cobs_decode(fixture->encoded, fixture->test_data,
-				  COBS_FLAG_TRAILING_DELIMITER | flags);
+				  COBS_FLAG_TRAILING_DELIMITER |
+					  COBS_FLAG_CUSTOM_DELIMITER(delimiter));
 		zassert_ok(ret, "COBS decoding failed for %s", cobs_dataset[idx].name);
 		zassert_equal(cobs_dataset[idx].decoded_len, fixture->test_data->len,
 			      "Decoded length does not match expected for %s",
@@ -643,7 +490,7 @@ ZTEST_F(cobs_tests, test_cobs_invalid_delim_pos)
 
 	net_buf_add_mem(fixture->encoded, data_enc, sizeof(data_enc));
 	ret = cobs_decode(fixture->encoded, fixture->decoded, 0);
-	zassert_equal(ret, -EINVAL, "Decoding invalid delimiter caught");
+	zassert_true(ret == -EINVAL, "Decoding invalid delimiter caught");
 }
 
 ZTEST_F(cobs_tests, test_cobs_consecutive_delims)
@@ -653,7 +500,7 @@ ZTEST_F(cobs_tests, test_cobs_consecutive_delims)
 
 	net_buf_add_mem(fixture->encoded, data_enc, sizeof(data_enc));
 	ret = cobs_decode(fixture->encoded, fixture->decoded, 0);
-	zassert_equal(ret, -EINVAL, "Decoding consecutive delimiters not caught");
+	zassert_true(ret == -EINVAL, "Decoding consecutive delimiters not caught");
 }
 
 ZTEST_F(cobs_tests, test_cobs_invalid_overrun)
@@ -663,5 +510,5 @@ ZTEST_F(cobs_tests, test_cobs_invalid_overrun)
 
 	net_buf_add_mem(fixture->encoded, data_enc, sizeof(data_enc));
 	ret = cobs_decode(fixture->encoded, fixture->decoded, 0);
-	zassert_equal(ret, -EINVAL, "Decoding insufficient data not caught");
+	zassert_true(ret == -EINVAL, "Decoding insufficient data not caught");
 }

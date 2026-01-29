@@ -30,9 +30,6 @@ This document provides a quick reference for commonly used reST and
 Sphinx-defined directives and roles used to create the documentation
 you're reading.
 
-For instructions regarding writing good C API documentation, see
-:ref:`doxygen_style`.
-
 Content Structure
 *****************
 
