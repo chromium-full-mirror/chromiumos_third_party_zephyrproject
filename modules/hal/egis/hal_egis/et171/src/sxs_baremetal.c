@@ -172,7 +172,7 @@ void sx_flush_fromhw(struct sx_regs *regs, char *cpumem, size_t offset,
     (void)offset;
     (void)sz;
 #ifdef CONFIG_DCACHE
-    cache_data_invd_range((void*)cpumem, sz);
+    cache_data_flush_and_invd_range((void*)cpumem, sz);
 #endif
 }
 
