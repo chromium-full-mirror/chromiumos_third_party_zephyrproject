@@ -186,9 +186,6 @@ class TestInstance:
     def __lt__(self, other):
         return self.name < other.name
 
-    def compose_case_name(self, tc_name) -> str:
-        return self.testsuite.compose_case_name(tc_name)
-
     def set_case_status_by_name(self, name, status, reason=None):
         tc = self.get_case_or_create(name)
         tc.status = status
@@ -398,7 +395,6 @@ class TestInstance:
             for cp in coverage_platform:
                 if cp in platform.aliases:
                     content = content + "\nCONFIG_COVERAGE=y"
-                    content = content + "\nCONFIG_COVERAGE_DUMP=y"
 
         if platform.type == "native":
             if enable_asan:

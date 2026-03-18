@@ -87,8 +87,13 @@
 			#clock-cells = <1>;
 		};
 
+		rcm: rcm@4007F000 {
+			compatible = "nxp,rcm-hwinfo";
+			reg = <0x4007F000 0x1000>;
+		};
+
 		sim: sim@40047000 {
-			compatible = "nxp,kinetis-sim";
+			compatible = "nxp,kinetis-sim", "nxp,sim-uuid";
 			reg = <0x40047000 0x1060>;
 			#clock-cells = <3>;
 
@@ -283,7 +288,6 @@
 			reg = <0x40040000 0x1000>;
 			interrupts = <28 0>;
 			clock-frequency = <DT_FREQ_K(1)>;
-			prescaler = <1>;
 			prescale-glitch-filter = <1>;
 			clk-source = <1>;
 			resolution = <16>;

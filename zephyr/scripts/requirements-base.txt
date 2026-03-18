@@ -12,6 +12,7 @@ PyYAML>=6.0
 
 # YAML validation. Used by zephyr_module.
 pykwalify
+jsonschema
 
 # used by west_commands
 canopen
@@ -23,7 +24,7 @@ pyserial
 requests>=2.32.4
 semver
 tqdm>=4.67.1
-reuse
+reuse>=6.0.0
 
 # for ram/rom reports
 anytree

@@ -38,6 +38,7 @@
 		zephyr,shell-uart = &lpuart0;
 		zephyr,uart-mcumgr = &lpuart0;
 		zephyr,canbus = &flexcan0;
+		zephyr,cortex-m-idle-timer = &lptmr0;
 	};
 
 	leds {
@@ -116,6 +117,10 @@
 			   <ARDUINO_HEADER_R3_D14 0 &gpio0 16 0>,
 			   <ARDUINO_HEADER_R3_D15 0 &gpio0 17 0>;
 	};
+};
+
+&cpu0 {
+	clock-frequency = <96000000>;
 };
 
 &gpio0 {
@@ -225,9 +230,9 @@ zephyr_mipi_dbi_parallel: &flexio0_lcd {
 	pinctrl-names = "default";
 };
 
-&lpcmp0 {
+&opamp0 {
 	status = "okay";
-	pinctrl-0 = <&pinmux_lpcmp0>;
+	pinctrl-0 = <&pinmux_opamp0>;
 	pinctrl-names = "default";
 };
 

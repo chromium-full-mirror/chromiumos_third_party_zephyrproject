@@ -2,6 +2,7 @@
 
 /*
  * Copyright (c) 2016 Intel Corporation
+ * Copyright 2024-2025 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1565,11 +1566,12 @@ done:
 
 	struct net_buf *buf;
 
-	buf = br_chan->_pdu_buf;
+	buf = net_buf_ref(br_chan->_pdu_buf);
 
 	if (br_chan->_pdu_remaining > amount) {
 		br_chan->_pdu_remaining -= amount;
 	} else {
+		net_buf_unref(br_chan->_pdu_buf);
 		br_chan->_pdu_buf = NULL;
 		br_chan->_pdu_remaining = 0;
 		if (pdu && !pdu->len) {
@@ -2614,6 +2616,9 @@ destroy:
 	/* Reset internal members of common channel */
 	bt_l2cap_br_chan_set_state(chan, BT_L2CAP_DISCONNECTED);
 	BR_CHAN(chan)->psm = 0U;
+	if (L2CAP_BR_CID_IS_DYN(BR_CHAN(chan)->rx.cid)) {
+		BR_CHAN(chan)->rx.cid = 0U;
+	}
 #endif
 	if (chan->destroy) {
 		chan->destroy(chan);
@@ -6190,8 +6195,6 @@ BT_L2CAP_BR_CHANNEL_DEFINE(br_fixed_chan, BT_L2CAP_CID_BR_SIG, l2cap_br_accept);
 
 void bt_l2cap_br_init(void)
 {
-	sys_slist_init(&br_servers);
-
 	if (IS_ENABLED(CONFIG_BT_RFCOMM)) {
 		bt_rfcomm_init();
 	}

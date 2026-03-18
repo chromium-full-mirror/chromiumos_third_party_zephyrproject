@@ -114,7 +114,7 @@ set_property(TARGET compiler-cpp PROPERTY dialect_cpp2b "-std=c++2b" "-Wno-regis
 ###################################################
 
 # clang flags for coverage generation
-if (CONFIG_COVERAGE_NATIVE_SOURCE)
+if(CONFIG_COVERAGE_NATIVE_SOURCE)
   set_compiler_property(PROPERTY coverage -fprofile-instr-generate -fcoverage-mapping)
 else()
   set_compiler_property(PROPERTY coverage --coverage -fno-inline)
@@ -136,6 +136,9 @@ set_compiler_property(PROPERTY linker_script -Wl,-T)
 
 # clang flag for colourful diagnostic messages
 set_compiler_property(PROPERTY diagnostic -fcolor-diagnostics)
+
+# clang flag to disable macro backtrace in diagnostics (can't fully disable it, so limit to 1)
+set_compiler_property(PROPERTY no_track_macro_expansion "-fmacro-backtrace-limit=1")
 
 set_compiler_property(PROPERTY no_global_merge "-mno-global-merge")
 
