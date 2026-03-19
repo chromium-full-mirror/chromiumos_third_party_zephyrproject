@@ -1896,7 +1896,8 @@ static int udc_ft_host_wakeup(const struct device *dev)
     {
         priv->disable_suspend_irq=true;
         USBx->UCSR |= USB_POWER_RESUME;
-        k_sleep(K_MSEC(10));
+        //k_sleep(K_MSEC(10));
+        udelay(8*1000);
         USBx->UCSR &= ~(USB_POWER_RESUME);
         priv->disable_suspend_irq=false;
     }
