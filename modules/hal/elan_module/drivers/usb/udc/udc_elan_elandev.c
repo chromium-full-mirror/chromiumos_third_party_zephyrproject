@@ -988,25 +988,28 @@ static void e967_usb_resume_isr(const struct device *dev)
 {
 	struct udc_e967_data *priv = udc_get_private(dev);
 	if (priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RESUMEINTSF == 1) {
-		priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RESUMEINTSFCLR = 1;
-	}
 	
 #if (__GLOBAL_DEBUG_LOG__ > 0)		
-	printk("[INFO] >>> usb [resume] signal\n");
+		printk("[INFO] >>> usb [resume] signal\n");
 #endif		
 	
-	udc_set_suspended(dev, false);
-	udc_submit_event(dev, UDC_EVT_RESUME, 0);
+		udc_set_suspended(dev, false);
+		udc_submit_event(dev, UDC_EVT_RESUME, 0);
 
 #if (_IS_SET_CLEAR_FEATURE_PATCH)
-	_handle_set_feature_remote_wakeup( dev, 0);
+		_handle_set_feature_remote_wakeup( dev, 0);
 #endif
+		priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RESUMEINTSFCLR = 1;
+	}
 
 	return;
 }
 static void e967_usb_reset_isr(const struct device *dev)
 {
 	struct udc_e967_data *priv = udc_get_private(dev);
+	int len, i;
+	uint8_t tmp;
+	
 	if (priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RSTINTSF == 1) {
 		priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RSTINTSFCLR = 1;
 	}
@@ -1014,7 +1017,35 @@ static void e967_usb_reset_isr(const struct device *dev)
 #if (__GLOBAL_DEBUG_LOG__ > 0)		
 	printk("[INFO] >>> usb [reset] signal\n");
 #endif
-	
+
+
+	// EP1 Buffer Clear
+	UDCEP1INTEN->UDCEP1INT_EN.UDC_EP1_INT_ENBIT.EP1BUFCLR = 1;
+	UDCEP1INTEN->UDCEP1INT_EN.UDC_EP1_INT_ENBIT.EP1BUFCLR = 0;
+
+	// EP2 Buffer Clear
+	UDCEP2INTEN->UDCEP2INT_EN.UDC_EP2_INT_ENBIT.EP2BUFCLR = 1;
+	UDCEP2INTEN->UDCEP2INT_EN.UDC_EP2_INT_ENBIT.EP2BUFCLR = 0;
+
+	// EP3 Buffer Clear
+	UDCEP3INTEN->UDCEP3INT_EN.UDC_EP3_INT_ENBIT.EP3BUFCLR = 1;
+	UDCEP3INTEN->UDCEP3INT_EN.UDC_EP3_INT_ENBIT.EP3BUFCLR = 0;
+
+	len = (EP1DATINOUTCNT >> 16);
+	for( i = 0 ; i < len ; i++) {
+		tmp = EP1BUFDATA;
+	}
+
+	len = (EP2DATINOUTCNT >> 16);
+	for( i = 0 ; i < len ; i++) {
+		tmp = EP2BUFDATA;
+	}
+
+	len = (EP3DATINOUTCNT >> 16);
+	for( i = 0 ; i < len ; i++) {
+		tmp = EP3BUFDATA;
+	}
+
 	priv->addr = 0;
 	priv->ep0_cur_ref = 0;
 	priv->ep0_proc_ref = 0;

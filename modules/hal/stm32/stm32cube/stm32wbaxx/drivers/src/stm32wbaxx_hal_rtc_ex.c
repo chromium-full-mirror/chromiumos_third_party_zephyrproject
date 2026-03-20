@@ -1860,7 +1860,7 @@ HAL_StatusTypeDef HAL_RTCEx_LockBootHardwareKey(const RTC_HandleTypeDef *hrtc)
   /* Prevent unused argument(s) compilation warning */
   UNUSED(hrtc);
 
-  WRITE_REG(TAMP->SECCFGR, TAMP_SECCFGR_BHKLOCK);
+  SET_BIT(TAMP->SECCFGR, TAMP_SECCFGR_BHKLOCK);
 
   return HAL_OK;
 }
@@ -2632,7 +2632,7 @@ void  HAL_RTCEx_BKUPBlock(const RTC_HandleTypeDef *hrtc)
   /* Prevent unused argument(s) compilation warning */
   UNUSED(hrtc);
 
-  WRITE_REG(TAMP->CR2, TAMP_CR2_BKBLOCK);
+  SET_BIT(TAMP->CR2, TAMP_CR2_BKBLOCK);
 }
 
 /**
@@ -2648,7 +2648,7 @@ void  HAL_RTCEx_BKUPUnblock(const RTC_HandleTypeDef *hrtc)
   CLEAR_BIT(TAMP->CR2, TAMP_CR2_BKBLOCK);
 }
 
-#ifdef TAMP_RPCFGR_RPCFG
+#if defined (TAMP_RPCFGR_RPCFG) || defined(TAMP_ERCFGR_ERCFG)
 /**
   * @brief  Enable and Disable the erase of the configurable Device Secrets
   * @note   This API must be called before enabling the Tamper.
@@ -2670,7 +2670,11 @@ void  HAL_RTCEx_ConfigEraseDeviceSecrets(const RTC_HandleTypeDef *hrtc, uint32_t
   /* Prevent unused argument(s) compilation warning */
   UNUSED(hrtc);
 
+#if defined (TAMP_RPCFGR_RPCFG)
   MODIFY_REG(TAMP->RPCFGR, TAMP_RPCFGR_RPCFG, DeviceSecretConf);
+#elif defined (TAMP_ERCFGR_ERCFG)
+  MODIFY_REG(TAMP->ERCFGR, TAMP_ERCFGR_ERCFG, DeviceSecretConf);
+#endif
 }
 #endif /* TAMP_RPCFGR_RPCFG */
 

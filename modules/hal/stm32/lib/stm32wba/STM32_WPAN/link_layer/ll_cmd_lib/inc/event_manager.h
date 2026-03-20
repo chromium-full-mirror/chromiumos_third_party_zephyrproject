@@ -1,4 +1,4 @@
-/*$Id: //dwh/bluetooth/DWC_ble154combo/firmware/rel/2.00a-lca03/firmware/public_inc/event_manager.h#1 $*/
+/*$Id: //dwh/bluetooth/DWC_ble154combo/firmware/branches/P10164613/2.00a-lca05_CombinedPatchV2/firmware/public_inc/event_manager.h#4 $*/
 /**
  ********************************************************************************
  * @file    event_manager.h
@@ -9,7 +9,7 @@
  * Copyright (c) 2020-Present Synopsys, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of the software and
- * associated documentation files (the ‚ÄúSoftware‚Äù), to deal in the Software without restriction, including
+ * associated documentation files (the ìSoftwareî), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
  * following conditions:
@@ -26,7 +26,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  * */
-
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef INCLUDE_EVENT_MANAGER_H_
 #define INCLUDE_EVENT_MANAGER_H_
@@ -34,7 +33,7 @@
 #include "ll_fw_config.h"
 #include "common_types.h"
 
-/* Defination ----------------------------------------------------------------*/
+/* Definition ----------------------------------------------------------------*/
 /*Event manager events*/
 #define EVENT_PENDING		1
 #define HANDLE_IS_FULL		77
@@ -323,7 +322,7 @@ void * emngr_peak_frst_event(unsigned char id);
 void * emngr_del_event(unsigned char id, void *data);
 
 
-/* @breif Used to remove a certain event within a queue that satisfies the condition set by cbk
+/* @brief Used to remove a certain event within a queue that satisfies the condition set by cbk
  * 		  the cbk can delete priv data if it has allocated data.
  * @param id: [In] ID of the queue to search for
  * @param only_one_event: [In] if False delete all events that satisfies the condition
@@ -342,7 +341,7 @@ uint8_t emngr_remove_conditional_event( uint8_t id, uint8_t only_one_event,
  * */
 uint8_t emngr_can_mcu_sleep(void);
 
-/* @breif Used to process a certain event within a queue that satisfies the condition set by cbk
+/* @brief Used to process a certain event within a queue that satisfies the condition set by cbk
  * @param id: [In] ID of the queue to search for
  * @param only_one_event: [In] if False process all events that satisfies the condition
  * @param conitional_data: [In] Optional pointer to pass to cbk along with priv data

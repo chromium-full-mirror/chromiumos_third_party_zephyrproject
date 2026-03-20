@@ -32,7 +32,6 @@
 #include <zephyr/kernel.h>
 
 #include <zephyr/drivers/usb/udc.h>
-#include <zephyr/dt-bindings/usb/usb.h>
 
 #include <zephyr/drivers/reset.h>
 #include <zephyr/sys/util.h>
@@ -48,7 +47,7 @@ LOG_MODULE_REGISTER(usb_device_init, LOG_LEVEL_ERR);
 
 #include "cpm_drv.h"
 #include "usb_drv.h"
-
+void udelay(unsigned int us);
 enum udc_ft_msg_type
 {
     // FT_EVT_TRANSFER
@@ -134,6 +133,7 @@ struct udc_ft_data
     uint8_t addr; /* Host assigned USB device address */
     uint8_t tailrom;
     bool enum_done;
+    bool disable_suspend_irq;
 #ifdef CONFIG_PM
     atomic_t pm_lock;
 #endif
@@ -465,7 +465,7 @@ static int ft_udc_xfer_out(const struct device *dev, uint8_t ep, bool strict)
 
     udc_ft_hal_lock(dev);
     saved_idx = USBx->EINDEX;
-    ;
+    
     USBx->EINDEX = ep_idx;
     if (ep == USB_CONTROL_EP_OUT)
     {
@@ -1319,6 +1319,7 @@ static int ft_udc_msg_handle_reset(const struct device *dev, struct udc_ft_msg *
     priv->enum_done = false;
     irq_unlock(key);
 #ifdef CONFIG_PM
+    ft_pm_enter_deep_sleep(false);
     udc_ft_pm_policy_lock_get(dev);
 #endif
     udc_submit_event(dev, UDC_EVT_RESET, 0);
@@ -1353,7 +1354,7 @@ static int ft_udc_msg_handle_reset(const struct device *dev, struct udc_ft_msg *
 
 static int ft_udc_msg_handle_suspend(const struct device *dev, struct udc_ft_msg *msg)
 {
-    unsigned int key;
+    
     struct udc_ft_data *priv = udc_get_private(dev);
     printk("usb suspend\n");
 
@@ -1362,7 +1363,8 @@ static int ft_udc_msg_handle_suspend(const struct device *dev, struct udc_ft_msg
     {
         return 0;
     }
-    key = irq_lock();
+
+ //FT_USBD_Type *const USBx = config->base;
     
     /* UDC stack would handle bottom-half processing */
     if (!udc_is_suspended(dev) && udc_is_enabled(dev))
@@ -1370,11 +1372,16 @@ static int ft_udc_msg_handle_suspend(const struct device *dev, struct udc_ft_msg
         LOG_WRN("Enter SUSPEND State");
         udc_set_suspended(dev, true);
         udc_submit_event(dev, UDC_EVT_SUSPEND, 0);
-    }
-    irq_unlock(key);
+
 #ifdef CONFIG_PM
-    ft_pm_enter_deep_sleep(true);
-    udc_ft_pm_policy_lock_put(dev);
+        ft_pm_enter_deep_sleep(true);
+#endif
+    }
+  
+#ifdef CONFIG_PM
+        
+        udc_ft_pm_policy_lock_put(dev);
+  
 #endif
     return 0;
 }
@@ -1512,6 +1519,8 @@ static void ft_udbd_isr(const struct device *dev)
     uint32_t usbd_intdma = USBx->DMA_INTR;
 #endif
 
+    static uint8_t send_sof_once=0;
+
     usbd_intrusb = USBx->INTRUSB;
     usbd_inttx = USBx->INTRTX;
     usbd_intrx = USBx->INTRRX;
@@ -1536,26 +1545,40 @@ static void ft_udbd_isr(const struct device *dev)
     if (usbd_intrusb & USB_INTERRUPT_RESET)
     {
         msg.type = FT_UDC_MSG_TYPE_RESET;
+        send_sof_once=0;
         ft_udc_send_msg(dev, &msg);
     }
     /* USB suspend */
     if (usbd_intrusb & USB_INTERRUPT_SUSPEND)
     {
+        send_sof_once=0;
+        printk("usbd_intrusb=%x/%x/%x\n",USBx->E0CSR_L,USBx->RXCSR_L,USBx->TXCSR_L);
         // disable usb py
-        msg.type = FT_UDC_MSG_TYPE_SUSUPEND;
-        ft_udc_send_msg(dev, &msg);
+		if(!priv->disable_suspend_irq){
+       	 	msg.type = FT_UDC_MSG_TYPE_SUSUPEND;
+        	ft_udc_send_msg(dev, &msg);
+		}
     }
     /* USB resume */
     if (usbd_intrusb & USB_INTERRUPT_RESUME)
     {
+		priv->disable_suspend_irq=false;
+        send_sof_once=1;
         ft_usb_resume_event(dev);
     }
     /* USB SOF */
     if (usbd_intrusb & USB_INTERRUPT_SOF)
     {
         priv->sof_num = USBx->FNUMR;
-        // udc_submit_event(dev, UDC_EVT_SOF, 0);
-        ft_usb_resume_event(dev);
+        if(!priv->disable_suspend_irq&&send_sof_once==0){
+            
+            ft_usb_resume_event(dev);
+            send_sof_once=1;
+            //udc_submit_event(dev, UDC_EVT_SOF, 0);
+        }
+
+        
+
     }
 
     /* Handle EP0 interrupt */
@@ -1856,6 +1879,11 @@ static int udc_ft_host_wakeup(const struct device *dev)
 {
     const struct udc_ft_config *config = dev->config;
     FT_USBD_Type *const USBx = config->base;
+ 
+	printk("ft remote wakeup--\n");
+  
+    struct udc_ft_data *priv = udc_get_private(dev);
+    
 
     LOG_WRN("Remote wakeup");
     /*When the device is operating in the suspended mode,
@@ -1865,12 +1893,17 @@ static int udc_ft_host_wakeup(const struct device *dev)
     0= Turn off the recovery signal
     1= to produce the recovery signal BIT 2*/
 
+    udc_ft_hal_lock(dev);
     if (udc_is_suspended(dev))
     {
+        priv->disable_suspend_irq=true;
         USBx->UCSR |= USB_POWER_RESUME;
-        k_sleep(K_MSEC(10));
+        //k_sleep(K_MSEC(10));
+        udelay(8*1000);
         USBx->UCSR &= ~(USB_POWER_RESUME);
+        priv->disable_suspend_irq=false;
     }
+    udc_ft_hal_unlock(dev);
 
     return 0;
 }
@@ -2184,6 +2217,7 @@ static const struct udc_api udc_ft_api = {
     static struct udc_ft_data udc_priv_##n = {                                                                         \
         .msgq = &udc_ft_msgq_##n,                                                                                      \
         .enum_done = false,                                                                                            \
+        .disable_suspend_irq=false,                                                                                    \
         IF_ENABLED(CONFIG_UDC_FT_DMA, (.status_sem = Z_SEM_INITIALIZER(udc_priv_##n.status_sem, 0, 1), ))};            \
                                                                                                                        \
     static struct udc_data udc_data_##n = {                                                                            \

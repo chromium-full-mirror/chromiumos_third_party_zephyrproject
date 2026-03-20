@@ -57,6 +57,8 @@ LOG_MODULE_REGISTER(uart_ifx, CONFIG_UART_LOG_LEVEL);
 #define IFX_UART_RX_INT_MASK_NONE 0UL
 #define IFX_UART_TX_INT_MASK_NONE 0UL
 
+#define IFX_UART_RTS_RX_FIFO_LEVEL 63UL
+
 #ifdef CONFIG_UART_ASYNC_API
 #include <zephyr/drivers/dma.h>
 #include <cy_trigmux.h>
@@ -131,6 +133,7 @@ struct ifx_cat1_uart_config {
 	struct uart_config dt_cfg;
 	uint16_t irq_num;
 	uint8_t irq_priority;
+	en_clk_dst_t clk_dst;
 };
 
 typedef void (*ifx_cat1_uart_event_callback_t)(void *callback_arg);
@@ -313,13 +316,12 @@ cy_rslt_t ifx_cat1_uart_set_baud(const struct device *dev, uint32_t baudrate)
 
 	divider = ifx_uart_divider(peri_frequency, baudrate, best_oversample);
 
-	en_clk_dst_t clk_idx = ifx_cat1_scb_get_clock_index(data->hw_resource.block_num);
-
 	/* Set baud rate */
 	if ((data->clock.block & 0x02) == 0) {
-		status = ifx_cat1_utils_peri_pclk_set_divider(clk_idx, &(data->clock), divider - 1);
+		status = ifx_cat1_utils_peri_pclk_set_divider(config->clk_dst, &(data->clock),
+							      divider - 1);
 	} else {
-		status = ifx_cat1_utils_peri_pclk_set_frac_divider(clk_idx, &(data->clock),
+		status = ifx_cat1_utils_peri_pclk_set_frac_divider(config->clk_dst, &(data->clock),
 								   divider - 1, 0);
 	}
 
@@ -423,7 +425,8 @@ static int ifx_cat1_uart_configure(const struct device *dev, const struct uart_c
 	data->scb_config.dataWidth = convert_uart_data_bits_z_to_cy(cfg->data_bits);
 	data->scb_config.stopBits = convert_uart_stop_bits_z_to_cy(cfg->stop_bits);
 	data->scb_config.parity = convert_uart_parity_z_to_cy(cfg->parity);
-	data->scb_config.enableCts = data->cts_enabled;
+	data->scb_config.enableCts = cfg->flow_ctrl;
+	data->scb_config.rtsRxFifoLevel = cfg->flow_ctrl ? IFX_UART_RTS_RX_FIFO_LEVEL : 0UL;
 
 	Cy_SCB_UART_Init(config->reg_addr, &(data->scb_config), NULL);
 	Cy_SCB_UART_Enable(config->reg_addr);
@@ -1321,6 +1324,12 @@ static int ifx_cat1_uart_init(const struct device *dev)
 	data->scb_config.txFifoTriggerLevel = 1;
 #endif
 
+	/* Connect this SCB to the peripheral clock */
+	result = ifx_cat1_utils_peri_pclk_assign_divider(config->clk_dst, &data->clock);
+	if (result != CY_RSLT_SUCCESS) {
+		return -EIO;
+	}
+
 	result = (cy_rslt_t)Cy_SCB_UART_Init(config->reg_addr, &(data->scb_config),
 					     &(data->context));
 
@@ -1354,6 +1363,7 @@ static int ifx_cat1_uart_init(const struct device *dev)
 		data->async.dma_rx.dma_cfg.head_block = &data->async.dma_rx.blk_cfg;
 		data->async.dma_rx.dma_cfg.user_data = (void *)dev;
 		data->async.dma_rx.dma_cfg.dma_callback = dma_callback_rx_rdy;
+		data->async.dma_rx.dma_cfg.source_handshake = 0;
 
 #if defined(CONFIG_SOC_FAMILY_INFINEON_EDGE)
 		Cy_TrigMux_Connect(
@@ -1379,6 +1389,7 @@ static int ifx_cat1_uart_init(const struct device *dev)
 		data->async.dma_tx.dma_cfg.head_block = &data->async.dma_tx.blk_cfg;
 		data->async.dma_tx.dma_cfg.user_data = (void *)dev;
 		data->async.dma_tx.dma_cfg.dma_callback = dma_callback_tx_done;
+		data->async.dma_tx.dma_cfg.source_handshake = 1;
 
 #if defined(CONFIG_SOC_FAMILY_INFINEON_EDGE)
 		Cy_TrigMux_Connect(
@@ -1446,7 +1457,7 @@ static DEVICE_API(uart, ifx_cat1_uart_driver_api) = {
 		.channel_direction = ch_dir,                                                       \
 		.source_data_size = src_data_size,                                                 \
 		.dest_data_size = dst_data_size,                                                   \
-		.source_burst_length = 0,                                                          \
+		.source_burst_length = 1,                                                          \
 		.dest_burst_length = 0,                                                            \
 		.block_count = 1,                                                                  \
 		.complete_callback_en = 0,                                                         \
@@ -1537,6 +1548,7 @@ static DEVICE_API(uart, ifx_cat1_uart_driver_api) = {
 		.dt_cfg.flow_ctrl = DT_INST_PROP(n, hw_flow_control),                              \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
 		.reg_addr = (CySCB_Type *)DT_INST_REG_ADDR(n),                                     \
+		.clk_dst = DT_INST_PROP(n, clk_dst),                                               \
 		IRQ_INFO(n)};                                                                      \
                                                                                                    \
 	DEVICE_DT_INST_DEFINE(n, &ifx_cat1_uart_init##n, NULL, &ifx_cat1_uart##n##_data,           \

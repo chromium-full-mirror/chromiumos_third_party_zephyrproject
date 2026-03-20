@@ -5,7 +5,7 @@
  *****************************************************************************
  * @attention
  *
- * Copyright (c) 2018-2025 STMicroelectronics.
+ * Copyright (c) 2018-2026 STMicroelectronics.
  * All rights reserved.
  *
  * This software is licensed under terms that can be found in the LICENSE file
@@ -4015,56 +4015,6 @@ typedef __PACKED_STRUCT
 {
   uint16_t Connection_Handle;
   uint16_t Attr_Handle;
-  uint16_t Val_Offset;
-  uint8_t Attribute_Val_Length;
-  uint8_t Attribute_Val[BLE_CMD_MAX_PARAM_LEN - 7];
-} aci_gatt_write_long_char_desc_cp0;
-
-typedef __PACKED_STRUCT
-{
-  uint8_t Status;
-} aci_gatt_write_long_char_desc_rp0;
-
-typedef __PACKED_STRUCT
-{
-  uint16_t Connection_Handle;
-  uint16_t Attr_Handle;
-  uint16_t Val_Offset;
-} aci_gatt_read_long_char_desc_cp0;
-
-typedef __PACKED_STRUCT
-{
-  uint8_t Status;
-} aci_gatt_read_long_char_desc_rp0;
-
-typedef __PACKED_STRUCT
-{
-  uint16_t Connection_Handle;
-  uint16_t Attr_Handle;
-  uint8_t Attribute_Val_Length;
-  uint8_t Attribute_Val[BLE_CMD_MAX_PARAM_LEN - 5];
-} aci_gatt_write_char_desc_cp0;
-
-typedef __PACKED_STRUCT
-{
-  uint8_t Status;
-} aci_gatt_write_char_desc_rp0;
-
-typedef __PACKED_STRUCT
-{
-  uint16_t Connection_Handle;
-  uint16_t Attr_Handle;
-} aci_gatt_read_char_desc_cp0;
-
-typedef __PACKED_STRUCT
-{
-  uint8_t Status;
-} aci_gatt_read_char_desc_rp0;
-
-typedef __PACKED_STRUCT
-{
-  uint16_t Connection_Handle;
-  uint16_t Attr_Handle;
   uint8_t Attribute_Val_Length;
   uint8_t Attribute_Val[BLE_CMD_MAX_PARAM_LEN - 5];
 } aci_gatt_write_without_resp_cp0;
@@ -4105,22 +4055,25 @@ typedef __PACKED_STRUCT
   uint8_t Error_Code;
   uint8_t Attribute_Val_Length;
   uint8_t Attribute_Val[BLE_CMD_MAX_PARAM_LEN - 7];
-} aci_gatt_write_resp_cp0;
+} aci_gatt_permit_write_cp0;
 
 typedef __PACKED_STRUCT
 {
   uint8_t Status;
-} aci_gatt_write_resp_rp0;
+} aci_gatt_permit_write_rp0;
 
 typedef __PACKED_STRUCT
 {
   uint16_t Connection_Handle;
-} aci_gatt_allow_read_cp0;
+  uint8_t Read_status;
+  uint8_t Error_Code;
+  uint16_t Attr_Handle;
+} aci_gatt_permit_read_cp0;
 
 typedef __PACKED_STRUCT
 {
   uint8_t Status;
-} aci_gatt_allow_read_rp0;
+} aci_gatt_permit_read_rp0;
 
 typedef __PACKED_STRUCT
 {
@@ -4166,6 +4119,22 @@ typedef __PACKED_STRUCT
 
 typedef __PACKED_STRUCT
 {
+  uint16_t Connection_Handle;
+  uint16_t Attr_Handle;
+  uint16_t Offset;
+  uint16_t Value_Length_Requested;
+} aci_gatt_get_attribute_value_cp0;
+
+typedef __PACKED_STRUCT
+{
+  uint8_t Status;
+  uint16_t Length;
+  uint16_t Value_Length;
+  uint8_t Value[(BLE_EVT_MAX_PARAM_LEN - 3) - 5];
+} aci_gatt_get_attribute_value_rp0;
+
+typedef __PACKED_STRUCT
+{
   uint16_t Conn_Handle_To_Notify;
   uint16_t Service_Handle;
   uint16_t Char_Handle;
@@ -4180,17 +4149,6 @@ typedef __PACKED_STRUCT
 {
   uint8_t Status;
 } aci_gatt_update_char_value_ext_rp0;
-
-typedef __PACKED_STRUCT
-{
-  uint16_t Connection_Handle;
-  uint8_t Error_Code;
-} aci_gatt_deny_read_cp0;
-
-typedef __PACKED_STRUCT
-{
-  uint8_t Status;
-} aci_gatt_deny_read_rp0;
 
 typedef __PACKED_STRUCT
 {
@@ -4232,6 +4190,35 @@ typedef __PACKED_STRUCT
 {
   uint8_t Status;
 } aci_gatt_read_multiple_var_char_value_rp0;
+
+typedef __PACKED_STRUCT
+{
+  uint16_t Connection_Handle;
+  uint16_t Attr_Handle;
+  uint8_t Signed_Mode;
+  uint16_t Data_Length;
+  uint32_t Data_Pointer;
+} aci_gatt_write_without_resp_ext_cp0;
+
+typedef __PACKED_STRUCT
+{
+  uint8_t Status;
+} aci_gatt_write_without_resp_ext_rp0;
+
+typedef __PACKED_STRUCT
+{
+  uint16_t Connection_Handle;
+  uint16_t Attr_Handle;
+  uint8_t Write_Mode;
+  uint16_t Val_Offset;
+  uint16_t Data_Length;
+  uint32_t Data_Pointer;
+} aci_gatt_write_with_resp_ext_cp0;
+
+typedef __PACKED_STRUCT
+{
+  uint8_t Status;
+} aci_gatt_write_with_resp_ext_rp0;
 
 typedef __PACKED_STRUCT
 {
@@ -5039,27 +5026,10 @@ typedef __PACKED_STRUCT
 
 typedef __PACKED_STRUCT
 {
-  uint8_t Last_State;
-  uint8_t Next_State;
-  uint32_t Next_State_SysTime;
-  uint8_t Last_State_Slot;
-  uint8_t Next_State_Slot;
-} aci_hal_end_of_radio_activity_event_rp0;
-
-typedef __PACKED_STRUCT
-{
   uint8_t Warning_Type;
   uint8_t Data_Length;
   uint8_t Data[(BLE_EVT_MAX_PARAM_LEN - 2) - 2];
 } aci_warning_event_rp0;
-
-typedef __PACKED_STRUCT
-{
-  uint8_t Group_Id;
-  uint32_t Next_Anchor_Point;
-  uint32_t Time_Stamp;
-  uint32_t Next_Sdu_Delivery_Timeout;
-} aci_hal_sync_event_rp0;
 
 typedef __PACKED_STRUCT
 {
@@ -5071,6 +5041,7 @@ typedef __PACKED_STRUCT
 typedef __PACKED_STRUCT
 {
   uint16_t Connection_Handle;
+  uint8_t IO_Capability;
 } aci_gap_pass_key_req_event_rp0;
 
 typedef __PACKED_STRUCT
@@ -5414,6 +5385,23 @@ typedef __PACKED_STRUCT
   uint16_t Attribute_Value_Length;
   uint8_t Attribute_Value[(BLE_EVT_MAX_PARAM_LEN - 2) - 8];
 } aci_gatt_notification_ext_event_rp0;
+
+typedef __PACKED_STRUCT
+{
+  uint8_t Last_State;
+  uint8_t Next_State;
+  uint32_t Next_State_SysTime;
+  uint8_t Last_State_Slot;
+  uint8_t Next_State_Slot;
+} aci_hal_end_of_radio_activity_event_rp0;
+
+typedef __PACKED_STRUCT
+{
+  uint8_t Group_Id;
+  uint32_t Next_Anchor_Point;
+  uint32_t Time_Stamp;
+  uint32_t Next_Sdu_Delivery_Timeout;
+} aci_hal_sync_event_rp0;
 
 
 #endif /* BLE_TYPES_H__ */

@@ -46,6 +46,13 @@ file_list_wba = {
         "Middlewares/ST/STM32_WPAN/ble/stack/include/auto/ble_types.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/_40nm_reg_files/"
         + "DWC_ble154combo.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/crypto.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/error.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/instance.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/logging.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/radio.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/toolchain.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/types.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/bsp.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/common_types.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/dtm.h",
@@ -55,6 +62,7 @@ file_list_wba = {
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/hci.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ll_intf.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ll_intf_cmn.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/mac_host_intf.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/mem_intf.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/os_wrapper.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/platform.h",
@@ -68,12 +76,8 @@ file_list_wba = {
         + "ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ieee_15_4_basic/"
         + "ll_fw_config.h",
-        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/thread/"
-        + "ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/"
         + "ble_15_4/ll_fw_config.h",
-        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/"
-        + "ble_full_15_4/ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/ble/stack/include/ble_bufsize.h",
         "Middlewares/ST/STM32_WPAN/ble/stack/include/ble_const.h",
         "Middlewares/ST/STM32_WPAN/ble/stack/include/ble_defs.h",
@@ -89,28 +93,38 @@ file_list_wba = {
         "Middlewares/ST/STM32_WPAN/link_layer/ll_sys/inc/ll_sys_startup.h",
         "Middlewares/ST/STM32_WPAN/stm32_wpan_common.h",
     ],
-    "RF_Integration": [
+    "RF_Integration/Core": [
         ble_transparent_mode_app_path + "/Core/Inc/app_common.h",
-        ble_transparent_mode_app_path + "/Core/Inc/app_conf.h",
-        ble_transparent_mode_app_path + "/Core/Inc/app_entry.h",
         ble_transparent_mode_app_path + "/Core/Inc/utilities_conf.h",
         ble_transparent_mode_app_path + "/Core/Inc/main.h",
+    ],
+    "RF_Integration/System": [
         ble_transparent_mode_app_path + "/System/Config/Debug_GPIO/debug_config.h",
         ble_transparent_mode_app_path + "/System/Config/Log/log_module_conf.h",
+    ],
+    "RF_Integration/STM32_WPAN": [
         ble_transparent_mode_app_path + "/STM32_WPAN/Target/power_table.c",
-        ble_transparent_mode_app_path + "/STM32_WPAN/Target/bpka.c",
-        ble_transparent_mode_app_path + "/STM32_WPAN/Target/bpka.h",
         ble_transparent_mode_app_path + "/STM32_WPAN/Target/linklayer_plat.c",
         ble_transparent_mode_app_path + "/STM32_WPAN/Target/ll_sys_if.c",
         ble_transparent_mode_app_path + "/STM32_WPAN/Target/ll_sys_if.h",
     ],
+    "RF_Integration/Core/Inc/app_conf": [
+        ble_transparent_mode_app_path + "/Core/Inc/app_conf.h",
+    ],
     "Common": [
+        "Projects/Common/WPAN/Modules/BasicAES/baes_ccm.c",
+        "Projects/Common/WPAN/Modules/BasicAES/baes_cmac.c",
+        "Projects/Common/WPAN/Modules/BasicAES/baes_ecb.c",
+        "Projects/Common/WPAN/Modules/BasicAES/baes_global.h",
+        "Projects/Common/WPAN/Modules/BasicAES/baes.h",
         "Projects/Common/WPAN/Modules/Flash/rf_timing_synchro.c",
         "Projects/Common/WPAN/Modules/Flash/rf_timing_synchro.h",
         "Projects/Common/WPAN/Modules/Flash/flash_driver.c",
         "Projects/Common/WPAN/Modules/Flash/flash_driver.h",
         "Projects/Common/WPAN/Modules/Flash/flash_manager.c",
         "Projects/Common/WPAN/Modules/Flash/flash_manager.h",
+        "Projects/Common/WPAN/Modules/Log/log_module.c",
+        "Projects/Common/WPAN/Modules/Log/log_module.h",
         "Projects/Common/WPAN/Modules/RTDebug/debug_signals.h",
         "Projects/Common/WPAN/Modules/RTDebug/RTDebug.c",
         "Projects/Common/WPAN/Modules/RTDebug/RTDebug.h",
@@ -121,16 +135,87 @@ file_list_wba = {
         "Projects/Common/WPAN/Interfaces/hw.h",
         "Projects/Common/WPAN/Interfaces/hw_aes.c",
         "Projects/Common/WPAN/Interfaces/hw_if.h",
-        "Projects/Common/WPAN/Interfaces/hw_pka.c",
-        "Projects/Common/WPAN/Interfaces/hw_pka_p256.c",
-        "Projects/Common/WPAN/Modules/Log/log_module.c",
-        "Projects/Common/WPAN/Modules/Log/log_module.h",
     ],
     "Utilities": [
         "Utilities/trace/adv_trace/stm32_adv_trace.h",
         "Utilities/misc/stm32_mem.h",
         "Utilities/tim_serv/stm32_timer.h",
         "Utilities/misc/stm32_tiny_vsnprintf.h",
+    ],
+}
+
+wb0_ble_transparent_mode_app_path = "Projects/NUCLEO-WB09KE/Applications/BLE/" \
+                                    + "BLE_TransparentMode"
+
+file_list_wb0 = {
+    "STM32_BLE": [
+        "Middlewares/ST/STM32_BLE/ble.h",
+        "Middlewares/ST/STM32_BLE/stack/config/ble_stack_user_cfg.c",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_api.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_const.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_events.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_gatt.h",
+        "Middlewares/ST/STM32_BLE/stack/include/bleplat_cntr.h",
+        "Middlewares/ST/STM32_BLE/stack/include/bleplat.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_stack.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_stack_user_cfg.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_status.h",
+        "Middlewares/ST/STM32_BLE/stack/include/ble_types.h",
+        "Middlewares/ST/STM32_BLE/stack/include/uuid.h",
+    ],
+    "BLE_TransparentMode": [
+        wb0_ble_transparent_mode_app_path + "/Core/Inc/app_common.h",
+        wb0_ble_transparent_mode_app_path + "/Core/Inc/app_conf.h",
+        wb0_ble_transparent_mode_app_path + "/Core/Src/stm32wb0x_hal_msp.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/aci_adv_nwk.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/aci_adv_nwk.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/aci_gatt_nwk.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/aci_l2cap_nwk.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/adv_buff_alloc.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/adv_buff_alloc.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/adv_buff_alloc_tiny.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/adv_buff_alloc_tiny.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/app_ble.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/ble_conf.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dm_alloc.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dm_alloc.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_burst.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_cmd_db.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_cmd_db.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_cmd_en.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_cmds.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_cmds.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_cmd_stack_en.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_preprocess_events.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/dtm_preprocess_events.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/fifo.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/hci_parser.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/pawr_buff_alloc.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/pawr_buff_alloc.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/transport_layer.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/App/transport_layer.h",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/Target/bleplat.c",
+        wb0_ble_transparent_mode_app_path + "/STM32_BLE/Target/bleplat_cntr.c",
+    ],
+    "Common": [
+        "Projects/Common/BLE/Interfaces/hw_aes.c",
+        "Projects/Common/BLE/Interfaces/hw_aes.h",
+        "Projects/Common/BLE/Interfaces/hw_pka.c",
+        "Projects/Common/BLE/Interfaces/hw_pka.h",
+        "Projects/Common/BLE/Interfaces/hw_rng.c",
+        "Projects/Common/BLE/Interfaces/hw_rng.h",
+        "Projects/Common/BLE/Modules/asm.h",
+        "Projects/Common/BLE/Modules/blue_unit_conversion.s",
+        "Projects/Common/BLE/Modules/compiler.h",
+        "Projects/Common/BLE/Modules/crash_handler.h",
+        "Projects/Common/BLE/Modules/miscutil.c",
+        "Projects/Common/BLE/Modules/miscutil.h",
+        "Projects/Common/BLE/Modules/osal.h",
+        "Projects/Common/BLE/Modules/osal_memcpy.s",
+        "Projects/Common/BLE/Modules/PKAMGR/Inc/pka_manager.h",
+        "Projects/Common/BLE/Modules/PKAMGR/Src/pka_manager.c",
+        "Projects/Common/BLE/Modules/RADIO_utils/Inc/RADIO_utils.h",
+        "Projects/Common/BLE/Modules/RADIO_utils/Src/RADIO_utils.c",
     ],
 }
 
@@ -182,25 +267,51 @@ def copy_ble_lib_files(src_repo_path, dest_lib_path, stm32_serie):
                 logging.error("Abort")
                 sys.exit()
 
-    elif stm32_serie == "stm32wba":
+    elif stm32_serie in ["stm32wba", "stm32wb0"]:
+
+        if stm32_serie == "stm32wba":
+            target_file_list = file_list_wba
+        elif stm32_serie == "stm32wb0":
+            target_file_list = file_list_wb0
+        else:
+            logging.error(f"File : Unexpected series {stm32_serie}")
+            logging.error("Abort")
+            sys.exit()
+
         # Remove existing *.c and *.h files
         for root, _, files in os.walk(dest_lib_path):
             for file in files:
                 if file.endswith(".c") or file.endswith(".h"):
                     os.remove(os.path.join(root, file))
 
-        for dir_name in file_list_wba:
-            for file in file_list_wba[dir_name]:
+        for dir_name in target_file_list:
+            for file in target_file_list[dir_name]:
                 # Src file path to be copied
                 src_file_path = Path(src_repo_path / file)
                 if src_file_path.exists():
                     # Extract the relevant part of the path from "dir_name" onwards
                     start_index = file.find(dir_name)
-                    relative_path = file[start_index:]
+                    if start_index > 0:
+                        # Relevant part of the path from "dir_name" has been found
+                        relative_path = file[start_index:]
+                    else:
+                        # Extract subdirectory from "dir_name"
+                        sub_dir_name = os.path.basename(dir_name)
+                        # Extract parent directory name from "dir_name"
+                        parent_name = os.path.dirname(os.path.normpath(dir_name))
+                        # Extract the relevant part of the path
+                        # from "sub_dir_name" onwards
+                        start_index = file.find(sub_dir_name)
+                        if sub_dir_name == 'app_conf':
+                            # If base name is app_conf, add 'app_conf'
+                            # in the relative path
+                            parent_name = os.path.join(parent_name, sub_dir_name)
+                        relative_path = os.path.join(parent_name, file[start_index:])
                     # Create the full destination path
                     destination_path = os.path.join(dest_lib_path, relative_path)
                     # Create (if does not exist) all directories in the destination path
                     os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+                    logging.info(f"File : {src_file_path} copy to {destination_path}")
                     # Copy the file to the destination path
                     shutil.copy(src_file_path, destination_path)
                 else:

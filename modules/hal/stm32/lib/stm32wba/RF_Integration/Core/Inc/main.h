@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2022 STMicroelectronics.
+  * Copyright (c) 2024 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -32,6 +32,7 @@ extern "C" {
 #include "app_common.h"
 
 #include "stm32wbaxx_ll_icache.h"
+#include "stm32wbaxx_ll_pka.h"
 #include "stm32wbaxx_ll_tim.h"
 #include "stm32wbaxx_ll_bus.h"
 #include "stm32wbaxx_ll_cortex.h"

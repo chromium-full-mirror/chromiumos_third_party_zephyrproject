@@ -7,6 +7,7 @@
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 #include <sys/vfs.h>
+#include <limits.h>
 
 #include "ff_common.h"
 #include "ff_log.h"
@@ -189,7 +190,7 @@ static int ft_device_init(ft_device_info_t *info)
     if (ret < 0)
     {
         FF_LOGE("open vid(%x) pid(%x) failed\n", vid, pid);
-        return 0;
+        return ret;
     }
 
     return 0;
@@ -200,9 +201,9 @@ int main(int argc, char **argv)
     int ret = 0;
     ft_device_info_t info;
 
-    char tmp[64];
+    char tmp[PATH_MAX];
 
-    if (argc < 2 && argc > 3)
+    if (argc < 2 || argc > 3)
     {
         FF_LOGE("para err");
         return -1;
@@ -232,7 +233,7 @@ int main(int argc, char **argv)
             if (!memcmp(tmp, "force_update_full_ec_bin", sizeof("force_update_full_ec_bin")))
             {
                 FF_LOGD("force update ec bin");
-                info.next_mode = FORCE_UPDATE_MDOE;
+                info.next_mode = FORCE_UPDATE_MODE;
             }
             else
             {
@@ -288,7 +289,7 @@ int main(int argc, char **argv)
             return 0;
         }
 
-        if (info.next_mode != FORCE_UPDATE_MDOE)
+        if (info.next_mode != FORCE_UPDATE_MODE)
         {
             info.next_mode = EC_MODE;
         }
@@ -314,7 +315,7 @@ int main(int argc, char **argv)
         info.current_mode = ROM_MODE;
     }
 
-    if (info.current_mode == EC_MODE && info.next_mode == FORCE_UPDATE_MDOE)
+    if (info.current_mode == EC_MODE && info.next_mode == FORCE_UPDATE_MODE)
     {
         ft_switch_to_boot();
         mbedtls_usb_free();

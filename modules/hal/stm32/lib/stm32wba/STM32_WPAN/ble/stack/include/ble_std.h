@@ -5,7 +5,7 @@
  ******************************************************************************
  * @attention
  *
- * Copyright (c) 2018-2025 STMicroelectronics.
+ * Copyright (c) 2018-2026 STMicroelectronics.
  * All rights reserved.
  *
  * This software is licensed under terms that can be found in the LICENSE file
@@ -59,7 +59,7 @@
 #define HCI_ENCRYPTION_KEY_REFRESH_COMPLETE_EVT_CODE                   0x30U
 #define HCI_LE_META_EVT_CODE                                           0x3EU
 #define HCI_AUTHENTICATED_PAYLOAD_TIMEOUT_EXPIRED_EVT_CODE             0x57U
-#define HCI_VENDOR_SPECIFIC_DEBUG_EVT_CODE                             0xFFU
+#define HCI_VENDOR_SPECIFIC_EVT_CODE                                   0xFFU
 
 /* HCI LE subevent code */
 #define HCI_LE_CONNECTION_COMPLETE_SUBEVT_CODE                            0x01U
@@ -266,6 +266,7 @@
 #define BLE_CORE_5_4                                   13
 #define BLE_CORE_6_0                                   14
 #define BLE_CORE_6_1                                   15
+#define BLE_CORE_6_2                                   16
 
 /* AD types for advertising data and scan response data
  */

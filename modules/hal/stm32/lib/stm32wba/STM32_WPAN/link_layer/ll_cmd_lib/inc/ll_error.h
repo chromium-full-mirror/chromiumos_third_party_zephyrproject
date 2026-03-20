@@ -1,5 +1,4 @@
-/*$Id: //dwh/bluetooth/DWC_ble154combo/firmware/rel/2.00a-lca03/firmware/public_inc/ll_error.h#1 $*/
-
+/*$Id: //dwh/bluetooth/DWC_ble154combo/firmware/branches/P10164613/2.00a-lca05_CombinedPatchV2/firmware/public_inc/ll_error.h#4 $*/
 /**
  ********************************************************************************
  * @file    error.h
@@ -10,7 +9,7 @@
  * Copyright (c) 2020-Present Synopsys, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of the software and
- * associated documentation files (the ‚ÄúSoftware‚Äù), to deal in the Software without restriction, including
+ * associated documentation files (the ìSoftwareî), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
  * following conditions:
@@ -219,6 +218,10 @@ typedef enum _HW_ERROR_CODES
 #if (SUPPORT_DYNAMIC_PREEMPH_COEFF && CTE_DEGRADATION_API_PHY_SUPPORT)
 #error "Dynamic Preemphasis coefficients feature cannot be enabled while the CTE degradation API is enabled"
 #endif /* SUPPORT_DYNAMIC_PREEMPH_COEFF && CTE_DEGRADATION_API_PHY_SUPPORT */
+
+#if (defined(RTL_VER_7) ^ (defined(PHY_40nm_3_60_a_tc_new_demod) || defined(PHY_40nm_6_00_a_lca00))) && defined(snps_ble_demo)
+#error "Configuration error: RTL_VER_7 shall only be defined while either PHY_40nm_3_60_a_tc_new_demod or PHY_40nm_6_00_a_lca00 is defined"
+#endif /*(defined(RTL_VER_7) && (!defined(PHY_40nm_3_60_a_tc_new_demod) && !defined(PHY_40nm_6_00_a_lca00)))*/
 
 /* Exported macros ------------------------------------------------------------*/
 

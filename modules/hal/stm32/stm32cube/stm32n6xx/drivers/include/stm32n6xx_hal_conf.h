@@ -72,6 +72,7 @@
 #define HAL_RTC_MODULE_ENABLED
 #define HAL_SAI_MODULE_ENABLED
 #define HAL_SD_MODULE_ENABLED
+#define HAL_SDIO_MODULE_ENABLED
 #define HAL_SDRAM_MODULE_ENABLED
 #define HAL_SMARTCARD_MODULE_ENABLED
 #define HAL_SMBUS_MODULE_ENABLED
@@ -86,9 +87,7 @@
 #define HAL_CACHEAXI_MODULE_ENABLED
 #define HAL_MDIOS_MODULE_ENABLED
 #define HAL_GPU2D_MODULE_ENABLED
-#define HAL_CACHEAXI_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
-#define HAL_EXTI_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
 #define HAL_PWR_MODULE_ENABLED
@@ -315,10 +314,6 @@
 #include "stm32n6xx_hal_gfxtim.h"
 #endif /* HAL_GFXTIM_MODULE_ENABLED */
 
-#ifdef HAL_GPIO_MODULE_ENABLED
-#include "stm32n6xx_hal_gpio.h"
-#endif /* HAL_GPIO_MODULE_ENABLED */
-
 #ifdef HAL_GPU2D_MODULE_ENABLED
 #include "stm32n6xx_hal_gpu2d.h"
 #endif /* HAL_GPU2D_MODULE_ENABLED */
@@ -390,10 +385,6 @@
 #ifdef HAL_NOR_MODULE_ENABLED
 #include "stm32n6xx_hal_nor.h"
 #endif /* HAL_NOR_MODULE_ENABLED */
-
-#ifdef HAL_NAND_MODULE_ENABLED
-#include "stm32n6xx_hal_nand.h"
-#endif /* HAL_NAND_MODULE_ENABLED */
 
 #ifdef HAL_PCD_MODULE_ENABLED
 #include "stm32n6xx_hal_pcd.h"

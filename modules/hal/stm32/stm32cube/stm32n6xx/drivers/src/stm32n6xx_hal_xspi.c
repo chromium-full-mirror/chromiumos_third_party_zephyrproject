@@ -2828,7 +2828,7 @@ HAL_StatusTypeDef HAL_XSPIM_Config(XSPI_HandleTypeDef *hxspi, const XSPIM_CfgTyp
   }
 
   /********** Disable all XSPI to configure XSPI IO Manager **********/
-  if ((__HAL_RCC_XSPI1_IS_CLK_ENABLED() != 0U) && (hxspi->Instance == XSPI1))
+ if (__HAL_RCC_XSPI1_IS_CLK_ENABLED() != 0U)
   {
     if ((XSPI1->CR & XSPI_CR_EN) != 0U)
     {
@@ -2836,7 +2836,7 @@ HAL_StatusTypeDef HAL_XSPIM_Config(XSPI_HandleTypeDef *hxspi, const XSPIM_CfgTyp
       xspi_enabled |= 0x1U;
     }
   }
-  if ((__HAL_RCC_XSPI2_IS_CLK_ENABLED() != 0U) && (hxspi->Instance == XSPI2))
+  if (__HAL_RCC_XSPI2_IS_CLK_ENABLED() != 0U)
   {
     if ((XSPI2->CR & XSPI_CR_EN) != 0U)
     {
@@ -2936,6 +2936,10 @@ HAL_StatusTypeDef HAL_XSPIM_Config(XSPI_HandleTypeDef *hxspi, const XSPIM_CfgTyp
   if ((xspi_enabled & 0x2U) != 0U)
   {
     SET_BIT(XSPI2->CR, XSPI_CR_EN);
+  }
+  if ((xspi_enabled & 0x4U) != 0U)
+  {
+    SET_BIT(XSPI3->CR, XSPI_CR_EN);
   }
 
   return status;

@@ -5,7 +5,7 @@
  *****************************************************************************
  * @attention
  *
- * Copyright (c) 2018-2025 STMicroelectronics.
+ * Copyright (c) 2018-2026 STMicroelectronics.
  * All rights reserved.
  *
  * This software is licensed under terms that can be found in the LICENSE file
@@ -247,7 +247,8 @@
  * (ACI_GAP_SET_AUTHENTICATION_REQUIREMENT)
  */
 #define MITM_PROTECTION_NOT_REQUIRED               0x00U
-#define MITM_PROTECTION_REQUIRED                   0x01U
+#define MITM_PROTECTION_REQUIRED_AS_MANDATORY      0x01U
+#define MITM_PROTECTION_REQUIRED_AS_OPTIONAL       0x02U
 
 /* LE Secure Connections support
  * (ACI_GAP_SET_AUTHENTICATION_REQUIREMENT)
@@ -368,6 +369,8 @@
 #define ATTR_PERMISSION_AUTHEN_WRITE   0x08U /* Need authentication to write */
 #define ATTR_PERMISSION_AUTHOR_WRITE   0x10U /* Need authorization to write */
 #define ATTR_PERMISSION_ENCRY_WRITE    0x20U /* Need encryption to write */
+#define ATTR_PERMISSION_SC_READ        0x40U /* Need SC to read */
+#define ATTR_PERMISSION_SC_WRITE       0x80U /* Need SC tto write */
 
 /* Type of UUID (16 bit or 128 bit)
  */
@@ -417,6 +420,10 @@
 #define GATT_CHAR_UPDATE_LOCAL_ONLY                0x00U
 #define GATT_CHAR_UPDATE_SEND_NOTIFICATION         0x01U
 #define GATT_CHAR_UPDATE_SEND_INDICATION           0x02U
+
+/* Conn_Handle_To_Notify definitions for ACI_GATT_UPDATE_CHAR_VALUE_EXT
+ */
+#define GATT_NOTIFY_TO_ALL_CLIENTS                 0x0FFFU
 
 /* ------------------------------------------------------------------------- */
 

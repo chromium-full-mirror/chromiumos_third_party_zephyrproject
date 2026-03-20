@@ -60,8 +60,13 @@ typedef struct FM_FlashOpConfig
 
 /* Private defines -----------------------------------------------------------*/
 #define FLASH_PAGE_NBR    (FLASH_SIZE / FLASH_PAGE_SIZE)
+#if defined(STM32WBA25xx) || defined(STM32WBA23xx)
+#define FLASH_WRITE_BLOCK_SIZE  2U
+#else
 #define FLASH_WRITE_BLOCK_SIZE  4U
+#endif /* defined(STM32WBA25xx) || defined(STM32WBA23xx)  */
 #define ALIGNMENT_32   0x00000003
+#define ALIGNMENT_64   0x00000007
 #define ALIGNMENT_128  0x0000000F
 
 /* Private macros ------------------------------------------------------------*/
@@ -86,11 +91,6 @@ static bool fm_window_granted = FALSE;
   * @brief Callback node list for pending flash operation request
   */
 static tListNode fm_cb_pending_list;
-
-/**
-  * @brief Flag indicating if pending node list has been initialized
-  */
-static bool fm_cb_pending_list_init = FALSE;
 
 /**
   * @brief Pointer to current flash operation requester's callback
@@ -118,6 +118,20 @@ static FM_Cmd_Status_t FM_CheckFlashManagerState(FM_CallbackNode_t *CallbackNode
 static void FM_WindowAllowed_Callback(void);
 
 /* Functions Definition ------------------------------------------------------*/
+/**
+ * @brief Initialize the Flash manager module
+ */
+void FM_Init (void)
+{
+  static bool fm_cb_pending_list_init = false;
+
+  /* Initialize pending list if not done */
+  if (fm_cb_pending_list_init == false)
+  {
+    LST_init_head(&fm_cb_pending_list);
+    fm_cb_pending_list_init = true;
+  }
+}
 
 /**
   * @brief  Request the Flash Manager module to initiate a Flash Write operation
@@ -133,7 +147,7 @@ FM_Cmd_Status_t FM_Write(uint32_t *Src, uint32_t *Dest, int32_t Size, FM_Callbac
   FM_Cmd_Status_t status;
 
   if (((uint32_t)Dest < FLASH_BASE) || ((uint32_t)Dest > (FLASH_BASE + FLASH_SIZE))
-                                    || (((uint32_t)Dest + Size) > (FLASH_BASE + FLASH_SIZE)))
+                                    || (((uint32_t)Dest + (Size << 2)) > (FLASH_BASE + FLASH_SIZE)))
   {
     LOG_ERROR_SYSTEM("\r\nFM_Write - Destination address not part of the flash");
 
@@ -141,7 +155,11 @@ FM_Cmd_Status_t FM_Write(uint32_t *Src, uint32_t *Dest, int32_t Size, FM_Callbac
     return FM_ERROR;
   }
 
+#ifdef FLASH_DOUBLEWORD_SUPPORT
+  if (((uint32_t) Src & ALIGNMENT_32) || ((uint32_t) Dest & ALIGNMENT_64))
+#else
   if (((uint32_t) Src & ALIGNMENT_32) || ((uint32_t) Dest & ALIGNMENT_128))
+#endif
   {
     LOG_ERROR_SYSTEM("\r\nFM_Write - Source or destination address not properly aligned");
 
@@ -434,12 +452,6 @@ static FM_Cmd_Status_t FM_CheckFlashManagerState(FM_CallbackNode_t *CallbackNode
   /* Check if semaphore on flash is available */
   UTILS_ENTER_CRITICAL_SECTION();
 
-  /* Initialize pending list if not done */
-  if (fm_cb_pending_list_init == false)
-  {
-    LST_init_head(&fm_cb_pending_list);
-    fm_cb_pending_list_init = true;
-  }
   /* Check if semaphore on flash is available */
   if (busy_flash_sem == false)
   { /* Check if Flash Manager is already busy */

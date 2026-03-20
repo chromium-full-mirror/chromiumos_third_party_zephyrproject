@@ -117,11 +117,6 @@ static int eth_initialize(const struct device *dev)
 	ETH_HandleTypeDef *heth = &dev_data->heth;
 	int ret = 0;
 
-	if (!device_is_ready(DEVICE_DT_GET(STM32_CLOCK_CONTROL_NODE))) {
-		LOG_ERR("clock control device not ready");
-		return -ENODEV;
-	}
-
 	/* Enable clocks */
 	for (size_t n = 0; n < cfg->pclken_cnt; n++) {
 		if (n == cfg->kclk_sel_idx) {
@@ -146,41 +141,30 @@ static int eth_initialize(const struct device *dev)
 		return ret;
 	}
 
-	if (cfg->mac_cfg.type != NET_ETH_MAC_NVMEM) {
-#if defined(ETH_STM32_RANDOM_MAC)
-		/* "zephyr,random-mac-address" is set, generate a random mac address */
-		gen_random_mac(dev_data->mac_addr, ST_OUI_B0, ST_OUI_B1, ST_OUI_B2);
-#else /* Use user defined mac address */
-		dev_data->mac_addr[0] = ST_OUI_B0;
-		dev_data->mac_addr[1] = ST_OUI_B1;
-		dev_data->mac_addr[2] = ST_OUI_B2;
-#if NODE_HAS_VALID_MAC_ADDR(DT_DRV_INST(0))
-		dev_data->mac_addr[3] = NODE_MAC_ADDR_OCTET(DT_DRV_INST(0), 3);
-		dev_data->mac_addr[4] = NODE_MAC_ADDR_OCTET(DT_DRV_INST(0), 4);
-		dev_data->mac_addr[5] = NODE_MAC_ADDR_OCTET(DT_DRV_INST(0), 5);
-#else
+	ret = net_eth_mac_load(&cfg->mac_cfg, dev_data->mac_addr);
+	if (ret == -ENODATA) {
 		uint8_t unique_device_ID_12_bytes[12];
 		uint32_t result_mac_32_bits;
+
+		/**
+		 * Set MAC address locally administered bit (LAA) as this is not assigned by the
+		 * manufacturer
+		 */
+		dev_data->mac_addr[0] = ST_OUI_B0 | 0x02;
+		dev_data->mac_addr[1] = ST_OUI_B1;
+		dev_data->mac_addr[2] = ST_OUI_B2;
 
 		/* Nothing defined by the user, use device id */
 		hwinfo_get_device_id(unique_device_ID_12_bytes, 12);
 		result_mac_32_bits = crc32_ieee((uint8_t *)unique_device_ID_12_bytes, 12);
 		memcpy(&dev_data->mac_addr[3], &result_mac_32_bits, 3);
 
-		/**
-		 * Set MAC address locally administered bit (LAA) as this is not assigned by the
-		 * manufacturer
-		 */
-		dev_data->mac_addr[0] |= 0x02;
+		ret = 0;
+	}
 
-#endif /* NODE_HAS_VALID_MAC_ADDR(DT_DRV_INST(0))) */
-#endif
-	} else {
-		ret = net_eth_mac_load(&cfg->mac_cfg, dev_data->mac_addr);
-		if (ret < 0) {
-			LOG_ERR("Failed to load MAC (%d)", ret);
-			return ret;
-		}
+	if (ret < 0) {
+		LOG_ERR("Failed to load MAC address (%d)", ret);
+		return ret;
 	}
 
 	heth->Init.MACAddr = dev_data->mac_addr;
@@ -272,13 +256,10 @@ static void eth_iface_init(struct net_if *iface)
 {
 	const struct device *dev = net_if_get_device(iface);
 	struct eth_stm32_hal_dev_data *dev_data = dev->data;
+	const struct eth_stm32_hal_dev_cfg *cfg = dev->config;
 	ETH_HandleTypeDef *heth = &dev_data->heth;
-	bool is_first_init = false;
 
-	if (dev_data->iface == NULL) {
-		dev_data->iface = iface;
-		is_first_init = true;
-	}
+	dev_data->iface = iface;
 
 	/* Register Ethernet MAC Address with the upper layer */
 	net_if_set_link_addr(iface, dev_data->mac_addr,
@@ -303,23 +284,20 @@ static void eth_iface_init(struct net_if *iface)
 		LOG_ERR("PHY device not ready");
 	}
 
-	if (is_first_init) {
-		const struct eth_stm32_hal_dev_cfg *cfg = dev->config;
-		/* Now that the iface is setup, we are safe to enable IRQs. */
-		__ASSERT_NO_MSG(cfg->config_func != NULL);
-		cfg->config_func();
+	/* Now that the iface is setup, we are safe to enable IRQs. */
+	__ASSERT_NO_MSG(cfg->config_func != NULL);
+	cfg->config_func();
 
-		/* Start interruption-poll thread */
-		k_thread_create(&dev_data->rx_thread, dev_data->rx_thread_stack,
-				K_KERNEL_STACK_SIZEOF(dev_data->rx_thread_stack),
-				rx_thread, (void *) dev, NULL, NULL,
-				IS_ENABLED(CONFIG_ETH_STM32_HAL_RX_THREAD_PREEMPTIVE)
-					? K_PRIO_PREEMPT(CONFIG_ETH_STM32_HAL_RX_THREAD_PRIO)
-					: K_PRIO_COOP(CONFIG_ETH_STM32_HAL_RX_THREAD_PRIO),
-				0, K_NO_WAIT);
+	/* Start interruption-poll thread */
+	k_thread_create(&dev_data->rx_thread, dev_data->rx_thread_stack,
+			K_KERNEL_STACK_SIZEOF(dev_data->rx_thread_stack),
+			rx_thread, (void *) dev, NULL, NULL,
+			IS_ENABLED(CONFIG_ETH_STM32_HAL_RX_THREAD_PREEMPTIVE)
+				? K_PRIO_PREEMPT(CONFIG_ETH_STM32_HAL_RX_THREAD_PRIO)
+				: K_PRIO_COOP(CONFIG_ETH_STM32_HAL_RX_THREAD_PRIO),
+			0, K_NO_WAIT);
 
-		k_thread_name_set(&dev_data->rx_thread, "stm_eth");
-	}
+	k_thread_name_set(&dev_data->rx_thread, "stm_eth");
 }
 
 static enum ethernet_hw_caps eth_stm32_hal_get_capabilities(const struct device *dev)

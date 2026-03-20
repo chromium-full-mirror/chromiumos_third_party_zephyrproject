@@ -29,7 +29,6 @@ def mocked_hm():
 
     hm = HardwareMap(env=mock.Mock())
     hm.duts = duts
-    hm.detected = duts[:5]
 
     return hm
 
@@ -187,7 +186,7 @@ def test_hardwaremap_discover(
         )
     if expect_save:
         mocked_hm.save.assert_called_once_with(
-            mocked_hm.options.generate_hardware_map
+            mocked_hm.options.generate_hardware_map, mock.ANY
         )
     if expect_load:
         mocked_hm.load.assert_called_once_with(
@@ -324,7 +323,6 @@ def test_hardwaremap_load():
             'serial_baud': 115200,
             'fixtures': [],
             'connected': True,
-            'serial': None,
             'serial_pty': 'dummy',
         },
     }
@@ -338,27 +336,21 @@ TESTDATA_4 = [
     (
         True,
         'Linux',
-        ['<p1 (pr1) on s1>', '<p2 (pr2) on s2>', '<p3 (pr3) on s3>',
-         '<p4 (pr4) on s4>', '<p5 (pr5) on s5>',
-         '<unknown (TI product) on /dev/serial/by-id/basic-file1>',
+        ['<unknown (TI product) on /dev/serial/by-id/basic-file1>',
          '<unknown (product123) on dummy device>',
          '<unknown (unknown) on /dev/serial/by-id/basic-file2-link>']
     ),
     (
         True,
         'nt',
-        ['<p1 (pr1) on s1>', '<p2 (pr2) on s2>', '<p3 (pr3) on s3>',
-         '<p4 (pr4) on s4>', '<p5 (pr5) on s5>',
-         '<unknown (TI product) on /dev/serial/by-id/basic-file1>',
+        ['<unknown (TI product) on /dev/serial/by-id/basic-file1>',
          '<unknown (product123) on dummy device>',
          '<unknown (unknown) on /dev/serial/by-id/basic-file2>']
     ),
     (
         False,
         'Linux',
-        ['<p1 (pr1) on s1>', '<p2 (pr2) on s2>', '<p3 (pr3) on s3>',
-         '<p4 (pr4) on s4>', '<p5 (pr5) on s5>',
-         '<unknown (TI product) on /dev/serial/by-id/basic-file1>',
+        ['<unknown (TI product) on /dev/serial/by-id/basic-file1>',
          '<unknown (product123) on dummy device>',
          '<unknown (unknown) on /dev/serial/by-id/basic-file2>']
     )
@@ -444,9 +436,9 @@ def test_hardwaremap_scan(
                     autospec=True, side_effect=mock_iterdir), \
          mock.patch('twisterlib.hardwaremap.Path.exists',
                     autospec=True, side_effect=mock_exists):
-        mocked_hm.scan(persistent)
+        detected = mocked_hm.scan(persistent)
 
-    assert sorted([d.__repr__() for d in mocked_hm.detected]) == \
+    assert sorted([d.__repr__() for d in detected]) == \
            sorted(expected_reprs)
 
     assert 'Scanning connected hardware...' in caplog.text
@@ -572,7 +564,6 @@ TESTDATA_5 = [
             'platform': 'p0',
             'product': 'pr0',
             'connected': False,
-            'serial': None
         },
         {
             'id': 4,
@@ -586,14 +577,12 @@ TESTDATA_5 = [
             'platform': 'p5-5',
             'product': 'pr5-5',
             'connected': False,
-            'serial': None
         },
         {
             'id': 10,
             'platform': 'p10',
             'product': 'pr10',
             'connected': False,
-            'serial': None
         },
         {
             'serial': 's1',
@@ -659,7 +648,7 @@ def test_hardwaremap_save(mocked_hm, hwm, expected_dump):
     with mock.patch('os.path.exists', return_value=hwm is not None), \
          mock.patch('builtins.open', open_mock), \
          mock.patch('twisterlib.hardwaremap.yaml.dump', dump_mock):
-        mocked_hm.save('hwm.yaml')
+        mocked_hm.save('hwm.yaml', detected=mocked_hm.duts[:5])
 
     dump_mock.assert_called_once_with(expected_dump, mock.ANY, Dumper=mock.ANY,
                                       default_flow_style=mock.ANY)
@@ -714,10 +703,91 @@ def test_hardwaremap_dump(
     detected,
     expected_out
 ):
-    mocked_hm.dump(filtered, header, connected_only, detected)
+    detected_duts = mocked_hm.duts[:5] if detected else None
+    mocked_hm.dump(filtered, header, connected_only, detected_duts)
 
     out, err = capfd.readouterr()
     sys.stdout.write(out)
     sys.stderr.write(err)
 
     assert out.strip() == expected_out.strip()
+
+def _run_save_and_get_dump(mocked_hm, *, exists, filename='hwm.yaml', read_data=None):
+    """
+    Run HardwareMap.save() with mocked file I/O and return the object passed to yaml.dump()
+    """
+    dump_mock = mock.Mock()
+
+    if read_data is None:
+        write_mock = mock.mock_open()
+        open_mock = mock.Mock(return_value=write_mock())
+    else:
+        read_mock = mock.mock_open(read_data=read_data)
+        write_mock = mock.mock_open()
+
+        def mock_open(filename, mode='r'):
+            if mode == 'r':
+                return read_mock()
+            if mode == 'w':
+                return write_mock()
+            raise AssertionError(f"unexpected mode {mode}")
+
+        open_mock = mock.Mock(side_effect=mock_open)
+
+    mocked_hm.load = mock.Mock()
+    mocked_hm.dump = mock.Mock()
+
+    with mock.patch('os.path.exists', return_value=exists), \
+         mock.patch('builtins.open', open_mock), \
+         mock.patch('twisterlib.hardwaremap.yaml.dump', dump_mock):
+        mocked_hm.save(filename, detected=mocked_hm.duts[:5])
+
+    return dump_mock.call_args.args[0]
+
+def test_hardwaremap_save_omits_serial_when_none(mocked_hm):
+    """
+    Verify 'serial' key is omitted when from the generated hardware map
+    when it is unknown. 'serial' is not required.
+    """
+    # Force one detected device to have no serial
+    mocked_hm.duts = list(mocked_hm.duts)
+    mocked_hm.duts[1].serial = None  # id=2 in mocked_hm fixture
+
+    dumped = _run_save_and_get_dump(mocked_hm, exists=False, filename='hwm.yaml')
+
+    entry = next(d for d in dumped if d['id'] == 2)
+    assert 'serial' not in entry
+
+    # And ensure nobody writes serial=None
+    assert all(d.get('serial') is not None for d in dumped if 'serial' in d)
+
+def test_hardwaremap_save_existing_map_disconnect_omits_serial(mocked_hm):
+    """
+    If the hardware map contained a 'serial' value, then the next time a
+    hardmap is generated and the device is disconnected, and the serial value
+    is unknown, then the new file should not contain the 'serial'.
+    """
+    mocked_hm.duts = []  # simulate unplugged
+
+    hwm = """
+- id: 4
+  platform: p4
+  product: pr4
+  runner: r4
+  connected: True
+  serial: s4
+"""
+
+    dumped = _run_save_and_get_dump(
+        mocked_hm,
+        exists=True,
+        filename='hwmap1.yaml',
+        read_data=hwm,
+    )
+
+    entry = next(d for d in dumped if d['id'] == 4)
+    assert entry['connected'] is False
+    assert 'serial' not in entry
+
+    # And ensure nobody writes serial=None
+    assert all(d.get('serial') is not None for d in dumped if 'serial' in d)

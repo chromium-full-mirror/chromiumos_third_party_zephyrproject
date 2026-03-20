@@ -39,13 +39,14 @@ extern "C" {
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
-#define DRIFT_TIME_DEFAULT                      (13)
+#define DRIFT_TIME_DEFAULT                      (14)
 #define DRIFT_TIME_EXTRA_LSI2                   (9)
 #define DRIFT_TIME_EXTRA_GCC_DEBUG              (6)
 #ifdef __ZEPHYR__
 #define DRIFT_TIME_EXTRA_ZEPHYR                 (15)
 #endif
-#define EXEC_TIME_DEFAULT                       (24)
+
+#define EXEC_TIME_DEFAULT                       (28)
 #define EXEC_TIME_EXTRA_LSI2                    (3)
 #define EXEC_TIME_EXTRA_GCC_DEBUG               (4)
 #ifdef __ZEPHYR__
@@ -71,6 +72,19 @@ extern "C" {
 #if (USE_TEMPERATURE_BASED_RADIO_CALIBRATION == 1)
 void ll_sys_bg_temperature_measurement(void);
 #endif /* USE_TEMPERATURE_BASED_RADIO_CALIBRATION */
+#ifndef __ZEPHYR__
+#if defined(STM32WBA52xx) || defined(STM32WBA54xx) || defined(STM32WBA55xx) || defined(STM32WBA65xx)
+/**
+ * @brief Apply CTE degradation settings
+ * @param  None
+ * @retval None
+ */
+void ll_sys_apply_cte_settings(void);
+#endif /* defined(STM32WBA52xx) || defined(STM32WBA54xx) || defined(STM32WBA55xx) || defined(STM32WBA65xx) */
+#if (CFG_LPM_STANDBY_SUPPORTED == 0)
+void ll_sys_get_ble_profile_statistics(uint32_t* exec_time, uint32_t* drift_time, uint32_t* average_drift_time, uint8_t reset);
+#endif
+#endif /* __ZEPHYR__ */
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

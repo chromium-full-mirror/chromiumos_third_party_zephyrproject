@@ -19,6 +19,10 @@
 #ifndef HW_H__
 #define HW_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "stm32wbaxx.h"
 #include "app_conf.h"
 
@@ -83,6 +87,9 @@ enum
   HW_AES_REV     = 2,
   HW_AES_SWAP    = 4
 };
+
+extern int CRYP_MutexTake(void);
+extern int CRYP_MutexRelease(void);
 
 /*
  * HW_AES_Enable
@@ -165,6 +172,11 @@ extern void HW_AES_SetLast( uint8_t left_length );
  *                                 PKA
  * ---------------------------------------------------------------------------
  */
+
+extern int PKA_MutexTake(void);
+extern int PKA_MutexRelease(void);
+extern int PKA_TakeSemEndOfOperation(void);
+extern int PKA_ReleaseSemEndOfOperation(void);
 
 /*
  * HW_PKA_Enable
@@ -251,12 +263,13 @@ extern void HW_PKA_ReadResult( uint32_t index,
  */
 extern void HW_PKA_Disable( void );
 
+
 /*
- * Notes:
+ * HW_PKA_EndOfProcessCb
  *
- * - this driver uses a semaphore to handle access to the PKA. The index of
- * the semaphore must be configured with CFG_HW_PKA_SEMID.
+ * Callback to be called when PKA end of process IRQ is managed.
  */
+extern void HW_PKA_EndOfProcessCb (void);
 
 /* ---------------------------------------------------------------------------
  *                               PKA_P256
@@ -376,6 +389,9 @@ enum
 #define HW_RNG_POOL_SIZE                        (CFG_HW_RNG_POOL_SIZE)
 /* Default threshold to refill RNG pool */
 #define HW_RNG_POOL_DEFAULT_THRESHOLD           (12)
+
+extern int RNG_MutexTake(void);
+extern int RNG_MutexRelease(void);
 
 /* RNG_KERNEL_CLK_ON
  *
@@ -541,5 +557,9 @@ int HW_OTP_Write( uint8_t* additional_data,
                   uint8_t* bd_address,
                   uint8_t hsetune,
                   uint8_t index );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HW_H__ */

@@ -1,4 +1,4 @@
-/*$Id: //dwh/bluetooth/DWC_ble154combo/firmware/rel/2.00a-lca01/firmware/public_inc/ll_fw_config.h#1 $*/
+/*$Id: //dwh/bluetooth/DWC_ble154combo/firmware/rel/2.00a-lca04/firmware/public_inc/ll_fw_config.h#1 $*/
 /**
  ********************************************************************************
  * @file    ll_fw_config.h
@@ -9,7 +9,7 @@
  * Copyright (c) 2020-Present Synopsys, Inc
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of the software and
- * associated documentation files (the ‚ÄúSoftware‚Äù), to deal in the Software without restriction, including
+ * associated documentation files (the ìSoftwareî), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
  * following conditions:
@@ -36,6 +36,11 @@
 
 /*************************** BLE Configuration *************************************/
 /*Configurations of BLE will apply only when BLE is enabled*/
+
+/* Variant configuration */
+#define CFG_LL_BLE_FULL                             1
+#define CFG_LL_BLE_INTERFACE_COMPATIBILITY          1
+
 /* Roles configurations */
 #ifndef SUPPORT_EXPLCT_OBSERVER_ROLE
 #define SUPPORT_EXPLCT_OBSERVER_ROLE                1 /* Enable\Disable Explicit observer role. Enable:1 - Disable:0 */
@@ -87,15 +92,27 @@
 #endif /* SUPPORT_SLEEP_CLOCK_ACCURCY_UPDATES */
 
 #ifndef SUPPORT_CONNECTED_ISOCHRONOUS
+#if (defined(STM32WBA25xx) || defined(STM32WBA26xx)) && !defined(CFG_LL_BLE_FULL_INTERFACE)
+#define SUPPORT_CONNECTED_ISOCHRONOUS               0 /* Enable\Disable Connected Isochronous Channel Feature. Enable:1 - Disable:0 */
+#else
 #define SUPPORT_CONNECTED_ISOCHRONOUS               1 /* Enable\Disable Connected Isochronous Channel Feature. Enable:1 - Disable:0 */
+#endif
 #endif /* SUPPORT_CONNECTED_ISOCHRONOUS */
 
 #ifndef SUPPORT_BRD_ISOCHRONOUS
+#if (defined(STM32WBA25xx) || defined(STM32WBA26xx)) && !defined(CFG_LL_BLE_FULL_INTERFACE)
+#define SUPPORT_BRD_ISOCHRONOUS                     0 /* Enable\Disable Broadcast Isochronous Channel Feature. Enable:1 - Disable:0 */
+#else
 #define SUPPORT_BRD_ISOCHRONOUS                     1 /* Enable\Disable Broadcast Isochronous Channel Feature. Enable:1 - Disable:0 */
+#endif
 #endif /* SUPPORT_BRD_ISOCHRONOUS */
 
 #ifndef SUPPORT_SYNC_ISOCHRONOUS
+#if (defined(STM32WBA25xx) || defined(STM32WBA26xx)) && !defined(CFG_LL_BLE_FULL_INTERFACE)
+#define SUPPORT_SYNC_ISOCHRONOUS                    0 /* Enable\Disable Broadcast Isochronous Synchronizer Channel Feature. Enable:1 - Disable:0 */
+#else
 #define SUPPORT_SYNC_ISOCHRONOUS                    1 /* Enable\Disable Broadcast Isochronous Synchronizer Channel Feature. Enable:1 - Disable:0 */
+#endif
 #endif /* SUPPORT_SYNC_ISOCHRONOUS */
 
 #ifndef SUPPORT_LE_POWER_CONTROL
@@ -119,7 +136,7 @@
 #endif /* SUPPORT_CSSA */
 
 #ifndef SUPPORT_LE_PAWR_ADVERTISER_ROLE
-#ifdef STM32WBA25xx
+#if defined(STM32WBA25xx) || defined(STM32WBA26xx) || defined(CFG_LL_BLE_FULL_INTERFACE)
 #define SUPPORT_LE_PAWR_ADVERTISER_ROLE             1 /* Enable\Disable PAwR Advertiser role. Enable:1 - Disable:0 */
 #else
 #define SUPPORT_LE_PAWR_ADVERTISER_ROLE             0 /* Enable\Disable PAwR Advertiser role. Enable:1 - Disable:0 */
@@ -127,19 +144,24 @@
 #endif /* SUPPORT_LE_PAWR_ADVERTISER_ROLE */
 
 #ifndef SUPPORT_LE_PAWR_SYNC_ROLE
-#ifdef STM32WBA25xx
+#if defined(STM32WBA25xx) || defined(STM32WBA26xx) || defined(CFG_LL_BLE_FULL_INTERFACE)
 #define SUPPORT_LE_PAWR_SYNC_ROLE                   1 /* Enable\Disable PAwR Synchronizer role. Enable:1 - Disable:0 */
 #else
 #define SUPPORT_LE_PAWR_SYNC_ROLE                   0 /* Enable\Disable PAwR Synchronizer role. Enable:1 - Disable:0 */
 #endif
 #endif /* SUPPORT_LE_PAWR_SYNC_ROLE */
 
+
 #ifndef SUPPORT_CHANNEL_SOUNDING
-#define SUPPORT_CHANNEL_SOUNDING										0 /* Enable\Disable Channel Sounding Feature.   Enable:1 - Disable:0 */
-#endif /* SUPPORT_CHANNEL_SOUNDING */
+#if defined(CFG_LL_BLE_FULL_INTERFACE)
+#define SUPPORT_CHANNEL_SOUNDING              1 /* Channel Sounding Feature.   Enable:1 - Disable:0 */
+#else
+#define SUPPORT_CHANNEL_SOUNDING              0 /* Channel Sounding Feature.   Enable:1 - Disable:0 */
+#endif
+#endif
 
 #ifndef SUPPORT_FRAME_SPACE_UPDATE
-#ifdef STM32WBA25xx
+#if defined(STM32WBA25xx) || defined(STM32WBA26xx) || defined(CFG_LL_BLE_FULL_INTERFACE)
 #define SUPPORT_FRAME_SPACE_UPDATE									1 /* Enable\Disable Frame Space Update Feature. Enable:1 - Disable:0 */
 #else
 #define SUPPORT_FRAME_SPACE_UPDATE									0 /* Enable\Disable Frame Space Update Feature. Enable:1 - Disable:0 */
@@ -147,7 +169,7 @@
 #endif /* SUPPORT_FRAME_SPACE_UPDATE */
 
 #ifndef SUPPORT_EXT_FEATURE_SET
-#ifdef STM32WBA25xx
+#if defined(STM32WBA25xx) || defined(STM32WBA26xx) || defined(CFG_LL_BLE_FULL_INTERFACE)
 #define SUPPORT_EXT_FEATURE_SET                     1 /* Enable\Disable Extended Feature Set Exchange. Enable:1 - Disable:0 */
 #else
 #define SUPPORT_EXT_FEATURE_SET                     0 /* Enable\Disable Extended Feature Set Exchange. Enable:1 - Disable:0 */
@@ -155,15 +177,11 @@
 #endif /* SUPPORT_EXT_FEATURE_SET */
 
 #ifndef SUPPORT_ISO_UNSEG_MODE
-#ifdef STM32WBA25xx
-#define SUPPORT_ISO_UNSEG_MODE                   		1 /* Enable\Disable Unsegmented Mode for Framed ISO PDUs. Enable: 1 - Disable: 0*/
-#else
 #define SUPPORT_ISO_UNSEG_MODE              				0 /* Enable\Disable Unsegmented Mode for Framed ISO PDUs. Enable: 1 - Disable: 0*/
-#endif
 #endif /* SUPPORT_ISO_UNSEG_MODE */
 
 #ifndef SUPPORT_LE_ADVERTISERS_MONITORING
-#ifdef STM32WBA25xx
+#if defined(STM32WBA25xx) || defined(STM32WBA26xx) || defined(CFG_LL_BLE_FULL_INTERFACE)
 #define SUPPORT_LE_ADVERTISERS_MONITORING       		1 /* Enable\Disable Advertisers Monitoring Feature. Enable:1 - Disable:0 */
 #else
 #define SUPPORT_LE_ADVERTISERS_MONITORING           0 /* Enable\Disable Advertisers Monitoring Feature. Enable:1 - Disable:0 */
@@ -209,6 +227,10 @@
 #define SUPPORT_AUTONOMOUS_POWER_CONTROL_REQ        1
 #endif /* SUPPORT_AUTONOMOUS_POWER_CONTROL_REQ */
 
+#ifndef SUPPORT_PROFILE
+#define SUPPORT_PROFILE                             PROFILE_LIGHTWEIGHT /* Enable\Disable profiling LL timing framework */
+#endif /* SUPPORT_PROFILE */
+
 #ifndef LL_BASIC
 #define LL_BASIC  0
 #endif /* LL_BASIC */
@@ -246,9 +268,22 @@
 #define RADIO_CSMA                                  0 /* Enable\Disable CSMA Algorithm in Radio Layer, Must be Enabled if MAC_LAYER_BUILD */
 #endif /* RADIO_CSMA */
 
+#ifndef ENHANCED_RX_WHILE_CSMA_BACKOFF_DELAY
+#define ENHANCED_RX_WHILE_CSMA_BACKOFF_DELAY		1 /* Enable\Disable RX WITH CSMA Feature */
+#endif /* ENHANCED_RX_WHILE_CSMA_BACKOFF_DELAY */
+
+#ifndef SUPPORT_ANT_DIV
+#define SUPPORT_ANT_DIV                             1 /* Enable/Disable Antenna Diversity Feature */
+#endif /* SUPPORT_ANT_DIV */
+
 #ifndef SUPPORT_A_MAC
 #define SUPPORT_A_MAC                               0
 #endif /* SUPPORT_A_MAC */
+
+#ifndef SUPPORT_CONFIG_LIB
+#define SUPPORT_CONFIG_LIB							1 /* Enable\Disable Configurable Library feature */
+#endif /* SUPPORT_CONFIG_LIB */
+
 #ifndef SMPL_PRTCL_TEST_ENABLE
 #define SMPL_PRTCL_TEST_ENABLE                      0
 #endif /* SMPL_PRTCL_TEST_ENABLE */
