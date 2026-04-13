@@ -70,6 +70,7 @@ static struct udc_ep_config ep_cfg_in[CFG_EPIN_CNT + CFG_EP_ISOIN_CNT + 1];
 static bool udc_nrf_setup_set_addr, udc_nrf_fake_setup;
 static uint8_t udc_nrf_address;
 const static struct device *udc_nrf_dev;
+static bool vbus_present;
 
 #define NRF_USBD_COMMON_EPIN_CNT      9
 #define NRF_USBD_COMMON_EPOUT_CNT     9
@@ -1544,6 +1545,7 @@ static void udc_nrf_power_handler(nrfx_power_usb_evt_t pwr_evt)
 	case NRFX_POWER_USB_EVT_DETECTED:
 		LOG_DBG("POWER event detected");
 		udc_submit_event(udc_nrf_dev, UDC_EVT_VBUS_READY, 0);
+		vbus_present = true;
 		break;
 	case NRFX_POWER_USB_EVT_READY:
 		LOG_DBG("POWER event ready");
@@ -1552,6 +1554,7 @@ static void udc_nrf_power_handler(nrfx_power_usb_evt_t pwr_evt)
 	case NRFX_POWER_USB_EVT_REMOVED:
 		LOG_DBG("POWER event removed");
 		udc_submit_event(udc_nrf_dev, UDC_EVT_VBUS_REMOVED, 0);
+		vbus_present = false;
 		break;
 	default:
 		LOG_ERR("Unknown power event %d", pwr_evt);
@@ -1762,6 +1765,10 @@ static int udc_nrf_init(const struct device *dev)
 	const struct udc_nrf_config *cfg = dev->config;
 
 	hfxo_mgr = z_nrf_clock_control_get_onoff(cfg->clock);
+
+	if (vbus_present) {
+		udc_submit_event(udc_nrf_dev, UDC_EVT_VBUS_READY, 0);
+	}
 
 #ifdef CONFIG_HAS_HW_NRF_USBREG
 	/* Use CLOCK/POWER priority for compatibility with other series where
