@@ -88,7 +88,7 @@ struct udc_e967_data {
 	struct k_thread thread_data;
 	uint8_t ep_out_num;
 	uint8_t ep_out_num_new;
-	
+
 	UDC_EP0_INT_EN *reg_ep0_int_en;
 	UDC_EP0_INT_STA *reg_ep0_int_sts;
 	uint32_t ep0_out_size;
@@ -380,13 +380,13 @@ void _get_out_pipe_num( const struct device *dev, struct net_buf *buf)
 	uint8_t *ptr;
 	uint8_t *pEnd;
 	uint32_t len;
-	
+
 	ptr = buf->data;
 	len = buf->len;
-	
+
 	if( len <= 9)
 		return;
-	
+
 	if( ptr[0] == 0x09 && ptr[1] == 0x02) {
 		pEnd = ptr+len;
 		ptr = ptr + ptr[0];
@@ -418,6 +418,14 @@ static int udc_e967_ep_enqueue(const struct device *dev, struct udc_ep_config *c
 #if (__GLOBAL_DEBUG_LOG__ > 0)
 	printk("[INFO] enqueue ep:0x%2x, buf=%p\n", ep, buf);
 #endif
+
+	if (USB_EP_GET_IDX(cfg->addr) == 0) {
+		struct udc_buf_info *buf_info = udc_get_buf_info(buf);
+
+		if (buf_info->setup) {
+			return 0;
+		}
+	}
 
 	if( ep == USB_CONTROL_EP_IN) {
 		_get_out_pipe_num( dev, buf);
@@ -451,14 +459,10 @@ static int udc_e967_ep_enqueue(const struct device *dev, struct udc_ep_config *c
 static int udc_e967_ep_dequeue(const struct device *dev, struct udc_ep_config *const cfg)
 {
 	unsigned int lock_key;
-	struct net_buf *buf;
 
 	lock_key = irq_lock();
 
-	buf = udc_buf_get_all(cfg);
-	if (buf) {
-		udc_submit_ep_event(dev, buf, -ECONNABORTED);
-	}
+	udc_ep_cancel_queued(dev, cfg);
 
 	irq_unlock(lock_key);
 
@@ -532,175 +536,6 @@ static int udc_e967_host_wakeup(const struct device *dev)
 	return 0;
 }
 
-static int usbd_ctrl_feed_dout(const struct device *dev, struct net_buf *pSetupPkg)
-{
-	struct udc_e967_data *priv = udc_get_private(dev);
-	//	struct udc_ep_config *cfg = udc_get_ep_cfg(dev, USB_CONTROL_EP_OUT);
-	struct udc_buf_info *bi;
-	struct net_buf *data_buf;
-	struct net_buf *st_buf;
-	uint8_t *data_ptr;
-	uint32_t data_len;
-	uint32_t len, i, bRead;
-	uint32_t length = udc_data_stage_length(pSetupPkg);
-
-	data_buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, length);
-	if (data_buf == NULL) {
-		return -ENOMEM;
-	}
-
-	net_buf_frag_add(pSetupPkg, data_buf);
-	bi = udc_get_buf_info(data_buf);
-	bi->data = true;
-
-	st_buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_IN, 0);
-	if (data_buf == NULL) {
-		return -ENOMEM;
-	}
-	net_buf_frag_add(data_buf, st_buf);
-	bi = udc_get_buf_info(st_buf);
-	bi->status = true;
-
-	bRead = 0;
-	do {
-		if (priv->ep0_proc_ref != priv->ep0_cur_ref) {
-			goto _error;
-		}
-
-		data_ptr = net_buf_tail(data_buf);
-		data_len = net_buf_tailroom(data_buf);
-		if (data_len == 0) {
-			break;
-		}
-		if (priv->reg_ep0_int_sts->UDC_EP0_INTSTA.UDC_EP0_INT_STABIT.EP0OUTINTSF) {
-			priv->reg_ep0_int_sts->UDC_EP0_INTSTA.UDC_EP0_INT_STABIT.EP0OUTINTSFCLR = 1;
-			priv->ep0_out_size = 0;
-
-			len = EP0_MPS;
-			if (len > data_len) {
-				len = data_len;
-			}
-
-			for (i = 0; i < len; i++) {
-				*data_ptr = *(priv->reg_ep0_data_buf);
-			}
-			net_buf_add(data_buf, len);
-			bRead = bRead + len;
-		}
-	} while (1);
-
-#if ( __EP0_LOG__ > 1)
-	printk("[INFO] ep0-out read %i bytes\n", bRead);
-#endif
-
-	udc_submit_ep_event(dev, pSetupPkg, 0);
-
-	return 0;
-
-_error:
-	net_buf_unref(pSetupPkg);
-	net_buf_unref(data_buf);
-	net_buf_unref(st_buf);
-	return -1;
-}
-
-void _update_address_event(const struct device *dev)
-{
-	int err;
-	struct udc_e967_data *priv = udc_get_private(dev);
-	uint8_t *pSetup;
-	struct net_buf *buf;
-
-	if (priv->is_addressed_state == 0) {
-		if (*((uint32_t *)(priv->setup_pkg)) == 0x01000680 &&
-		    *((uint16_t *)(priv->setup_pkg + 6)) > 8) {
-
-			priv->reg_ep0_int_en->UDCEP0INT_EN.UDC_EP0_INT_ENBIT.SETUPINTEN = 0;
-			
-#if ( __EP0_LOG__ > 0)
-			printk("[UDC] dev do set-address-op \n");
-#endif
-			buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, 8);
-			udc_ep_buf_set_setup(buf);
-			pSetup = net_buf_tail(buf);
-
-			pSetup[0] = 0x00;
-			pSetup[1] = 0x05;
-			pSetup[2] = 0x0f;
-			pSetup[3] = 0x00;
-			pSetup[4] = 0x00;
-			pSetup[5] = 0x00;
-			pSetup[6] = 0x00;
-			pSetup[7] = 0x00;
-
-			net_buf_add(buf, 8);
-			udc_ctrl_update_stage(dev, buf);
-
-			if (udc_ctrl_stage_is_data_out(dev)) {
-				while (1)
-					;
-			} else if (udc_ctrl_stage_is_data_in(dev)) {
-				err = udc_ctrl_submit_s_in_status(dev);
-			} else {
-				err = udc_ctrl_submit_s_status(dev);
-			}
-			priv->is_addressed_state = 1;
-
-			priv->reg_ep0_int_en->UDCEP0INT_EN.UDC_EP0_INT_ENBIT.SETUPINTEN = 1;
-		}
-	}
-}
-
-void _update_configured_event( const struct device *dev)
-{
-	int err;
-	struct udc_e967_data *priv = udc_get_private(dev);
-	uint8_t *pSetup;
-	struct net_buf *buf;
-	
-	if( priv->is_configured_state == 0) {
-		pSetup = priv->setup_pkg;
-		if( *((uint32_t*)(priv->setup_pkg)) == 0x02000680 && *((uint16_t*)(priv->setup_pkg+6)) > 9) {
-			priv->is_configured_state = 1;
-		}
-	}else if( priv->is_configured_state == 1)
-	{
-
-			priv->reg_ep0_int_en->UDCEP0INT_EN.UDC_EP0_INT_ENBIT.SETUPINTEN = 0;
-			
-#if ( __EP0_LOG__ > 0)			
-			printk("[UDC] dev do configure-op \n");			
-#endif
-
-			buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, 8);
-			udc_ep_buf_set_setup(buf);
-			pSetup = net_buf_tail(buf);
-	
-			pSetup[0] = 0x00;
-			pSetup[1] = 0x09;
-			pSetup[2] = 0x01;
-			pSetup[3] = 0x00;
-			pSetup[4] = 0x00;
-			pSetup[5] = 0x00;
-			pSetup[6] = 0x00;
-			pSetup[7] = 0x00;
-			
-			net_buf_add(buf, 8);
-			udc_ctrl_update_stage(dev, buf);
-			
-			if (udc_ctrl_stage_is_data_out(dev)) {
-				while(1);
-			} else if (udc_ctrl_stage_is_data_in(dev)) {
-				err = udc_ctrl_submit_s_in_status(dev);
-			} else {
-				err = udc_ctrl_submit_s_status(dev);
-			}					
-
-			priv->is_configured_state = 2;
-			
-			priv->reg_ep0_int_en->UDCEP0INT_EN.UDC_EP0_INT_ENBIT.SETUPINTEN = 1;
-	}
-}
 
 
 #if (_IS_SET_CLEAR_FEATURE_PATCH)
@@ -730,7 +565,7 @@ int _handle_set_feature_remote_wakeup( const struct device *dev, uint32_t isSet)
 	priv->setup_pkg[5] = 0x00;
 	priv->setup_pkg[6] = 0x00;
 	priv->setup_pkg[7] = 0x00;
-	
+
 	priv->ep0_cur_ref++;
 
 	msg.type = UDC_E967_MSG_TYPE_SETUP;
@@ -749,30 +584,12 @@ int _handle_set_feature_remote_wakeup( const struct device *dev, uint32_t isSet)
 static int udc_e967_msg_handler_setup(const struct device *dev, struct udc_e967_msg *msg)
 {
 	struct udc_e967_data *priv = udc_get_private(dev);
-	//	struct udc_data *udata = dev->data;
-	struct net_buf *pSetupPkg;
-	//	struct net_buf *pDataBufPkg;
-	//	struct net_buf *pStatusPkg;
-	//	struct usb_setup_packet *setup;
-	uint8_t *data_ptr;
 	struct udc_ep_config *ep_ctrl_in;
 	struct udc_ep_config *ep_ctrl_out;
-	//	struct udc_buf_info *bi;
-	int i;
-	int err = 0;
-	//	unsigned int lock_key;
-	//	uint32_t reg;
-	//	uint32_t isValid;
-	//	uint16_t length;
 
 #if (__EP0_LOG__ > 1)
 	printk("[INFO] setup handler, cur_ref: %i\n", priv->ep0_cur_ref);
 #endif
-
-	_update_address_event(dev);
-	_update_configured_event(dev);
-
-	pSetupPkg = NULL;
 
 	priv->ep0_proc_ref = msg->setup.ref;
 
@@ -785,26 +602,7 @@ static int udc_e967_msg_handler_setup(const struct device *dev, struct udc_e967_
 	_udc_ep_set_halt(priv, ep_ctrl_in, false);
 	_udc_ep_set_halt(priv, ep_ctrl_out, false);
 
-	// allocate and copy setup pkg
-	pSetupPkg = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, 8);
-	udc_ep_buf_set_setup(pSetupPkg);
-	data_ptr = net_buf_tail(pSetupPkg);
-
-	for (i = 0; i < 8; i++) {
-		*(data_ptr + i) = priv->setup_pkg[i];
-	}
-	net_buf_add(pSetupPkg, 8);
-
-	udc_ctrl_update_stage(dev, pSetupPkg);
-
-	if (udc_ctrl_stage_is_data_out(dev)) {
-		usbd_ctrl_feed_dout(dev, pSetupPkg);
-		return 0;
-	} else if (udc_ctrl_stage_is_data_in(dev)) {
-		err = udc_ctrl_submit_s_in_status(dev);
-	} else {
-		err = udc_ctrl_submit_s_status(dev);
-	}
+	udc_setup_received(dev, priv->setup_pkg);
 
 	return 0;
 }
@@ -825,7 +623,7 @@ int _usbd_ctrl_out(const struct device *dev, uint8_t ep)
 	ep_cfg = udc_get_ep_cfg(dev, ep);
 	buf = udc_buf_peek(ep_cfg);
 	bi = udc_get_buf_info(buf);
-#if 0	
+#if 0
 	if( bi->status) {
 		udc_buf_get(ep_cfg);
 		udc_submit_ep_event(dev, buf, 0);
@@ -837,7 +635,7 @@ int _usbd_ctrl_out(const struct device *dev, uint8_t ep)
 
 int _usbd_ctrl_handler(const struct device *dev, uint8_t ep)
 {
-#if (__EP0_LOG__ > 2)	
+#if (__EP0_LOG__ > 2)
 	struct udc_e967_data *priv = udc_get_private(dev);
 #endif
 	int ret;
@@ -943,7 +741,7 @@ static void e967_usbd_msg_handler(const struct device *dev)
 			break;
 
 		default:
-#if (__GLOBAL_DEBUG_LOG__ > 0)		
+#if (__GLOBAL_DEBUG_LOG__ > 0)
 			printk("[DEBUG] unknown msg\n");
 #endif
 			__ASSERT_NO_MSG(false);
@@ -988,11 +786,11 @@ static void e967_usb_resume_isr(const struct device *dev)
 {
 	struct udc_e967_data *priv = udc_get_private(dev);
 	if (priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RESUMEINTSF == 1) {
-	
-#if (__GLOBAL_DEBUG_LOG__ > 0)		
+
+#if (__GLOBAL_DEBUG_LOG__ > 0)
 		printk("[INFO] >>> usb [resume] signal\n");
-#endif		
-	
+#endif
+
 		udc_set_suspended(dev, false);
 		udc_submit_event(dev, UDC_EVT_RESUME, 0);
 
@@ -1009,12 +807,12 @@ static void e967_usb_reset_isr(const struct device *dev)
 	struct udc_e967_data *priv = udc_get_private(dev);
 	int len, i;
 	uint8_t tmp;
-	
+
 	if (priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RSTINTSF == 1) {
 		priv->reg_udc_int_sta->UDCINT_STA.UDC_INT_STABIT.RSTINTSFCLR = 1;
 	}
-	
-#if (__GLOBAL_DEBUG_LOG__ > 0)		
+
+#if (__GLOBAL_DEBUG_LOG__ > 0)
 	printk("[INFO] >>> usb [reset] signal\n");
 #endif
 
@@ -1050,12 +848,12 @@ static void e967_usb_reset_isr(const struct device *dev)
 	priv->ep0_cur_ref = 0;
 	priv->ep0_proc_ref = 0;
 	priv->is_addressed_state = 0;
-	priv->is_configured_state = 0;	
+	priv->is_configured_state = 0;
 	priv->ep_out_num = 0;
 	priv->ep_out_num_new = 0;
 
 	udc_submit_event( dev, UDC_EVT_RESET, 0);
-	
+
 	return;
 }
 
@@ -1086,8 +884,8 @@ static void e967_usb_setup_isr(const struct device *dev)
 	priv->ep0_cur_ref++;
 
 	ptr = priv->setup_pkg;
-	
-#if ( __EP0_LOG__ > 0)	
+
+#if ( __EP0_LOG__ > 0)
 	printk("\n[SETUP]: %x %x %x %x %x %x %x %x :%i\n", ptr[0], ptr[1], ptr[2], ptr[3], ptr[4],
 	       ptr[5], ptr[6], ptr[7], priv->ep0_cur_ref);
 #endif
@@ -1436,7 +1234,7 @@ static int _e967_usbd_xfer_out(const struct device *dev, uint8_t ep)
 		isDataOut = 1;
 	}
 	//reg = ep_ctrl->reg_ep_int_en->UDCEPx_INT_EN.UDC_EPx_INT_ENBIT.EPxOUTINTEN = 1;
-	
+
 	if (!isDataOut) {
 		goto __exit;
 	}
@@ -1445,7 +1243,7 @@ static int _e967_usbd_xfer_out(const struct device *dev, uint8_t ep)
 	printk("[INFO] process ep=0x%2x data, buf=%p\n", ep, buf);
 #endif
 
-	
+
 
 	do {
 		priv->reg_udc_ctrl1->UDC_CTRL1_.UDCCTRL1BIT.EPINPREHOLD = 1;
@@ -1478,7 +1276,7 @@ static int _e967_usbd_xfer_out(const struct device *dev, uint8_t ep)
 		udc_submit_ep_event(dev, buf, 0);
 	}
 
-	
+
 	//reg = ep_ctrl->reg_ep_int_en->UDCEPx_INT_EN.UDC_EPx_INT_ENBIT.EPxOUTINTEN = 0;
 	ep_ctrl->data_size_out = 0;
 	//reg = ep_ctrl->reg_ep_int_en->UDCEPx_INT_EN.UDC_EPx_INT_ENBIT.EPxOUTINTEN = 1;
@@ -1792,7 +1590,7 @@ static int udc_e967_init(const struct device *dev)
 	priv->addr = 0;
 	priv->ep_out_num = 0;
 	priv->ep_out_num_new = 0;
-	
+
 	_e967_epx_init(dev);
 
 	_enable_all_ep(dev);
