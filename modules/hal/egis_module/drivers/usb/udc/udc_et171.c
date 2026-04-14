@@ -205,71 +205,15 @@ static uint32_t isr_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 
 	return -1;
 }
-static void udc_ep_buf_flush(const struct device *dev, const uint8_t ep) {
-	struct udc_ep_config *ep_cfg = udc_get_ep_cfg(dev, ep);
-	struct net_buf *buf = udc_buf_get_all(ep_cfg);
-	if (buf != NULL) {
-		net_buf_unref(buf);
-		udc_ep_set_busy(ep_cfg, false);
-	}
-}
 static uint32_t work_cb_setup(void *privateData, CH9_UsbSetup *ctrl)  {
 
 	struct device* const dev = ((struct device**)privateData)[-1];
-	__unused struct udc_data *data = dev->data;
 
 	LOG_INF("setup( Type = %02X, Req = %02X, Value = %04X, Index = %04X, Len = %04X )", ctrl->bmRequestType, ctrl->bRequest, ctrl->wValue, ctrl->wIndex, ctrl->wLength);
 
-	struct net_buf *buf;
-	int ret;
+	udc_setup_received(dev, ctrl);
 
-	// flush all pending control
-	udc_ep_buf_flush(dev, USB_CONTROL_EP_OUT);
-	udc_ep_buf_flush(dev, USB_CONTROL_EP_IN);
-
-	// Allocate for setup
-	buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, sizeof(struct usb_setup_packet));
-	if (buf == NULL) {
-		udc_submit_event(dev, UDC_EVT_ERROR, -ENOBUFS);
-		return -1;
-	}
-
-	net_buf_add_mem(buf, (void*)ctrl, sizeof(struct usb_setup_packet));
-	udc_ep_buf_set_setup(buf);
-
-	// Update to next stage of control transfer
-	udc_ctrl_update_stage(dev, buf);
-
-	if (udc_ctrl_stage_is_data_out(dev)) {
-		//  Allocate and feed buffer for dout stage
-		LOG_DBG("%s(%p) dout stage", "setup", buf);
-		struct udc_ep_config *ep_cfg = udc_get_ep_cfg(dev, USB_CONTROL_EP_OUT);
-		struct net_buf *feed_buf = udc_ctrl_alloc(dev, USB_CONTROL_EP_OUT, udc_data_stage_length(buf));
-		if (feed_buf == NULL) {
-			ret = -ENOBUFS;
-		} else {
-			ret = ((const struct udc_api*)dev->api)->ep_enqueue(dev, ep_cfg, feed_buf);
-		}
-		if (ret != 0) {
-			ret = udc_submit_ep_event(dev, buf, ret);
-		}
-	} else if (udc_ctrl_stage_is_data_in(dev)) {
-		// allocate din buffer and forward.
-		LOG_DBG("%s(%p) din stage", "setup", buf);
-		ret = udc_ctrl_submit_s_in_status(dev);
-	} else {
-		// allocate status buffer and forward.
-		LOG_DBG("%s(%p) no data", "setup", buf);
-		ret = udc_ctrl_submit_s_status(dev);
-	}
-
-	if (ret != 0) {
-		// unknown exception
-		LOG_ERR("%s(%p) exception %d", "setup", buf, ret);
-		udc_submit_event(dev, UDC_EVT_ERROR, ret);
-	}
-
-	return ret ? -1 : 0;
+	return 0;
 }
 static void isr_cb_suspend(void *privateData)  {
 	struct device* const dev = ((struct device**)privateData)[-1];
@@ -343,44 +287,11 @@ static void udc_et171_ep0_transfer__cb_complete(struct CUSBD_Ep *ep, struct CUSB
 
 		if (req->status != 0) {
 			udc_submit_ep_event(dev, buf, -ECONNABORTED);
-		}
-		else if (ep->address == USB_CONTROL_EP_IN) {
-			if (udc_ctrl_stage_is_status_in(dev) || udc_ctrl_stage_is_no_data(dev)) {
-				udc_ctrl_update_stage(dev, buf);
-				// status stage, finished
-				LOG_DBG("%s(%p) finish", "ep0_complete", buf);
-				udc_ctrl_submit_status(dev, buf);
-			} else if (udc_ctrl_stage_is_data_in(dev)) {
-				udc_ctrl_update_stage(dev, buf);
-				// din stage 
-				LOG_DBG("%s(%p) forward to upper", "ep0_complete", buf);
-				struct udc_buf_info *bi = udc_get_buf_info(buf);
-				bi->ep = USB_CONTROL_EP_OUT;
-				bi->status = true;
-				// sumbit status out
-				udc_submit_ep_event(dev, buf, 0);
-			} else {
-				LOG_WRN("%s(%p) unknown stage", "ep0_complete", buf);
-				udc_submit_ep_event(dev, buf, 0);
-			}
 		} else {
-			assert(ep->address == USB_CONTROL_EP_OUT);
-
-			if (udc_ctrl_stage_is_status_out(dev)) {
-				LOG_DBG("%s(%p) dout, no feed", "ep0_complete", buf);
-				udc_ctrl_update_stage(dev, buf);
-				// status stage, finished
-				udc_ctrl_submit_status(dev, buf);
-			} else if (udc_ctrl_stage_is_data_out(dev)) {
-				LOG_DBG("%s(%p) dout, setup", "ep0_complete", buf);
-				udc_ctrl_update_stage(dev, buf);
-				// dout state 
+			if (USB_EP_DIR_IS_OUT(ep->address)) {
 				net_buf_add(buf, req->actual);
-				udc_ctrl_submit_s_out_status(dev, buf);
-			} else {
-				LOG_WRN("%s(%p) unknown stage", "ep0_complete", buf);
-				udc_submit_ep_event(dev, buf, 0);
 			}
+			udc_submit_ep_event(dev, buf, 0);
 		}
 	}
 
@@ -480,6 +391,13 @@ static int udc_et171_ep_enqueue(const struct device *dev, struct udc_ep_config *
 	void* pD = data->priv;
 
 	if (USB_EP_GET_IDX(cfg->addr) == 0) { // control ep
+		struct udc_buf_info *buf_info = udc_get_buf_info(buf);
+
+		if (buf_info->setup) {
+			udc_buf_put(cfg, buf);
+			return 0;
+		}
+
 		// lock
 		if (udc_ep_is_busy(cfg)) {
 			// unlock
@@ -557,6 +475,10 @@ static int udc_et171_ep_dequeue(const struct device *dev, struct udc_ep_config *
 	struct udc_data *data = dev->data;
 	void* pD = data->priv;
 	CUSBD_Ep *ep = udc_et171_get_usbd_ep(pD, cfg->addr);
+
+	LOCK_PROCESS(dequeue);
+	udc_ep_cancel_queued(dev, cfg);
+	UNLOCK_PROCESS(dequeue);
 	if (drv->reqDequeue(pD, ep, NULL) == 0) {
 		while (drv->reqDequeue(pD, ep, NULL) == 0);
 		drv->epFifoFlush(pD, ep);
