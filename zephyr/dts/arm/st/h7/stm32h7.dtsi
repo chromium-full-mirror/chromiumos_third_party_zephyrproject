@@ -26,6 +26,7 @@
 
 / {
 	chosen {
+		zephyr,crc = &crc;
 		zephyr,entropy = &rng;
 		zephyr,flash-controller = &flash;
 	};
@@ -77,6 +78,7 @@
 			status = "disabled";
 		};
 
+		/* controller reset default is on */
 		clk_hsi: clk-hsi {
 			#clock-cells = <0>;
 			compatible = "st,stm32h7-hsi-clock";
@@ -145,11 +147,13 @@
 	mcos {
 		mco1: mco1 {
 			compatible = "st,stm32-clock-mco";
+			clock-names = "clksel";
 			status = "disabled";
 		};
 
 		mco2: mco2 {
 			compatible = "st,stm32-clock-mco";
+			clock-names = "clksel";
 			status = "disabled";
 		};
 	};
@@ -162,6 +166,39 @@
 
 			#address-cells = <1>;
 			#size-cells = <1>;
+
+			/*
+			 * Device-unique information is stored
+			 * at the end of the System memory area.
+			 */
+			flash@1ff1e000 {
+				compatible = "st,stm32-nvm-otp";
+				reg = <0x1ff1e000 DT_SIZE_K(8)>;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					ts_cal1_otp: ts-cal1@820 {
+						reg = <0x820 0x2>;
+						#nvmem-cell-cells = <0>;
+						read-only;
+					};
+
+					ts_cal2_otp: ts-cal2@840 {
+						reg = <0x840 0x2>;
+						#nvmem-cell-cells = <0>;
+						read-only;
+					};
+
+					vrefint_otp: vrefint@860 {
+						reg = <0x860 0x2>;
+						#nvmem-cell-cells = <0>;
+						read-only;
+					};
+				};
+			};
 		};
 
 		rcc: rcc@58024400 {
@@ -967,6 +1004,7 @@
 			st,adc-has-deep-powerdown;
 			st,adc-has-channel-preselection;
 			st,adc-has-differential-support;
+			st,adc-has-injected-support;
 			status = "disabled";
 		};
 
@@ -985,6 +1023,7 @@
 			st,adc-has-deep-powerdown;
 			st,adc-has-channel-preselection;
 			st,adc-has-differential-support;
+			st,adc-has-injected-support;
 			status = "disabled";
 		};
 
@@ -1004,6 +1043,7 @@
 			st,adc-has-deep-powerdown;
 			st,adc-has-channel-preselection;
 			st,adc-has-differential-support;
+			st,adc-has-injected-support;
 			status = "disabled";
 		};
 
@@ -1022,6 +1062,7 @@
 			st,adc-has-deep-powerdown;
 			st,adc-has-channel-preselection;
 			st,adc-has-differential-support;
+			st,adc-has-injected-support;
 			status = "disabled";
 		};
 
@@ -1241,12 +1282,20 @@
 			clocks = <&rcc STM32_CLOCK(APB4, 14)>;
 			status = "disabled";
 		};
+
+		crc: crc@58024c00 {
+			compatible = "st,stm32-crc";
+			reg = <0x58024c00 0x400>;
+			clocks = <&rcc STM32_CLOCK(AHB4, 19)>;
+			resets = <&rctl STM32_RESET(AHB4, 19)>;
+			status = "disabled";
+		};
 	};
 
 	die_temp: dietemp {
 		compatible = "st,stm32-temp-cal";
-		ts-cal1-addr = <0x1ff1e820>;
-		ts-cal2-addr = <0x1ff1e840>;
+		nvmem-cells = <&ts_cal1_otp>, <&ts_cal2_otp>;
+		nvmem-cell-names = "TS_CAL1", "TS_CAL2";
 		ts-cal1-temp = <30>;
 		ts-cal2-temp = <110>;
 		ts-cal-vrefanalog = <3300>;
@@ -1263,7 +1312,7 @@
 
 	vref: vref {
 		compatible = "st,stm32-vref";
-		vrefint-cal-addr = <0x1ff1e860>;
+		nvmem-cells = <&vrefint_otp>;
 		vrefint-cal-mv = <3300>;
 		vrefint-cal-resolution = <16>;
 		status = "disabled";

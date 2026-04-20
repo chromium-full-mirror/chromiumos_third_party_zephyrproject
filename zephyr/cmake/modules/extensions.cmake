@@ -1900,6 +1900,67 @@ macro(zephyr_custom_target_shared)
 
   zephyr_set(ZEPHYR_SHARED_TARGETS ${ARGV0} SCOPE cache APPEND)
 endmacro()
+
+# Usage:
+#   zephyr_constants_library(
+#     NAME    <name>          - OBJECT library name and base for target "<name>_h"
+#     SOURCE  <file>          - C source file using GEN_ABSOLUTE_SYM macros
+#     [HEADER  <filename>]    - output header name (default: <name>.h)
+#     [INCLUDES <dir>...]     - additional private include directories
+#     [DEPENDS <name>...]     - other constants libraries this one depends on
+#   )
+#
+# Creates an OBJECT library from a C source file containing
+# GEN_ABSOLUTE_SYM() declarations, then generates a header file from
+# the resulting symbols.  Symbols ending in _OFFSET or _SIZEOF are
+# extracted by gen_offset_header.py and the resulting header is placed
+# under include/generated/zephyr/.
+#
+# NAME is used as the OBJECT library name (like add_library(<name>)),
+# allowing callers to reference the compiled objects at link time via
+# $<TARGET_OBJECTS:name> if needed.
+#
+# DEPENDS lists other constants libraries (by NAME) whose generated
+# headers must be produced before this library is compiled.
+#
+function(zephyr_constants_library)
+  cmake_parse_arguments(ARG "" "NAME;SOURCE;HEADER" "INCLUDES;DEPENDS" ${ARGN})
+
+  zephyr_check_arguments_required_all(${CMAKE_CURRENT_FUNCTION} ARG NAME SOURCE)
+  if(NOT ARG_HEADER)
+    set(ARG_HEADER "${ARG_NAME}.h")
+  endif()
+
+  set(output_path ${PROJECT_BINARY_DIR}/include/generated/zephyr/${ARG_HEADER})
+  set(target_name ${ARG_NAME}_h)
+  set(lib_name ${ARG_NAME})
+
+  add_library(${lib_name} OBJECT ${ARG_SOURCE})
+  target_include_directories(${lib_name} PRIVATE
+    ${ZEPHYR_BASE}/kernel/include
+    ${ARG_INCLUDES}
+  )
+  target_link_libraries(${lib_name} zephyr_interface)
+
+  set_source_files_properties(${ARG_SOURCE} PROPERTIES
+    COMPILE_OPTIONS $<TARGET_PROPERTY:compiler,prohibit_lto>)
+
+  add_custom_command(
+    OUTPUT ${output_path}
+    COMMAND ${PYTHON_EXECUTABLE} ${ZEPHYR_BASE}/scripts/build/gen_offset_header.py
+    -i $<TARGET_OBJECTS:${lib_name}>
+    -o ${output_path}
+    DEPENDS ${lib_name} $<TARGET_OBJECTS:${lib_name}>
+  )
+  add_custom_target(${target_name} DEPENDS ${output_path})
+
+  add_dependencies(zephyr_generated_headers ${target_name})
+
+  foreach(dep IN LISTS ARG_DEPENDS)
+    add_dependencies(${lib_name} ${dep}_h)
+  endforeach()
+endfunction()
+
 ########################################################
 # 2. Kconfig-aware extensions
 ########################################################
@@ -3034,11 +3095,11 @@ endfunction()
 #   zephyr_file_suffix(<filename> SUFFIX <suffix>)
 #
 # Zephyr file add suffix extension.
-# This function will check the provied filename or list of filenames to see if they have a
+# This function will check the provided filename or list of filenames to see if they have a
 # `_<suffix>` extension to them and if so, updates the supplied variable/list with the new
 # path/paths.
 #
-# <filename>: Variable (singlular or list) of absolute path filename(s) which should be checked
+# <filename>: Variable (singular or list) of absolute path filename(s) which should be checked
 #             and updated if there is a filename which has the <suffix> present.
 # <suffix>: The suffix to test for and append to the end of the provided filename.
 #
@@ -3764,7 +3825,7 @@ endfunction()
 #   build_info(<tag>... VALUE <value>...)
 #   build_info(<tag>... PATH  <path>...)
 #
-# This function populates the build_info.yml info file with exchangable build
+# This function populates the build_info.yml info file with exchangeable build
 # information related to the current build.
 #
 # Example:

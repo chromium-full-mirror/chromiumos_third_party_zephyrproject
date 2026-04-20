@@ -267,7 +267,7 @@ uint32_t elan_em32_get_ahb_freq(const struct device *dev)
 	} break;
 
 	case 0x02: {
-		main_freq = 0xffffffff;
+		main_freq = 0xffffffffU;
 	} break;
 
 	default: {
@@ -292,7 +292,7 @@ void elan_em32_set_ahb_freq(const struct device *dev)
 	uint32_t clk_src = config->clock_source;
 	uint32_t freq_src = config->clock_frequency;
 	uint32_t pre_div = config->clock_divider;
-	bool bPLL = 0;
+	bool bPLL = false;
 
 	em32_clk_gate_open(sysctrl_base, EM32_GATE_PCLKG_AIP);
 
@@ -324,9 +324,9 @@ void elan_em32_set_ahb_freq(const struct device *dev)
 				     0x02);
 	} else {
 		if (freq_src >> 4) {
-			bPLL = 1;
+			bPLL = true;
 		} else {
-			bPLL = 0;
+			bPLL = false;
 		}
 
 		uint32_t mirc_tall, mirc_tv12;
@@ -450,7 +450,6 @@ void elan_em32_set_ahb_freq(const struct device *dev)
 			delay_1us();
 			while (ahb_em32_read_field(clkctrl_base, CLKCTRL_SYS_PLL_CTRL_OFF,
 						   CLKCTRL_SYS_PLL_STABLE) == 0) {
-				; /* wait for SYSPLL to become stable */
 			}
 			delay_1us();
 			ahb_em32_write_field(sysctrl_base, SYSCTRL_SYS_REG_CTRL_OFF,
@@ -563,7 +562,7 @@ static bool dwt_try_enable(void)
 	 * Unlock DWT if a Lock Access Register is present.
 	 */
 #ifdef DWT_LAR
-	DWT->LAR = 0xC5ACCE55;
+	DWT->LAR = 0xC5ACCE55U;
 #endif
 
 	/*

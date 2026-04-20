@@ -41,6 +41,7 @@ rsource "Kconfig.renesas_ra"
 rsource "Kconfig.sam"
 rsource "Kconfig.stm32_hal"
 rsource "Kconfig.sy1xx"
+rsource "Kconfig.wch"
 rsource "Kconfig.xilinx_axi_ethernet_lite"
 rsource "Kconfig.xilinx_axienet"
 rsource "Kconfig.xmc4xxx"
@@ -48,7 +49,7 @@ rsource "Kconfig.xmc4xxx"
 
 config MDIO_INIT_PRIORITY
 	int "Init priority"
-	default 60
+	default ETH_INIT_PRIORITY
 	help
 	  MDIO device driver initialization priority.
 

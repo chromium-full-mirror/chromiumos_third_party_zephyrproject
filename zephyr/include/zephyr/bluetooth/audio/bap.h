@@ -29,6 +29,7 @@
 #include <stdint.h>
 
 #include <zephyr/autoconf.h>
+#include <zephyr/bluetooth/assigned_numbers.h>
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/bluetooth.h>
@@ -628,16 +629,28 @@ struct bt_bap_ascs_rsp {
  */
 #define BT_BAP_ASCS_RSP(c, r) (struct bt_bap_ascs_rsp) { .code = c, .reason = r }
 
-/** @brief Abstract Audio Broadcast Source structure. */
+/**
+ * @struct bt_bap_broadcast_source
+ * @brief Abstract Audio Broadcast Source structure.
+ */
 struct bt_bap_broadcast_source;
 
-/** @brief Abstract Audio Broadcast Sink structure. */
+/**
+ * @struct bt_bap_broadcast_sink
+ * @brief Abstract Audio Broadcast Sink structure.
+ */
 struct bt_bap_broadcast_sink;
 
-/** @brief Abstract Audio Unicast Group structure. */
+/**
+ * @struct bt_bap_unicast_group
+ * @brief Abstract Audio Unicast Group structure.
+ */
 struct bt_bap_unicast_group;
 
-/** @brief Abstract Audio Endpoint structure. */
+/**
+ * @struct bt_bap_ep
+ * @brief Abstract Audio Endpoint structure.
+ */
 struct bt_bap_ep;
 
 /** Struct to hold subgroup specific information for the receive state */
@@ -913,8 +926,12 @@ struct bt_bap_stream {
 	/** Endpoint reference */
 	struct bt_bap_ep *ep;
 
-	/** Codec Configuration */
-	struct bt_audio_codec_cfg *codec_cfg;
+	/**
+	 * @brief Codec Configuration
+	 *
+	 * Only valid if the endpoint for this stream is non-NULL.
+	 */
+	const struct bt_audio_codec_cfg *codec_cfg;
 
 	/** QoS Configuration */
 	struct bt_bap_qos_cfg *qos;
@@ -1129,7 +1146,7 @@ void bt_bap_stream_cb_register(struct bt_bap_stream *stream, struct bt_bap_strea
  * @return Allocated Audio Stream object or NULL in case of error.
  */
 int bt_bap_stream_config(struct bt_conn *conn, struct bt_bap_stream *stream, struct bt_bap_ep *ep,
-			 struct bt_audio_codec_cfg *codec_cfg);
+			 const struct bt_audio_codec_cfg *codec_cfg);
 
 /**
  * @brief Reconfigure Audio Stream
@@ -1144,7 +1161,8 @@ int bt_bap_stream_config(struct bt_conn *conn, struct bt_bap_stream *stream, str
  *
  * @return 0 in case of success or negative value in case of error.
  */
-int bt_bap_stream_reconfig(struct bt_bap_stream *stream, struct bt_audio_codec_cfg *codec_cfg);
+int bt_bap_stream_reconfig(struct bt_bap_stream *stream,
+			   const struct bt_audio_codec_cfg *codec_cfg);
 
 /**
  * @brief Configure Audio Stream QoS
@@ -1562,8 +1580,11 @@ int bt_bap_unicast_server_unregister_cb(const struct bt_bap_unicast_server_cb *c
  *
  * @param ep The structure object with endpoint info.
  * @param user_data Data to pass to the function.
+ *
+ * @retval true Continue iterating.
+ * @retval false Stop iterating.
  */
-typedef void (*bt_bap_ep_func_t)(struct bt_bap_ep *ep, void *user_data);
+typedef bool (*bt_bap_ep_func_t)(struct bt_bap_ep *ep, void *user_data);
 
 /**
  * @brief Iterate through all endpoints of the given connection.
@@ -1571,8 +1592,12 @@ typedef void (*bt_bap_ep_func_t)(struct bt_bap_ep *ep, void *user_data);
  * @param conn Connection object
  * @param func Function to call for each endpoint.
  * @param user_data Data to pass to the callback function.
+ *
+ * @retval 0 Success
+ * @retval -ECANCELED Iteration was stopped by the callback function before complete.
+ * @retval -EINVAL @p conn or @p func were NULL.
  */
-void bt_bap_unicast_server_foreach_ep(struct bt_conn *conn, bt_bap_ep_func_t func, void *user_data);
+int bt_bap_unicast_server_foreach_ep(struct bt_conn *conn, bt_bap_ep_func_t func, void *user_data);
 
 /**
  * @brief Initialize and configure a new ASE.
@@ -1585,7 +1610,7 @@ void bt_bap_unicast_server_foreach_ep(struct bt_conn *conn, bt_bap_ep_func_t fun
  * @return 0 in case of success or negative value in case of error.
  */
 int bt_bap_unicast_server_config_ase(struct bt_conn *conn, struct bt_bap_stream *stream,
-				     struct bt_audio_codec_cfg *codec_cfg,
+				     const struct bt_audio_codec_cfg *codec_cfg,
 				     const struct bt_bap_qos_cfg_pref *qos_pref);
 
 /** @} */ /* End of group bt_bap_unicast_server */
@@ -1742,8 +1767,8 @@ int bt_bap_unicast_group_delete(struct bt_bap_unicast_group *unicast_group);
  * @param stream     The audio stream
  * @param user_data  User data
  *
- * @retval true Stop iterating.
- * @retval false Continue iterating.
+ * @retval true Continue iterating.
+ * @retval false Stop iterating.
  */
 typedef bool (*bt_bap_unicast_group_foreach_stream_func_t)(struct bt_bap_stream *stream,
 							   void *user_data);
@@ -1801,10 +1826,21 @@ struct bt_bap_unicast_client_cb {
 	 * @param conn  Connection to the remote unicast server.
 	 * @param dir   Direction of the location.
 	 * @param loc   The location bitfield value.
-	 *
-	 * @return 0 in case of success or negative value in case of error.
 	 */
 	void (*location)(struct bt_conn *conn, enum bt_audio_dir dir, enum bt_audio_location loc);
+
+	/**
+	 * @brief Remote Unicast Server Supported Contexts
+	 *
+	 * This callback is called whenever the supported contexts are read
+	 * from the server or otherwise notified to the client.
+	 *
+	 * @param conn     Connection to the remote unicast server.
+	 * @param snk_ctx  The sink context bitfield value.
+	 * @param src_ctx  The source context bitfield value.
+	 */
+	void (*supported_contexts)(struct bt_conn *conn, enum bt_audio_context snk_ctx,
+				   enum bt_audio_context src_ctx);
 
 	/**
 	 * @brief Remote Unicast Server Available Contexts
@@ -1815,8 +1851,6 @@ struct bt_bap_unicast_client_cb {
 	 * @param conn     Connection to the remote unicast server.
 	 * @param snk_ctx  The sink context bitfield value.
 	 * @param src_ctx  The source context bitfield value.
-	 *
-	 * @return 0 in case of success or negative value in case of error.
 	 */
 	void (*available_contexts)(struct bt_conn *conn, enum bt_audio_context snk_ctx,
 				   enum bt_audio_context src_ctx);
@@ -2287,7 +2321,7 @@ struct bt_bap_broadcast_source_stream_param {
 	size_t data_len;
 
 	/** BIS Codec Specific Configuration */
-	uint8_t *data;
+	const uint8_t *data;
 #endif /* CONFIG_BT_AUDIO_CODEC_CFG_MAX_DATA_SIZE > 0 */
 };
 
@@ -2300,7 +2334,7 @@ struct bt_bap_broadcast_source_subgroup_param {
 	struct bt_bap_broadcast_source_stream_param *params;
 
 	/** Subgroup Codec configuration. */
-	struct bt_audio_codec_cfg *codec_cfg;
+	const struct bt_audio_codec_cfg *codec_cfg;
 };
 
 /** Broadcast Source create parameters */
@@ -2485,8 +2519,8 @@ int bt_bap_broadcast_source_get_base(struct bt_bap_broadcast_source *source,
  * @param stream     The audio stream
  * @param user_data  User data
  *
- * @retval true  Stop iterating.
- * @retval false Continue iterating.
+ * @retval true  Continue iterating.
+ * @retval false Stop iterating.
  */
 typedef bool (*bt_bap_broadcast_source_foreach_stream_func_t)(struct bt_bap_stream *stream,
 							      void *user_data);
@@ -2499,7 +2533,7 @@ typedef bool (*bt_bap_broadcast_source_foreach_stream_func_t)(struct bt_bap_stre
  * @param user_data      User specified data that is sent to the callback function
  *
  * @retval 0          Success (even if no streams exists in the broadcast source).
- * @retval -ECANCELED The @p func returned true.
+ * @retval -ECANCELED The @p func returned false and stopped the iteration.
  * @retval -EINVAL    @p source or @p func were NULL.
  */
 int bt_bap_broadcast_source_foreach_stream(struct bt_bap_broadcast_source *source,
@@ -2654,7 +2688,7 @@ int bt_bap_broadcast_sink_delete(struct bt_bap_broadcast_sink *sink);
 /**
  * @brief Register the Basic Audio Profile Scan Delegator and BASS.
  *
- * Register the scan deligator and Broadcast Audio Scan Service (BASS)
+ * Register the scan delegator and Broadcast Audio Scan Service (BASS)
  * dynamically at runtime.
  *
  * Only one set of callbacks can be registered at any one time, and calling this function multiple
@@ -2669,7 +2703,7 @@ int bt_bap_scan_delegator_register(struct bt_bap_scan_delegator_cb *cb);
 /**
  * @brief unregister the Basic Audio Profile Scan Delegator and BASS.
  *
- * Unregister the scan deligator and Broadcast Audio Scan Service (BASS)
+ * Unregister the scan delegator and Broadcast Audio Scan Service (BASS)
  * dynamically at runtime.
  *
  * @return 0 in case of success or negative value in case of error.

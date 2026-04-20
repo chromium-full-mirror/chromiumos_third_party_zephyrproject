@@ -23,7 +23,7 @@
             reg = <0>;
             #address-cells = <1>;
             #size-cells = <1>;
-            cpu-power-states = <&idle &suspend>;
+            cpu-power-states = <&suspend>;
             mpu: mpu@e000ed90 {
                 compatible = "arm,armv7m-mpu";
                 reg = <0xe000ed90 0x40>;
@@ -31,13 +31,6 @@
         };
     };
     power-states {
-
-            idle: idle {
-                compatible = "zephyr,power-state";
-	 			power-state-name = "runtime-idle";
-	 			min-residency-us = <5000>;
-	 			exit-latency-us = <400>;
-            };
 
 			suspend: suspend {
 				compatible = "zephyr,power-state";
