@@ -2031,12 +2031,15 @@ static int udc_ft_driver_preinit(const struct device *dev)
     int err;
 
     CPM_UsbPhyDeinit();
+	
+#ifdef CONFIG_PM
+     atomic_set(&priv->pm_lock, 0);
+     udc_ft_pm_policy_lock_get(dev);
+#endif
+	
     k_sleep(K_MSEC(50));
 
-#ifdef CONFIG_PM
-    atomic_set(&priv->pm_lock, 0);
-    udc_ft_pm_policy_lock_get(dev);
-#endif
+
     /*
      * You do not need to initialize it if your driver does not use
      * udc_lock_internal() / udc_unlock_internal(), but implements its

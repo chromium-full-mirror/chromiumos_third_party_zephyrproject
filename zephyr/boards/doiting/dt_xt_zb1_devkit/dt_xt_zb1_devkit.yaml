@@ -21,4 +21,7 @@ supported:
   - spi
   - flash
   - entropy
+  - crypto
+  - counter
+  - usbd
 vendor: doiting

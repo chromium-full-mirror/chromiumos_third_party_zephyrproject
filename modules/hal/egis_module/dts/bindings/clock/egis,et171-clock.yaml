@@ -24,6 +24,8 @@ properties:
     type: int
     description: |
       Advanced High-performance Bus clock frequence.
+      This is not a precise clock setting, but rather uses the root clock
+      to automatically select the most suitable ahb-divide.
       That cannot be used simultaneously with ahb-divide.
 
   apb-divide:
@@ -36,7 +38,9 @@ properties:
   apb-clock:
     type: int
     description: |
-      Advanced Peripheral Bus clock frequence
+      Advanced Peripheral Bus clock frequence.
+      This is not a precise clock setting, but rather uses the AHB clock
+      to automatically select the most suitable apb-divide.
       That cannot be used simultaneously with apb-divide.
 
 clock-cells:

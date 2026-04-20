@@ -562,8 +562,8 @@ static void reschedule(struct k_spinlock *lock, k_spinlock_key_t key)
 	if (resched(key.key) && need_swap()) {
 		z_swap(lock, key);
 	} else {
-		k_spin_unlock(lock, key);
 		signal_pending_ipi();
+		k_spin_unlock(lock, key);
 	}
 }
 
@@ -806,8 +806,13 @@ void z_reschedule_irqlock(uint32_t key)
 	if (resched(key) && need_swap()) {
 		z_swap_irqlock(key);
 	} else {
-		irq_unlock(key);
+		/* TODO: We only hold the IRQ lock here, not _sched_spinlock,
+		 * violating the locking requirement documented in
+		 * signal_pending_ipi(). This can result in added delayed
+		 * rescheduling.
+		 */
 		signal_pending_ipi();
+		irq_unlock(key);
 	}
 }
 
@@ -899,7 +904,7 @@ static inline void set_current(struct k_thread *new_thread)
  * copy before calling this function.
  *
  * @param interrupted Handle for the thread that was interrupted or NULL.
- * @retval Handle for the next thread to execute, or @p interrupted when
+ * @return Handle for the next thread to execute, or @p interrupted when
  *         no new thread is to be scheduled.
  */
 void *z_get_next_switch_handle(void *interrupted)
@@ -963,8 +968,12 @@ void *z_get_next_switch_handle(void *interrupted)
 		ret = new_thread->switch_handle;
 		/* Active threads MUST have a null here */
 		new_thread->switch_handle = NULL;
+
+		/* Check for IPIs under the lock to avoid silently consuming a
+		 * rescheduling IPI flagged by another CPU for ourselves.
+		 */
+		signal_pending_ipi();
 	}
-	signal_pending_ipi();
 	return ret;
 #else
 	z_sched_usage_switch(_kernel.ready_q.cache);
@@ -975,17 +984,31 @@ void *z_get_next_switch_handle(void *interrupted)
 }
 #endif /* CONFIG_USE_SWITCH */
 
-int z_unpend_all(_wait_q_t *wait_q)
+int z_unpend_all_locked(_wait_q_t *wait_q)
 {
 	int need_sched = 0;
 	struct k_thread *thread;
 
+#ifdef CONFIG_SMP
+	__ASSERT(z_spin_is_locked(&_sched_spinlock), "sched lock not held");
+#endif
+
 	for (thread = z_waitq_head(wait_q); thread != NULL; thread = z_waitq_head(wait_q)) {
-		z_unpend_thread(thread);
-		z_ready_thread(thread);
+		unpend_thread_no_timeout(thread);
+		z_abort_thread_timeout(thread);
+		ready_thread(thread);
 		need_sched = 1;
 	}
 
+	return need_sched;
+}
+
+int z_unpend_all(_wait_q_t *wait_q)
+{
+	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
+	int need_sched = z_unpend_all_locked(wait_q);
+
+	k_spin_unlock(&_sched_spinlock, key);
 	return need_sched;
 }
 
@@ -1175,14 +1198,18 @@ static int32_t z_tick_sleep(k_timeout_t timeout)
 		return 0;
 	}
 
-	/* We require a 32 bit unsigned subtraction to care a wraparound */
+	/* We require a 32 bit unsigned subtraction to handle a wraparound */
 	uint32_t left_ticks = expected_wakeup_ticks - sys_clock_tick_get_32();
 
-	/* To handle a negative value correctly, once type-cast it to signed 32 bit */
-	k_ticks_t ticks = (k_ticks_t)(int32_t)left_ticks;
+	/* Use signed comparison so past-due wakeups (negative remainder) return 0.
+	 * k_ticks_t may be uint32_t (!CONFIG_TIMEOUT_64BIT), so comparing ticks > 0
+	 * directly would be an unsigned comparison and would misinterpret a negative
+	 * remainder as a large positive value.
+	 */
+	int32_t signed_left = (int32_t)left_ticks;
 
-	if (ticks > 0) {
-		return ticks;
+	if (signed_left > 0) {
+		return (k_ticks_t)signed_left;
 	}
 
 	return 0;

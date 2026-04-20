@@ -4,10 +4,14 @@ The following licenses are in use in this repository: BSD-3-Clause, Apache-2.0,
 MIT and ST SLA0044.
 They are applied according to the following scheme:
 - All files imported from STM32Cube packages are subject to their original
-  license: BSD-3-Clause. This covers following folders:
-                - stm32cube/stm32*
-                - lib/* (except lib/stm32wba/STM32_WPAN/link_layer/ll_cmd_lib/ see below)
-- All files in lib/stm32wba/STM32_WPAN/link_layer/ll_cmd_lib/ are subject to 
+  license, either:
+     - Apache 2.0 for following folders:
+           - stm32cube/stm32*/soc (for HAL based series)
+     - BSD-3-Clause for following folders:
+           - stm32cube/stm32*/drivers
+           - stm32cube/stm32*/dfp (for HAL2 based series)
+           - lib/* (except lib/stm32wba/STM32_WPAN/link_layer/ll_cmd_lib/ see below)
+- All files in lib/stm32wba/STM32_WPAN/link_layer/ll_cmd_lib/ are subject to
   MIT License terms.
 - All files in dts/ folder are subject to usual Zephyr project license: Apache-2.0
 - Binary blobs explicitly fetched by the user with command `west blobs fetch stm32`

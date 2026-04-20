@@ -6,8 +6,8 @@ tests:
   drivers.clock.clock_control_api_default:
     platform_allow:
       - esp32_devkitc/esp32/procpu
-      - esp32c3_devkitm
-      - esp32s2_saola
+      - esp32c3_devkitc
+      - esp32s2_devkitc
       - esp32s3_devkitc/esp32s3/procpu
       - sltb010a@0
       - xg24_dk2601b
@@ -30,6 +30,7 @@ tests:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120/cpuapp
+      - nrf7120dk/nrf7120/cpuapp/ns
       - ophelia4ev/nrf54l15/cpuapp
     integration_platforms:
       - nrf51dk/nrf51822
@@ -44,6 +45,7 @@ tests:
       - nrf54lm20dk/nrf54lm20a/cpuapp
       - nrf54lm20dk/nrf54lm20b/cpuapp
       - nrf7120dk/nrf7120/cpuapp
+      - nrf7120dk/nrf7120/cpuapp/ns
       - ophelia4ev/nrf54l15/cpuapp
     integration_platforms:
       - nrf51dk/nrf51822

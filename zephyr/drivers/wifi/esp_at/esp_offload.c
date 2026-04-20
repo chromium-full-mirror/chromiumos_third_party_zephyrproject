@@ -292,6 +292,12 @@ static int _sock_send(struct esp_socket *sock, struct net_pkt *pkt)
 		dst = sock->dst;
 		k_mutex_unlock(&sock->lock);
 
+		/* ESP-AT supports IPv4 only */
+		if (dst.sa_family != NET_AF_INET) {
+			ret = -EAFNOSUPPORT;
+			goto out;
+		}
+
 		net_addr_ntop(dst.sa_family,
 			      &net_sin(&dst)->sin_addr,
 			      addr_str, sizeof(addr_str));
@@ -790,7 +796,7 @@ static struct net_offload esp_offload = {
 
 int esp_offload_init(struct net_if *iface)
 {
-	iface->if_dev->offload = &esp_offload;
+	net_if_offload_set(iface, &esp_offload);
 
 	return 0;
 }

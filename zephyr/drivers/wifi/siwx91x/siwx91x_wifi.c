@@ -83,7 +83,9 @@ int siwx91x_status(const struct device *dev, struct wifi_iface_status *status)
 		status->link_mode = wlan_info.wireless_mode;
 		status->iface_mode = WIFI_MODE_INFRA;
 		status->channel = wlan_info.channel_number;
-		status->twt_capable = true;
+		if (status->link_mode >= WIFI_6) {
+			status->twt_capable = true;
+		}
 
 		ret = sl_wifi_get_mfp(interface, &mfp);
 		if (ret) {
@@ -504,8 +506,8 @@ static int siwx91x_wifi_reg_domain(const struct device *dev, struct wifi_reg_dom
 
 static void siwx91x_iface_init(struct net_if *iface)
 {
-	const struct siwx91x_config *siwx91x_cfg = iface->if_dev->dev->config;
-	struct siwx91x_dev *sidev = iface->if_dev->dev->data;
+	const struct siwx91x_config *siwx91x_cfg = net_if_get_device(iface)->config;
+	struct siwx91x_dev *sidev = net_if_get_device(iface)->data;
 	sl_wifi_advanced_client_configuration_t client_config = {
 		.max_retry_attempts = 1,
 		.scan_interval = 0,
@@ -524,6 +526,7 @@ static void siwx91x_iface_init(struct net_if *iface)
 				siwx91x_on_ap_sta_disconnect, sidev);
 	sl_wifi_set_callback_v2(SL_WIFI_STATS_RESPONSE_EVENTS,
 				siwx91x_wifi_module_stats_event_handler, sidev);
+	sl_wifi_set_callback_v2(SL_WIFI_TWT_RESPONSE_EVENTS, siwx91x_on_twt, sidev);
 
 	ret = siwx91x_set_max_tx_power(siwx91x_cfg);
 	if (ret != SL_STATUS_OK) {

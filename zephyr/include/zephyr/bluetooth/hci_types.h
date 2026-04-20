@@ -863,6 +863,33 @@ struct bt_hci_cp_host_num_completed_packets {
 	struct bt_hci_handle_count h[0];
 } __packed;
 
+/** HCI opcode for Read Link Supervision Timeout. */
+#define BT_HCI_OP_READ_LINK_SUPERVISION_TIMEOUT     BT_OP(BT_OGF_BASEBAND, 0x0036) /* 0x0c36 */
+/** HCI command parameters for Read Link Supervision Timeout. */
+struct bt_hci_cp_read_link_supervision_timeout {
+	/** Connection handle. */
+	uint16_t handle;
+} __packed;
+/** HCI response parameters for Read Link Supervision Timeout. */
+struct bt_hci_rp_read_link_supervision_timeout {
+	/** Status. */
+	uint8_t  status;
+	/** Connection handle. */
+	uint16_t handle;
+	/** Link supervision timeout. */
+	uint16_t timeout;
+} __packed;
+
+/** HCI opcode for Write Link Supervision Timeout. */
+#define BT_HCI_OP_WRITE_LINK_SUPERVISION_TIMEOUT    BT_OP(BT_OGF_BASEBAND, 0x0037) /* 0x0c37 */
+/** HCI command parameters for Write Link Supervision Timeout. */
+struct bt_hci_cp_write_link_supervision_timeout {
+	/** Connection handle. */
+	uint16_t handle;
+	/** Link supervision timeout. */
+	uint16_t timeout;
+} __packed;
+
 #define BT_HCI_OP_WRITE_CURRENT_IAC_LAP         BT_OP(BT_OGF_BASEBAND, 0x003a) /* 0x0c3a */
 struct bt_hci_iac_lap {
 	uint8_t iac[3];
@@ -892,6 +919,18 @@ struct bt_hci_cp_write_inquiry_mode {
 struct bt_hci_cp_write_page_scan_type {
 	/** Page scan type. */
 	uint8_t type;
+} __packed;
+
+/** Maximum length of Extended Inquiry Response data. */
+#define BT_HCI_EIR_MAX_DATA_LEN                 240
+/** HCI opcode for Write Extended Inquiry Response. */
+#define BT_HCI_OP_WRITE_EXT_INQUIRY_RESPONSE    BT_OP(BT_OGF_BASEBAND, 0x0052) /* 0x0c52 */
+/** HCI command parameters for Write Extended Inquiry Response. */
+struct bt_hci_cp_write_ext_inquiry_response {
+	/** FEC encoding required. */
+	uint8_t fec_required;
+	/** Extended inquiry response data. */
+	uint8_t eir[BT_HCI_EIR_MAX_DATA_LEN];
 } __packed;
 
 #define BT_HCI_OP_WRITE_SSP_MODE                BT_OP(BT_OGF_BASEBAND, 0x0056) /* 0x0c56 */
@@ -3927,6 +3966,8 @@ struct bt_hci_evt_le_read_all_remote_feat_complete {
 #define BT_HCI_LE_CS_SUBFEATURE_NO_TX_FAE_MASK BIT(1)
 #define BT_HCI_LE_CS_SUBFEATURE_CHSEL_ALG_3C_MASK BIT(2)
 #define BT_HCI_LE_CS_SUBFEATURE_PBR_FROM_RTT_SOUNDING_SEQ_MASK BIT(3)
+/** Subfeature: CS with IPT in the reflector. */
+#define BT_HCI_LE_CS_SUBFEATURE_CS_IPT_REFLECTOR_MASK BIT(4)
 
 #define BT_HCI_LE_CS_T_IP1_TIME_10US_MASK BIT(0)
 #define BT_HCI_LE_CS_T_IP1_TIME_20US_MASK BIT(1)

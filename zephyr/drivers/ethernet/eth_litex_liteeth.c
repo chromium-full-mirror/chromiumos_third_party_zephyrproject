@@ -42,18 +42,18 @@ struct eth_litex_config {
 	const struct device *phy_dev;
 	void (*config_func)(const struct device *dev);
 	struct net_eth_mac_config mcfg;
-	uint32_t rx_slot_addr;
-	uint32_t rx_length_addr;
-	uint32_t rx_ev_pending_addr;
-	uint32_t rx_ev_enable_addr;
-	uint32_t tx_start_addr;
-	uint32_t tx_ready_addr;
-	uint32_t tx_slot_addr;
-	uint32_t tx_length_addr;
-	uint32_t tx_ev_pending_addr;
-	uint32_t tx_ev_enable_addr;
-	uint32_t tx_buf_addr;
-	uint32_t rx_buf_addr;
+	mem_addr_t rx_slot_addr;
+	mem_addr_t rx_length_addr;
+	mem_addr_t rx_ev_pending_addr;
+	mem_addr_t rx_ev_enable_addr;
+	mem_addr_t tx_start_addr;
+	mem_addr_t tx_ready_addr;
+	mem_addr_t tx_slot_addr;
+	mem_addr_t tx_length_addr;
+	mem_addr_t tx_ev_pending_addr;
+	mem_addr_t tx_ev_enable_addr;
+	mem_addr_t tx_buf_addr;
+	mem_addr_t rx_buf_addr;
 	uint8_t tx_buf_n;
 	uint8_t rx_buf_n;
 };
@@ -173,19 +173,16 @@ static int eth_set_config(const struct device *dev, enum ethernet_config_type ty
 			  const struct ethernet_config *config)
 {
 	struct eth_litex_dev_data *context = dev->data;
-	int ret = -ENOTSUP;
 
 	switch (type) {
 	case ETHERNET_CONFIG_TYPE_MAC_ADDRESS:
 		memcpy(context->mac_addr, config->mac_address.addr, sizeof(context->mac_addr));
-		ret = net_if_set_link_addr(context->iface, context->mac_addr,
-					   sizeof(context->mac_addr), NET_LINK_ETHERNET);
-		break;
+		return 0;
 	default:
 		break;
 	}
 
-	return ret;
+	return -ENOTSUP;
 }
 
 static int eth_start(const struct device *dev)

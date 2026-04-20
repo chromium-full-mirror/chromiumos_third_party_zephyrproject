@@ -96,6 +96,12 @@
 
 &clk_hse {
 	status = "okay";
+
+	/*
+	 * Disable HSE trim applied by Clock Control.
+	 * Board-specific init will apply trim from OTP.
+	 */
+	/delete-property/ hse-trimming;
 };
 
 &clk_hsi {
@@ -201,6 +207,10 @@ stm32_lp_tick_source: &lptim1 {
 	status = "okay";
 };
 
+&ieee802154 {
+	status = "okay";
+};
+
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";
@@ -227,4 +237,8 @@ stm32_lp_tick_source: &lptim1 {
 			reg = <0x000f2000 DT_SIZE_K(56)>;
 		};
 	};
+};
+
+&crc {
+	status = "okay";
 };

@@ -408,6 +408,21 @@
 				width = <128>;
 				height = <160>;
 			};
+
+			test_spi_st7586s: st7586s@24 {
+				compatible = "sitronix,st7586s";
+				mipi-max-frequency = <10000000>;
+				reg = <24>;
+				width = <384>;
+				height = <160>;
+				duty = <159>;
+				framerate = <24>;
+				start-line = <0>;
+				display-offset = <0x0>;
+				bias-ratio = <2>;
+				flip-configuration = <0>;
+				mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
+			};
 		};
 
 		test_mipi_dbi_xfr_16bit_write_only {
@@ -571,6 +586,16 @@
 				data-lanes = <1>;
 				width = <466>;
 				height = <466>;
+				pixel-format = <0>;
+			};
+
+			test_rm67199: rm67199@8 {
+				status = "okay";
+				compatible = "raydium,rm67199";
+				reg = <8>;
+				bl-gpios = <&test_gpio 0 0>;
+				reset-gpios = <&test_gpio 0 0>;
+				data-lanes = <4>;
 				pixel-format = <0>;
 			};
 		};
