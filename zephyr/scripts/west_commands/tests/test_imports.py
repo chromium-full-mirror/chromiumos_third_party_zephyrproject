@@ -29,6 +29,7 @@ def test_runner_imports():
         'ezflashcli',
         'gd32isp',
         'hifive1',
+        'iar',
         'intel_adsp',
         'intel_cyclonev',
         'jlink',
@@ -61,6 +62,8 @@ def test_runner_imports():
         'teensy',
         'trace32',
         'uf2',
+        'wchisp',
+        'wlink',
         'xsdb',
         'xtensa',
         # zephyr-keep-sorted-stop

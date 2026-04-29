@@ -144,20 +144,20 @@ static int soc_pre_init(void)
 #       define APB_CLOCK (APB_BASE_CLOCK / DT_PROP(DT_NODELABEL(clock), apb_divide))
 #   elif DT_NODE_HAS_PROP(DT_NODELABEL(clock), apb_clock)
 #       define APB_CLOCK DT_PROP(DT_NODELABEL(clock), apb_clock)
-#         if AHB_CLOCK > ((APB_BASE_CLOCK / 1) + (APB_BASE_CLOCK / 2)) / 2
+#         if APB_CLOCK > ((APB_BASE_CLOCK / 1) + (APB_BASE_CLOCK / 2)) / 2
 #           define SET_APB_DIV APB_CLK_DIV_1
-#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 2) + (APB_BASE_CLOCK / 3)) / 2
+#       elif APB_CLOCK > ((APB_BASE_CLOCK / 2) + (APB_BASE_CLOCK / 3)) / 2
 #           define SET_APB_DIV APB_CLK_DIV_2
-#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 3) + (APB_BASE_CLOCK / 4)) / 2
-#           define SET_AHB_DIV ROOT_CLK_DIV_3
-#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 4) + (APB_BASE_CLOCK / 6)) / 2
-#           define SET_AHB_DIV ROOT_CLK_DIV_4
-#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 6) + (APB_BASE_CLOCK / 8)) / 2
-#           define SET_AHB_DIV ROOT_CLK_DIV_6
-#       elif AHB_CLOCK > ((APB_BASE_CLOCK / 8) + (APB_BASE_CLOCK / 16)) / 2
-#           define SET_AHB_DIV ROOT_CLK_DIV_8
-#       else /* AHB_CLOCK > (APB_BASE_CLOCK / 16) or others */
-#           define SET_AHB_DIV ROOT_CLK_DIV_16
+#       elif APB_CLOCK > ((APB_BASE_CLOCK / 3) + (APB_BASE_CLOCK / 4)) / 2
+#           define SET_APB_DIV APB_CLK_DIV_3
+#       elif APB_CLOCK > ((APB_BASE_CLOCK / 4) + (APB_BASE_CLOCK / 6)) / 2
+#           define SET_APB_DIV APB_CLK_DIV_4
+#       elif APB_CLOCK > ((APB_BASE_CLOCK / 6) + (APB_BASE_CLOCK / 8)) / 2
+#           define SET_APB_DIV APB_CLK_DIV_6
+#       elif APB_CLOCK > ((APB_BASE_CLOCK / 8) + (APB_BASE_CLOCK / 16)) / 2
+#           define SET_APB_DIV APB_CLK_DIV_8
+#       else /* APB_CLOCK > (APB_BASE_CLOCK / 16) or others */
+#           define SET_APB_DIV APB_CLK_DIV_16
 #       endif
 #   endif
 #endif

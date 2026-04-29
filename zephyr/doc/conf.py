@@ -76,6 +76,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.graphviz",
     "sphinxcontrib.jquery",
+    "sphinxcontrib.mermaid",
     "sphinxcontrib.programoutput",
     "zephyr.application",
     "zephyr.html_redirects",
@@ -108,6 +109,16 @@ if tags.has("convertimages"):  # pylint: disable=undefined-variable  # noqa: F82
 templates_path = ["_templates"]
 
 exclude_patterns = ["_build"]
+
+# EOL release notes and migration guides are not built (to avoid dead links etc.)
+RELEASE_NOTES_GLOB_PATTERNS = [
+    "releases/release-notes-[12].*.rst",
+    "releases/release-notes-3.[0-6].rst",
+    "releases/release-notes-4.[01].rst",
+    "releases/migration-guide-3.[56].rst",
+    "releases/migration-guide-4.[01].rst",
+]
+exclude_patterns.extend(RELEASE_NOTES_GLOB_PATTERNS)
 
 if not west_found:
     exclude_patterns.append("**/*west-apis*")
@@ -163,15 +174,15 @@ rst_epilog = f"""
    :ltrim:
 .. _Zephyr SDK bundle: https://github.com/zephyrproject-rtos/sdk-ng/releases/tag/v{sdk_version}
 .. |sdk-url-linux| replace::
-   `{SDK_URL_BASE}/v{sdk_version}/zephyr-sdk-{sdk_version}_linux-x86_64.tar.xz`
+   `{SDK_URL_BASE}/v{sdk_version}/zephyr-sdk-{sdk_version}_linux-x86_64_gnu.tar.xz`
 .. |sdk-url-linux-sha| replace::
    `{SDK_URL_BASE}/v{sdk_version}/sha256.sum`
 .. |sdk-url-macos| replace::
-   `{SDK_URL_BASE}/v{sdk_version}/zephyr-sdk-{sdk_version}_macos-x86_64.tar.xz`
+   `{SDK_URL_BASE}/v{sdk_version}/zephyr-sdk-{sdk_version}_macos-aarch64_gnu.tar.xz`
 .. |sdk-url-macos-sha| replace::
    `{SDK_URL_BASE}/v{sdk_version}/sha256.sum`
 .. |sdk-url-windows| replace::
-   `{SDK_URL_BASE}/v{sdk_version}/zephyr-sdk-{sdk_version}_windows-x86_64.7z`
+   `{SDK_URL_BASE}/v{sdk_version}/zephyr-sdk-{sdk_version}_windows-x86_64_gnu.7z`
 """
 
 # -- Options for HTML output ----------------------------------------------
@@ -209,8 +220,8 @@ html_context = {
     "current_version": version,
     "versions": (
         ("latest", "/"),
+        ("4.4.0", "/4.4.0/"),
         ("4.3.0", "/4.3.0/"),
-        ("4.2.0", "/4.2.0/"),
         ("3.7.0 (LTS)", "/3.7.0/"),
     ),
     "display_gh_links": True,
@@ -256,6 +267,7 @@ latex_documents = [
     ("index-tex", "zephyr.tex", "Zephyr Project Documentation", author, "manual"),
 ]
 latex_engine = "xelatex"
+figure_align = "H" # Place figures exactly where they are defined in the source file.
 
 # -- Options for zephyr.doxyrunner plugin ---------------------------------
 
@@ -280,7 +292,14 @@ doxybridge_projects = {"zephyr": doxyrunner_projects["zephyr"]["outdir"]}
 
 # -- Options for html_redirect plugin -------------------------------------
 
-html_redirect_pages = redirects.REDIRECTS
+html_redirect_pages = (
+    *redirects.REDIRECTS,
+    *(
+        (f"releases/{p.stem}", "releases/eol_releases")
+        for pattern in RELEASE_NOTES_GLOB_PATTERNS
+        for p in (ZEPHYR_BASE / "doc").glob(pattern)
+    ),
+)
 
 # -- Options for zephyr.link-roles ----------------------------------------
 
@@ -368,6 +387,15 @@ copybutton_prompt_is_regexp = True
 # -- Options for sphinx-sitemap ----------------------------------------
 
 sitemap_url_scheme = "{link}"
+
+#-- Options for sphinxcontrib-mermaid -------------------------------------
+
+mermaid_version = "11.14.0"
+d3_version = "7.9.0"
+
+if tags.has("no-external-deps"): # pylint: disable=undefined-variable  # noqa: F821
+    mermaid_use_local = "../../_static/js/mermaid/mermaid.esm.mjs"
+    d3_use_local = "../../_static/js/d3/d3.min.js"
 
 # -- Linkcheck options ----------------------------------------------------
 

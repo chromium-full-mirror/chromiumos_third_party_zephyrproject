@@ -398,6 +398,22 @@ enum wifi_security_type wpas_key_mgmt_to_zephyr(bool is_hapd, void *config, int 
 		return WIFI_SECURITY_TYPE_EAP_TLS;
 #endif
 	case WPA_KEY_MGMT_NONE:
+#ifdef CONFIG_WEP
+		if (!is_hapd && config) {
+			struct wpa_ssid *ssid = (struct wpa_ssid *)config;
+
+			for (int i = 0; i < NUM_WEP_KEYS; i++) {
+				if (ssid->wep_key_len[i] > 0) {
+					if (ssid->auth_alg == WPA_AUTH_ALG_OPEN) {
+						return WIFI_SECURITY_TYPE_WEP_OPEN;
+					} else if (ssid->auth_alg == WPA_AUTH_ALG_SHARED) {
+						return WIFI_SECURITY_TYPE_WEP_SHARED;
+					}
+					return WIFI_SECURITY_TYPE_WEP;
+				}
+			}
+		}
+#endif
 		return WIFI_SECURITY_TYPE_NONE;
 	case WPA_KEY_MGMT_PSK:
 		if (proto == WPA_PROTO_RSN) {
@@ -408,7 +424,7 @@ enum wifi_security_type wpas_key_mgmt_to_zephyr(bool is_hapd, void *config, int 
 	case WPA_KEY_MGMT_PSK_SHA256:
 		return WIFI_SECURITY_TYPE_PSK_SHA256;
 	case WPA_KEY_MGMT_SAE:
-		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3)) {
+		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3_COMMON)) {
 			if (pwe == 1) {
 				return WIFI_SECURITY_TYPE_SAE_H2E;
 			} else if (pwe == 2) {
@@ -427,7 +443,7 @@ enum wifi_security_type wpas_key_mgmt_to_zephyr(bool is_hapd, void *config, int 
 	case WPA_KEY_MGMT_FT_PSK:
 		return WIFI_SECURITY_TYPE_FT_PSK;
 	case WPA_KEY_MGMT_FT_SAE:
-		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3)) {
+		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3_COMMON)) {
 			return WIFI_SECURITY_TYPE_FT_SAE;
 		}
 		return WIFI_SECURITY_TYPE_UNKNOWN;
@@ -438,7 +454,7 @@ enum wifi_security_type wpas_key_mgmt_to_zephyr(bool is_hapd, void *config, int 
 	case WPA_KEY_MGMT_FT_IEEE8021X_SHA384:
 		return WIFI_SECURITY_TYPE_FT_EAP_SHA384;
 	case WPA_KEY_MGMT_SAE_EXT_KEY:
-		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3)) {
+		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3_COMMON)) {
 			return WIFI_SECURITY_TYPE_SAE_EXT_KEY;
 		}
 		return WIFI_SECURITY_TYPE_UNKNOWN;
@@ -702,7 +718,10 @@ static int wpas_add_and_config_network(struct wpa_supplicant *wpa_s,
 	}
 
 	if (params->security != WIFI_SECURITY_TYPE_NONE) {
-		if (params->psk) {
+		if (params->psk &&
+		    params->security != WIFI_SECURITY_TYPE_WEP &&
+		    params->security != WIFI_SECURITY_TYPE_WEP_OPEN &&
+		    params->security != WIFI_SECURITY_TYPE_WEP_SHARED) {
 			if ((params->psk_length < WIFI_PSK_MIN_LEN) ||
 			    (params->psk_length > WIFI_PSK_MAX_LEN)) {
 				wpa_printf(MSG_ERROR,
@@ -722,15 +741,18 @@ static int wpas_add_and_config_network(struct wpa_supplicant *wpa_s,
 			goto rem_net;
 		}
 
-		/* Except for WPA-PSK, rest all are under WPA2 */
-		if (params->security != WIFI_SECURITY_TYPE_WPA_PSK) {
+		/* Except for WPA-PSK and WEP, rest all are under WPA2 */
+		if (params->security != WIFI_SECURITY_TYPE_WPA_PSK &&
+		    params->security != WIFI_SECURITY_TYPE_WEP &&
+		    params->security != WIFI_SECURITY_TYPE_WEP_OPEN &&
+		    params->security != WIFI_SECURITY_TYPE_WEP_SHARED) {
 			if (!wpa_cli_cmd_v("set_network %d proto RSN",
 					   resp.network_id)) {
 				goto out;
 			}
 		}
 
-		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3) &&
+		if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3_COMMON) &&
 		    (params->security == WIFI_SECURITY_TYPE_SAE_HNP ||
 		     params->security == WIFI_SECURITY_TYPE_SAE_H2E ||
 		     params->security == WIFI_SECURITY_TYPE_SAE_AUTO ||
@@ -836,7 +858,7 @@ static int wpas_add_and_config_network(struct wpa_supplicant *wpa_s,
 				goto out;
 			}
 
-			if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3)) {
+			if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_WPA3_COMMON)) {
 				if (params->sae_password) {
 					if ((params->sae_password_length < WIFI_PSK_MIN_LEN) ||
 					    (params->sae_password_length > WIFI_SAE_PSWD_MAX_LEN)) {
@@ -908,6 +930,12 @@ static int wpas_add_and_config_network(struct wpa_supplicant *wpa_s,
 
 			if (params->wpa3_ent_mode == WIFI_WPA3_ENTERPRISE_SUITEB_192) {
 				if (params->TLS_cipher == WIFI_EAP_TLS_ECC_P384) {
+					snprintf(phase1, sizeof(phase1), "tls_disable_tlsv1_3=1");
+					if (!wpa_cli_cmd_v("set_network %d phase1 \"%s\"",
+							resp.network_id, &phase1[0])) {
+						goto out;
+					}
+
 					if (!wpa_cli_cmd_v("set_network %d openssl_ciphers \"%s\"",
 							resp.network_id,
 							cipher_config.openssl_ciphers)) {
@@ -1092,6 +1120,67 @@ static int wpas_add_and_config_network(struct wpa_supplicant *wpa_s,
 
 			if (!wpa_cli_cmd_v("set_network %d private_key2_passwd \"%s\"",
 					   resp.network_id, params->key2_passwd)) {
+				goto out;
+			}
+#endif
+#ifdef CONFIG_WEP
+		} else if (params->security == WIFI_SECURITY_TYPE_WEP ||
+			   params->security == WIFI_SECURITY_TYPE_WEP_OPEN ||
+			   params->security == WIFI_SECURITY_TYPE_WEP_SHARED) {
+			const char *auth_alg;
+
+			if (!params->psk || !params->psk_length) {
+				wpa_printf(MSG_ERROR, "WEP key is required");
+				goto out;
+			}
+
+			char wep_key_buf[WIFI_WEP_KEY_MAX_LEN + 1] = {0};
+
+			if (params->psk_length > sizeof(wep_key_buf) - 1) {
+				wpa_printf(MSG_ERROR, "WEP key too long: %d",
+					   params->psk_length);
+				goto out;
+			}
+
+			os_memcpy(wep_key_buf, params->psk, params->psk_length);
+			wep_key_buf[params->psk_length] = '\0';
+
+			if (!wpa_cli_cmd_v("set_network %d key_mgmt NONE",
+					   resp.network_id)) {
+				goto out;
+			}
+
+			/*
+			 * TODO: Only wep_key0 with wep_tx_keyidx 0 is supported.
+			 * Alternate key indices (1-3) are not yet configurable.
+			 */
+			if (params->psk_length == 5 || params->psk_length == 13) {
+				if (!wpa_cli_cmd_v("set_network %d wep_key0 \"%s\"",
+						   resp.network_id, wep_key_buf)) {
+					goto out;
+				}
+			} else {
+				if (!wpa_cli_cmd_v("set_network %d wep_key0 %s",
+						   resp.network_id, wep_key_buf)) {
+					goto out;
+				}
+			}
+
+			if (!wpa_cli_cmd_v("set_network %d wep_tx_keyidx 0",
+					   resp.network_id)) {
+				goto out;
+			}
+
+			if (params->security == WIFI_SECURITY_TYPE_WEP_OPEN) {
+				auth_alg = "OPEN";
+			} else if (params->security == WIFI_SECURITY_TYPE_WEP_SHARED) {
+				auth_alg = "SHARED";
+			} else {
+				auth_alg = "OPEN SHARED";
+			}
+
+			if (!wpa_cli_cmd_v("set_network %d auth_alg %s",
+					   resp.network_id, auth_alg)) {
 				goto out;
 			}
 #endif
@@ -1405,6 +1494,19 @@ int supplicant_status(const struct device *dev, struct wifi_iface_status *status
 		status->band = wpas_band_to_zephyr(wpas_freq_to_band(wpa_s->assoc_freq));
 		status->wpa3_ent_type = wpas_key_mgmt_to_zephyr_wpa3_ent(key_mgmt);
 		status->security = wpas_key_mgmt_to_zephyr(0, ssid, key_mgmt, proto, sae_pwe);
+#ifdef CONFIG_WEP
+		if (status->security == WIFI_SECURITY_TYPE_WEP ||
+		    status->security == WIFI_SECURITY_TYPE_WEP_OPEN ||
+		    status->security == WIFI_SECURITY_TYPE_WEP_SHARED) {
+			size_t klen = ssid->wep_key_len[ssid->wep_tx_keyidx];
+
+			if (klen == 5 || klen == 10) {
+				status->wep_key_type = WIFI_WEP_KEY_TYPE_64;
+			} else if (klen == 13 || klen == 26) {
+				status->wep_key_type = WIFI_WEP_KEY_TYPE_128;
+			}
+		}
+#endif
 		status->mfp = get_mfp(ssid->ieee80211w);
 		ieee80211_freq_to_chan(wpa_s->assoc_freq, &channel);
 		status->channel = channel;
@@ -2130,6 +2232,13 @@ static int supplicant_wps_pin(const struct device *dev, struct wifi_wps_config_p
 		if (zephyr_wpa_cli_cmd_resp(wpa_s->ctrl_conn, get_pin_cmd, params->pin)) {
 			goto out;
 		}
+
+		if (!wpa_cli_cmd_v("wps_pin any %s", params->pin)) {
+			goto out;
+		}
+
+		wpas_api_ctrl.dev = dev;
+		wpas_api_ctrl.requested_op = WPS_PIN;
 	} else if (params->oper == WIFI_WPS_PIN_SET) {
 		if (!wpa_cli_cmd_v("wps_check_pin %s", params->pin)) {
 			goto out;
@@ -2892,13 +3001,12 @@ int supplicant_p2p_oper(const struct device *dev, struct wifi_p2p_params *params
 				 join_str);
 			break;
 		case WIFI_P2P_METHOD_KEYPAD:
-			method_str = "keypad";
 			if (params->connect.pin[0] == '\0') {
 				wpa_printf(MSG_ERROR, "PIN required for keypad method");
 				return -EINVAL;
 			}
-			snprintk(cmd_buf, sizeof(cmd_buf), "P2P_CONNECT %s %s %s go_intent=%d%s%s",
-				 addr_str, method_str, params->connect.pin,
+			snprintk(cmd_buf, sizeof(cmd_buf), "P2P_CONNECT %s %s go_intent=%d%s%s",
+				 addr_str, params->connect.pin,
 				 params->connect.go_intent, freq_str, join_str);
 			break;
 		default:
