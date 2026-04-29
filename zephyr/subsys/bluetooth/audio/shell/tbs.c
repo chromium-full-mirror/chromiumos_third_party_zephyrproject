@@ -47,14 +47,10 @@ static struct bt_tbs_cb tbs_cbs = {
 
 static int cmd_tbs_authorize(const struct shell *sh, size_t argc, char *argv[])
 {
-	char addr[BT_ADDR_LE_STR_LEN];
-
 	tbs_authorized_conn = default_conn;
 
-	(void)bt_addr_le_to_str(bt_conn_get_dst(tbs_authorized_conn),
-				addr, sizeof(addr));
-
-	shell_print(sh, "Connection with addr %s authorized", addr);
+	shell_print(sh, "Connection with addr %s authorized",
+		    bt_conn_dst_str(tbs_authorized_conn));
 
 	return 0;
 }
@@ -76,7 +72,7 @@ static int cmd_tbs_init(const struct shell *sh, size_t argc, char *argv[])
 		.gtbs = true,
 		.authorization_required = false,
 		.technology = BT_TBS_TECHNOLOGY_3G,
-		.supported_features = CONFIG_BT_TBS_SUPPORTED_FEATURES,
+		.supported_features = BT_TBS_FEATURE_HOLD | BT_TBS_FEATURE_JOIN,
 	};
 	int err;
 
@@ -99,7 +95,7 @@ static int cmd_tbs_init(const struct shell *sh, size_t argc, char *argv[])
 			.authorization_required = false,
 			/* Set different technologies per bearer */
 			.technology = (i % BT_TBS_TECHNOLOGY_WCDMA) + 1,
-			.supported_features = CONFIG_BT_TBS_SUPPORTED_FEATURES,
+			.supported_features = BT_TBS_FEATURE_HOLD | BT_TBS_FEATURE_JOIN,
 		};
 
 		snprintf(prov_name, sizeof(prov_name), "Telephone Bearer #%d", i);

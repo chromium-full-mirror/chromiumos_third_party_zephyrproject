@@ -38,6 +38,7 @@ _names = [
     'ezflashcli',
     'gd32isp',
     'hifive1',
+    'iar',
     'intel_adsp',
     'intel_cyclonev',
     'jlink',
@@ -71,6 +72,8 @@ _names = [
     'teensy',
     'trace32',
     'uf2',
+    'wchisp',
+    'wlink',
     'xsdb',
     'xtensa',
     # zephyr-keep-sorted-stop

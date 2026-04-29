@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 NXP
+ * Copyright 2024-2026 NXP
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <zephyr/init.h>
@@ -465,6 +465,22 @@ void board_early_init_hook(void)
 	RESET_ClearPeripheralReset(kUSDHC0_RST_SHIFT_RSTn);
 #endif
 
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(usdhc1)) && CONFIG_IMX_USDHC
+	/* Make sure USDHC1 ram buffer has power up */
+	POWER_DisablePD(kPDRUNCFG_APD_SDHC1_SRAM);
+	POWER_DisablePD(kPDRUNCFG_PPD_SDHC1_SRAM);
+	POWER_DisablePD(kPDRUNCFG_PD_LPOSC);
+	POWER_ApplyPD();
+
+	/* USDHC1 */
+	/* usdhc depend on 32K clock also */
+	CLOCK_AttachClk(kLPOSC_DIV32_to_32K_WAKE);
+	CLOCK_InitAudioPfd(kCLOCK_Pfd0, 24U); /* Target 400MHZ. */
+	CLOCK_AttachClk(kAUDIO_PLL_PFD0_to_SDIO1);
+	CLOCK_SetClkDiv(kCLOCK_DivSdio1Clk, 1);
+	RESET_ClearPeripheralReset(kUSDHC1_RST_SHIFT_RSTn);
+#endif
+
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(wwdt0))
 	CLOCK_AttachClk(kLPOSC_to_WWDT0);
 	/* ROM may change ITRC OUT3_SEL0 and OUT4_SEL0, which will select
@@ -604,6 +620,18 @@ void board_early_init_hook(void)
 	POWER_DisablePD(kPDRUNCFG_APD_XSPI2);
 	POWER_DisablePD(kPDRUNCFG_PPD_XSPI2);
 	POWER_ApplyPD();
+#endif
+
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(sema420))
+	RESET_ReleasePeripheralReset(kSEMA420_RST_SHIFT_RSTn);
+#endif
+
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(sema423))
+	RESET_ReleasePeripheralReset(kSEMA423_RST_SHIFT_RSTn);
+#endif
+
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(sema424))
+	RESET_ReleasePeripheralReset(kSEMA424_RST_SHIFT_RSTn);
 #endif
 }
 

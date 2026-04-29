@@ -168,20 +168,18 @@ static enum ethernet_hw_caps axi_eth_lite_get_caps(const struct device *dev)
 	return ETHERNET_LINK_10BASE | ETHERNET_LINK_100BASE;
 }
 
-static void axi_eth_lite_phy_link_state_changed(const struct device *phydev,
+static void axi_eth_lite_phy_link_state_changed(const struct device *phydev __unused,
 						struct phy_link_state *state, void *user_data)
 {
-	struct axi_eth_lite_data *data = user_data;
-
-	ARG_UNUSED(phydev);
+	struct net_if *iface = (struct net_if *)user_data;
 
 	LOG_INF("Link state changed to: %s (speed %x)", state->is_up ? "up" : "down", state->speed);
 
 	/* inform the L2 driver whether we can handle packets now */
 	if (state->is_up) {
-		net_eth_carrier_on(data->iface);
+		net_eth_carrier_on(iface);
 	} else {
-		net_eth_carrier_off(data->iface);
+		net_eth_carrier_off(iface);
 	}
 }
 
@@ -207,7 +205,8 @@ static void axi_eth_lite_iface_init(struct net_if *iface)
 		/* initially no carrier */
 		net_eth_carrier_off(iface);
 
-		err = phy_link_callback_set(config->phy, axi_eth_lite_phy_link_state_changed, data);
+		err = phy_link_callback_set(config->phy, axi_eth_lite_phy_link_state_changed,
+					    iface);
 
 		if (err < 0) {
 			LOG_ERR("Could not set PHY link state changed handler: %d", err);
@@ -241,8 +240,7 @@ static int axi_eth_lite_set_config(const struct device *dev, enum ethernet_confi
 		LOG_DBG("Programming MAC address!");
 		axi_eth_lite_program_mac_address(dev_config, data);
 		LOG_DBG("MAC address set!");
-		return net_if_set_link_addr(data->iface, data->mac_addr, sizeof(data->mac_addr),
-					    NET_LINK_ETHERNET);
+		return 0;
 	default:
 		LOG_ERR("Unsupported configuration set: %u", type);
 		return -ENOTSUP;
@@ -398,7 +396,7 @@ static inline void axi_eth_lite_receive(const struct axi_eth_lite_config *config
 	 * AXI Ethernet Lite cannot tell us the length of the received packet, so we try to parse it
 	 * Also, FCS is not used by Zephyr stack
 	 */
-	switch (ntohs(len)) {
+	switch (net_ntohs(len)) {
 	case NET_ETH_PTYPE_ARP:
 		/* fixed length */
 		packet_size = sizeof(struct net_eth_hdr) + AXI_ETH_LITE_ARP_PACKET_LENGTH;
@@ -407,7 +405,7 @@ static inline void axi_eth_lite_receive(const struct axi_eth_lite_config *config
 		const struct net_ipv4_hdr *ip4_hdr =
 			(const struct net_ipv4_hdr *)&header_buf[sizeof(*hdr)];
 		len = ip4_hdr->len;
-		packet_size = ntohs(len);
+		packet_size = net_ntohs(len);
 		/* length includes ipv4 header length */
 		packet_size += sizeof(struct net_eth_hdr);
 		break;
@@ -417,7 +415,7 @@ static inline void axi_eth_lite_receive(const struct axi_eth_lite_config *config
 			(const struct net_ipv6_hdr *)&header_buf[sizeof(*hdr)];
 		/* payload + any optional extension headers */
 		len = ip6_hdr->len;
-		packet_size = ntohs(len);
+		packet_size = net_ntohs(len);
 		packet_size += sizeof(struct net_eth_hdr) + sizeof(*ip6_hdr);
 		break;
 	}
@@ -426,7 +424,7 @@ static inline void axi_eth_lite_receive(const struct axi_eth_lite_config *config
 		break;
 	}
 
-	pkt = net_pkt_rx_alloc_with_buffer(data->iface, packet_size, AF_UNSPEC, 0, K_NO_WAIT);
+	pkt = net_pkt_rx_alloc_with_buffer(data->iface, packet_size, NET_PF_UNSPEC, 0, K_NO_WAIT);
 
 	if (pkt == NULL) {
 		LOG_WRN("Could not alloc RX packet!");

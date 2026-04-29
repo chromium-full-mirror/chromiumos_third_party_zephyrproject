@@ -498,9 +498,16 @@ static int gpio_em32_pin_interrupt_configure(const struct device *dev, gpio_pin_
 		inten, itype, ipol);
 
 	/* Debug: Show final interrupt configuration */
-	const char *trig_str = (trig == GPIO_INT_TRIG_LOW)    ? "LOW/FALLING"
-			       : (trig == GPIO_INT_TRIG_HIGH) ? "HIGH/RISING"
-							      : "BOTH";
+	const char *trig_str;
+
+	if (trig == GPIO_INT_TRIG_LOW) {
+		trig_str = "LOW/FALLING";
+	} else if (trig == GPIO_INT_TRIG_HIGH) {
+		trig_str = "HIGH/RISING";
+	} else {
+		trig_str = "BOTH";
+	}
+
 	const char *mode_str = (mode == GPIO_INT_MODE_EDGE) ? "EDGE" : "LEVEL";
 
 	LOG_DBG("Final interrupt config: %s %s trigger", mode_str, trig_str);
@@ -545,7 +552,7 @@ static void gpio_em32_isr(const struct device *dev)
 }
 
 /* GPIO driver API (EM32-style) */
-static const struct gpio_driver_api gpio_em32_driver_api = {
+static DEVICE_API(gpio, gpio_em32_driver_api) = {
 	.pin_configure = gpio_em32_pin_configure,
 	.port_get_raw = gpio_em32_port_get_raw,
 	.port_set_masked_raw = gpio_em32_port_set_masked_raw,
@@ -696,7 +703,7 @@ static int gpio_em32_init(const struct device *dev)
 		.base = DT_INST_REG_ADDR(n),                                                       \
 		.sysctrl_base = DT_REG_ADDR(DT_NODELABEL(sysctrl)),                                \
 		.clock_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR(n)),                                \
-		.clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(n, 0, gate_id),                        \
+		.clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(n, 0, clk_id),                        \
 		.port = DT_INST_PROP(n, port_id),                                                  \
 		.pclken =                                                                          \
 			{                                                                          \

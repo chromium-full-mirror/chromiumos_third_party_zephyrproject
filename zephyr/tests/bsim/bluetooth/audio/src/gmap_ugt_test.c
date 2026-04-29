@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <zephyr/autoconf.h>
+#include <zephyr/bluetooth/assigned_numbers.h>
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/audio/bap.h>
 #include <zephyr/bluetooth/audio/bap_lc3_preset.h>
@@ -450,7 +451,7 @@ static void test_main(void)
 	bap_stream_tx_init();
 
 	err = bt_pacs_register(&pacs_param);
-	if (err) {
+	if (err != 0) {
 		FAIL("Could not register PACS (err %d)\n", err);
 		return;
 	}

@@ -12,6 +12,7 @@
 
 #include <zephyr/autoconf.h>
 #include <zephyr/bluetooth/addr.h>
+#include <zephyr/bluetooth/assigned_numbers.h>
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/audio/bap.h>
 #include <zephyr/bluetooth/audio/pbp.h>
@@ -155,7 +156,7 @@ static int pbp_broadcast_source_adv_setup(void)
 	int err = bt_rand(&broadcast_id, BT_AUDIO_BROADCAST_ID_SIZE);
 	struct bt_data ext_ad[3];
 
-	if (err) {
+	if (err != 0) {
 		LOG_ERR("Unable to generate broadcast ID: %d\n", err);
 		return -EINVAL;
 	}

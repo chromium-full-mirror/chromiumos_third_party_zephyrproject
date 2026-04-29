@@ -291,7 +291,7 @@ static void wdt_em32_isr(const struct device *dev)
     }
 }
 
-static const struct wdt_driver_api wdt_em32_api = {
+static DEVICE_API(wdt, wdt_em32_api) = {
     .setup = wdt_em32_setup,
     .disable = wdt_em32_disable,
     .install_timeout = wdt_em32_install_timeout,
@@ -351,7 +351,7 @@ static int wdt_em32_init(const struct device *dev)
     static const struct wdt_em32_config wdt_em32_config_##n = {	\
         .base = DT_INST_REG_ADDR(n),					\
         .clock_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR(n)),		\
-        .clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(n, 0, gate_id), \
+        .clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(n, 0, clk_id), \
     };									\
                                         \
     static struct wdt_em32_data wdt_em32_data_##n;			\
