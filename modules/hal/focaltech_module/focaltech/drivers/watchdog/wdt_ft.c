@@ -34,19 +34,13 @@ static int wdt_ft_setup(const struct device *dev, uint8_t options)
     ARG_UNUSED(dev);
     struct wdt_ft_data *wdt_datas = dev->data;
     const struct wdt_ft_config *cfg = dev->config;
-    if ((options & WDT_OPT_PAUSE_HALTED_BY_DBG) != 0U)
-    {
-        Wdt_SetMode(cfg->base, WDT_DBG);
-    }
-    else
-    {
-        wdt_datas->en_flag = false;
-        if ((options & WDT_OPT_PAUSE_IN_SLEEP) != 0U)
-        {
-            Wdt_SetMode(cfg->base, WDT_DOZE);
-        }
-    }
 
+    if ((options & WDT_OPT_PAUSE_IN_SLEEP) || (options & WDT_OPT_PAUSE_HALTED_BY_DBG)) {
+		LOG_ERR("Pause in sleep or halted by dbg is not supported");
+		return -ENOTSUP;
+	}
+
+    wdt_datas->en_flag = false;
     Wdt_EnableFunc(cfg->base);
 
     return 0;
@@ -89,8 +83,6 @@ static int wdt_ft_disable(const struct device *dev)
 
 static int wdt_ft_install_timeout(const struct device *dev, const struct wdt_timeout_cfg *config)
 {
-    uint32_t prescaler = 0U;
-    uint32_t reload = 0U;
     uint16_t divider = 4096U;
     uint32_t ticks = (uint64_t)(80 * NSEC_PER_MSEC) * (config->window.max) / MSEC_PER_SEC;
     struct wdt_ft_data *wdt_datas = dev->data;
@@ -171,6 +163,9 @@ static int wdt_ft_init(const struct device *dev)
     {
         return ret;
     }
+
+    Wdt_DisableFunc(cfg->base);
+
     return ret;
 }
 
