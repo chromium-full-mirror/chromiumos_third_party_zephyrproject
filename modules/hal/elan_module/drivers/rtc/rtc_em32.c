@@ -510,7 +510,7 @@ static void rtc_em32_isr(const struct device *dev)
     }
 }
 
-static const struct rtc_driver_api rtc_em32_api = {
+static DEVICE_API(rtc, rtc_em32_api) = {
     .set_time = rtc_em32_set_time,
     .get_time = rtc_em32_get_time,
 #if defined(CONFIG_RTC_ALARM)
@@ -590,7 +590,7 @@ static int rtc_em32_init(const struct device *dev)
     static const struct rtc_em32_config rtc_em32_config_##n = {	\
         .base = DT_INST_REG_ADDR(n),					\
         .clock_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR(n)),		\
-        .clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(n, 0, gate_id),		\
+        .clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(n, 0, clk_id),		\
     };									\
                                         \
     static struct rtc_em32_data rtc_em32_data_##n;			\

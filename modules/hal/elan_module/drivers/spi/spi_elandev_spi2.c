@@ -386,12 +386,13 @@ static int spi_e967_release(const struct device *dev, const struct spi_config *c
 	return 0;
 }
 
-static const struct spi_driver_api spi_elan967_api = {.transceive = spi_e967_transceive,
+static DEVICE_API(spi, spi_elan967_api) = {
+	.transceive = spi_e967_transceive,
 #ifdef CONFIG_SPI_ASYNC
 						      .transceive_async = NULL,
 #endif /* CONFIG_SPI_ASYNC */
 #ifdef CONFIG_SPI_RTIO
-						      .submit iodev_submit = NULL,
+	.submit = NULL,
 #endif /* CONFIG_SPI_RTIO */
 						      .release = spi_e967_release};
 
@@ -454,7 +455,7 @@ static int spi_e967_init(const struct device *dev)
 	static const struct spi_elandev_config spi_elandev_config_##index = {                      \
 		.base = DT_INST_REG_ADDR(index),                                                   \
 		.clock_dev = DEVICE_DT_GET(DT_INST_CLOCKS_CTLR(index)),                        \
-		.clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(index, 0, gate_id),                        \
+		.clock_gate_id = DT_INST_CLOCKS_CELL_BY_IDX(index, 0, clk_id),                        \
 		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(index),                                     \
 	};                                                                                         \
                                                                                                    \

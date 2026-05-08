@@ -797,7 +797,11 @@ __STATIC_FORCEINLINE uint32_t __STLEX(uint32_t value, volatile uint32_t *ptr)
  */
 __STATIC_FORCEINLINE void __enable_irq(void)
 {
-  __ASM volatile ("cpsie i" : : : "memory");
+  #if defined __aarch64__
+    __ASM volatile ("msr daifclr, #2" : : : "memory");
+  #else
+    __ASM volatile ("cpsie i" : : : "memory");
+  #endif
 }
 
 
@@ -808,7 +812,11 @@ __STATIC_FORCEINLINE void __enable_irq(void)
  */
 __STATIC_FORCEINLINE void __disable_irq(void)
 {
-  __ASM volatile ("cpsid i" : : : "memory");
+  #if defined __aarch64__
+    __ASM volatile ("msr daifset, #2" : : : "memory");
+  #else
+    __ASM volatile ("cpsid i" : : : "memory");
+  #endif
 }
 
 #if (__ARM_ARCH_ISA_THUMB >= 2)
@@ -843,7 +851,13 @@ __STATIC_FORCEINLINE void __disable_irq(void)
 __STATIC_FORCEINLINE uint32_t __get_FPSCR(void)
 {
 #if (defined(__ARM_FP) && (__ARM_FP >= 1))
-  return (__builtin_arm_get_fpscr());
+  #if __has_builtin(__builtin_arm_get_fpscr) 
+    return (__builtin_arm_get_fpscr());
+  #else
+    uint32_t result;
+    __ASM volatile ("VMRS %0, fpscr" : "=r" (result) );
+    return(result);
+  #endif
 #else
   return (0U);
 #endif
@@ -858,7 +872,11 @@ __STATIC_FORCEINLINE uint32_t __get_FPSCR(void)
 __STATIC_FORCEINLINE void __set_FPSCR(uint32_t fpscr)
 {
 #if (defined(__ARM_FP) && (__ARM_FP >= 1))
-  __builtin_arm_set_fpscr(fpscr);
+  #if __has_builtin(__builtin_arm_set_fpscr)
+    __builtin_arm_set_fpscr(fpscr);
+  #else
+    __ASM volatile ("VMSR fpscr, %0" : : "r" (fpscr) : "vfpcc", "memory");
+  #endif
 #else
   (void)fpscr;
 #endif
