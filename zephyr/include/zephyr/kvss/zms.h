@@ -31,6 +31,17 @@ extern "C" {
  * @{
  */
 
+/** Mount options for @ref zms_mount and @ref zms_mount_force. */
+enum zms_mount_flags {
+	/**
+	 * Do not format erased media during mount.
+	 *
+	 * When this flag is set and the backing flash area is erased (no valid ZMS
+	 * header), mount fails instead of creating a new ZMS header.
+	 */
+	ZMS_MOUNT_FLAG_NO_FORMAT = BIT(0),
+};
+
 /** Zephyr Memory Storage file system structure */
 struct zms_fs {
 	/** File system offset in flash */
@@ -49,6 +60,8 @@ struct zms_fs {
 	uint32_t sector_size;
 	/** Number of sectors in the file system */
 	uint32_t sector_count;
+	/** Mount behavior flags from @ref zms_mount_flags */
+	uint32_t mount_flags;
 	/** Current cycle counter of the active sector (pointed to by `ate_wra`) */
 	uint8_t sector_cycle;
 	/** Flag indicating if the file system is initialized */
@@ -91,6 +104,11 @@ typedef uint32_t zms_id_t;
 /**
  * @brief Mount a ZMS file system onto the device specified in `fs`.
  *
+ * @details If the flash area is erased and no valid ZMS header is found,
+ * mount will format the area and create a valid header by default.
+ * Set @ref ZMS_MOUNT_FLAG_NO_FORMAT in `fs->mount_flags` to disable this
+ * auto-format behavior and fail the mount instead.
+ *
  * @param fs Pointer to the file system.
  *
  * @retval 0 on success.
@@ -101,6 +119,21 @@ typedef uint32_t zms_id_t;
  * @retval -EIO if there is a memory read/write error.
  */
 int zms_mount(struct zms_fs *fs);
+
+/**
+ * @brief Mount a ZMS file system onto the device specified in `fs`, wiping the partition if
+ * mounting fails the first time.
+ *
+ * @param fs Pointer to the file system.
+ *
+ * @retval 0 on success.
+ * @retval -ENOTSUP if the detected file system is not ZMS.
+ * @retval -EPROTONOSUPPORT if the ZMS version is not supported.
+ * @retval -EINVAL if `fs` is NULL or any of the flash parameters or the sector layout is invalid.
+ * @retval -ENXIO if there is a device error.
+ * @retval -EIO if there is a memory read/write error.
+ */
+int zms_mount_force(struct zms_fs *fs);
 
 /**
  * @brief Clear the ZMS file system from device. The ZMS file system must be re-mounted after this

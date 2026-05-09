@@ -15,6 +15,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/net_buf.h>
+#include <zephyr/drivers/usb/usb_buf.h>
 #include <zephyr/usb/usb_ch9.h>
 #include <zephyr/sys/dlist.h>
 
@@ -205,7 +206,6 @@ struct uhc_event {
 };
 
 /**
- * @typedef uhc_event_cb_t
  * @brief Callback to submit UHC event to higher layer.
  *
  * At the higher level, the event is to be inserted into a message queue.

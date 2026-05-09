@@ -210,12 +210,14 @@ static void ft_Sys_SysClkConfig(SYS_ClkInitTypeDef *pClkInit)
 {
 
     // Trim clock source
-    LIB_CPM_OscSwitch(pClkInit->SysClkTrim);
+    
 
     // if ((OSC_320M_HZ < pClkInit->SysClkTrim) && (CLK_DIV_2 == pClkInit->SysClkDiv))
     {
         DRV_CPM_SystemClkVrefTrim(CPM_VREF_TRIM_121);
     }
+
+    LIB_CPM_OscSwitch(pClkInit->SysClkTrim);
 
     // Configure system clock
 
@@ -772,11 +774,28 @@ void ft_Sys_Init(void)
     /* Initialize CACHE */
     ft_Sys_CacheInit();
 
-    uart_init(2, 115200);
+    uart_init(3, 115200);
 
     close_wdt();
 
     ft_close_tc_reset();
+}
+
+uint32_t ft_get_ahb3_clk()
+{
+    uint32_t ahb3_clk;
+
+    if (_cpm_chk_ips_clk_div_en)
+    {
+        ahb3_clk = g_sys_clk / (((_cpm_get_peripheral1_clk_div_value>>8) & 0x0F) + 1);
+    }
+    else
+    {
+        ahb3_clk = g_sys_clk;
+    }
+
+    return ahb3_clk;
+
 }
 void ft_sys_wake_up(void)
 {

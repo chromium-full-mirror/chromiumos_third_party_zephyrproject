@@ -5,25 +5,28 @@ Origin:
    Generated
 
 Status:
-   Generated using STM32 Open Pin Data
+   Generated using external database:
+        STM32 Open Pin Data
+        STM32Cube package pinouts files
 
 Purpose:
-   SoC package specific -pintrl.dtsi files
+   SoC package specific -pinctrl.dtsi files
 
 Description:
-   This directory contains *-pcintrl.dtsi files generated using generation
+   This directory contains *-pinctrl.dtsi files generated using generation
    script (available under scripts/genpinctrl) along with inputs from
-   STM32 Open Pin Data database.
+    - STM32 Open Pin Data database.
+    - STM32Cube package Device Family Pack (DFP) pinouts database
    Each file matches a STM32 SoC package and contains, for each pin of the
    package the exhaustive list of pinctrl configurations depending on its
    capabilities and the various pin configurations described in
    scripts/genpinctrl/stm32*-pinctrl-config.yaml files.
    New set of files could be generated based on:
-   - new version of STM32 Open Pin Data
+   - new version of STM32 Open Pin Data / STM32 Cube DFP pinouts
    - new version of stm32*-pinctrl-config.yaml files
 
 Dependencies:
-    * STM32 Open Pin Data
+    * STM32 Open Pin Data / STM32 Cube package DFP pinouts
     * Generation script available in current repo under scripts/genpinctrl
       and configuration files.
 
@@ -31,7 +34,7 @@ URL:
    https://github.com/STMicroelectronics/STM32_open_pin_data
 
 Commit:
-   299253ac6ca176834a6b0b2faadd0ce7c628d296
+   d2ca9b5ed0b35ad3aa92e91984ec7addae58bf7e
 
 Maintained-by:
    External

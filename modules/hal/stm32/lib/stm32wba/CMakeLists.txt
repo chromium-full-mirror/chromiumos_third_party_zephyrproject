@@ -61,11 +61,13 @@ if(CONFIG_BT_STM32WBA)
   target_link_libraries(app PUBLIC stm32wba_ble_lib)
 endif()
 
-# Distinguish STM32WBA6x from STM32WBA5x lines
+# Distinguish between lines of the STM32WBA series
 if(CONFIG_SOC_STM32WBA65XX)
   set(libname_prefix "WBA6_")
 elseif(CONFIG_SOC_STM32WBA55XX OR CONFIG_SOC_STM32WBA52XX)
   set(libname_prefix "WBA5_")
+elseif(CONFIG_SOC_STM32WBA25XX OR CONFIG_SOC_STM32WBA23XX)
+  set(libname_prefix "WBA2_")
 else()
   message(FATAL_ERROR "Unsupported SoC: ${CONFIG_SOC}")
 endif()

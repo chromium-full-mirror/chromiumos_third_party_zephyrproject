@@ -18,6 +18,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/net/http/service.h>
 #include <zephyr/net/net_ip.h>
+#include <zephyr/net/net_log.h>
 #include <zephyr/net/socket.h>
 #include <zephyr/net/tls_credentials.h>
 #include <zephyr/zvfs/eventfd.h>
@@ -28,6 +29,9 @@ LOG_MODULE_REGISTER(net_http_server, CONFIG_NET_HTTP_SERVER_LOG_LEVEL);
 
 #include "../../ip/net_private.h"
 #include "headers/server_internal.h"
+
+BUILD_ASSERT(CONFIG_HTTP_SERVER_VERSION > 0,
+	     "HTTP server requires at least HTTP/1.x or HTTP/2 support");
 
 #if defined(CONFIG_NET_TC_THREAD_COOPERATIVE)
 /* Lowest priority cooperative thread */
@@ -182,13 +186,6 @@ int http_server_init(struct http_server_ctx *ctx)
 			if (zsock_setsockopt(fd, ZSOCK_SOL_TLS, ZSOCK_TLS_SEC_TAG_LIST,
 					     svc->sec_tag_list,
 					     svc->sec_tag_list_size) < 0) {
-				LOG_ERR("setsockopt: %d", errno);
-				zsock_close(fd);
-				continue;
-			}
-
-			if (zsock_setsockopt(fd, ZSOCK_SOL_TLS, ZSOCK_TLS_HOSTNAME, "localhost",
-					     sizeof("localhost")) < 0) {
 				LOG_ERR("setsockopt: %d", errno);
 				zsock_close(fd);
 				continue;
@@ -461,11 +458,13 @@ static int handle_http_preface(struct http_client_ctx *client)
 		client->header_capture_ctx.status = HTTP_HEADER_STATUS_OK;
 	}
 
-	if (strncmp(client->cursor, HTTP2_PREFACE, sizeof(HTTP2_PREFACE) - 1) != 0) {
+	if (IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_1) &&
+	    strncmp(client->cursor, HTTP2_PREFACE, sizeof(HTTP2_PREFACE) - 1) != 0) {
 		return enter_http1_request(client);
 	}
 
-	return enter_http2_request(client);
+	return IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+		enter_http2_request(client) : -ENOTSUP;
 }
 
 static int handle_http_done(struct http_client_ctx *client)
@@ -495,40 +494,51 @@ static int handle_http_request(struct http_client_ctx *client)
 	do {
 		switch (client->server_state) {
 		case HTTP_SERVER_FRAME_DATA_STATE:
-			ret = handle_http_frame_data(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_data(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_PREFACE_STATE:
 			ret = handle_http_preface(client);
 			break;
 		case HTTP_SERVER_REQUEST_STATE:
-			ret = handle_http1_request(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_1) ?
+				handle_http1_request(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_HEADER_STATE:
-			ret = handle_http_frame_header(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_header(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_HEADERS_STATE:
-			ret = handle_http_frame_headers(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_headers(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_CONTINUATION_STATE:
-			ret = handle_http_frame_continuation(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_continuation(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_SETTINGS_STATE:
-			ret = handle_http_frame_settings(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_settings(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_WINDOW_UPDATE_STATE:
-			ret = handle_http_frame_window_update(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_window_update(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_RST_STREAM_STATE:
-			ret = handle_http_frame_rst_stream(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_rst_stream(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_GOAWAY_STATE:
-			ret = handle_http_frame_goaway(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_goaway(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_PRIORITY_STATE:
-			ret = handle_http_frame_priority(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_priority(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_FRAME_PADDING_STATE:
-			ret = handle_http_frame_padding(client);
+			ret = IS_ENABLED(CONFIG_HTTP_SERVER_VERSION_2) ?
+				handle_http_frame_padding(client) : -ENOTSUP;
 			break;
 		case HTTP_SERVER_DONE_STATE:
 			ret = handle_http_done(client);
@@ -770,6 +780,79 @@ static bool skip_this(struct http_resource_desc *resource, bool is_websocket)
 	}
 
 	return false;
+}
+
+/* Resolves '.' / '..' in the path portion of the URL (everything before the first '?' or '#')
+ * so the caller-visible buffer holds a canonical form. The query/fragment portion is preserved
+ * unchanged. The output is always shorter or equal in length, so the in-place rewrite is safe.
+ */
+void http_server_remove_dot_segments(char *path)
+{
+	char *in = path;
+	char *out = path;
+	char *query = strpbrk(path, "?#");
+	size_t qtail_len = (query != NULL) ? strlen(query) : 0;
+
+	while ((*in != '\0') && (in != query)) {
+		if (in[0] == '.') {
+			if (in[1] == '/') {
+				in += 2;
+				continue;
+			} else if ((in[1] == '.') && (in[2] == '/')) {
+				in += 3;
+				continue;
+			} else if ((in[1] == '\0') || (in + 1 == query)) {
+				in += 1;
+				continue;
+			} else if ((in[1] == '.') &&
+					((in[2] == '\0') || (in + 2 == query))) {
+				in += 2;
+				continue;
+			}
+		} else if ((in[0] == '/') && (in[1] == '.')) {
+			if (in[2] == '/') {
+				in += 2;
+				continue;
+			} else if ((in[2] == '\0') || ((in + 2) == query)) {
+				in += 2;
+				*out++ = '/';
+				continue;
+			} else if ((in[2] == '.') && (in[3] == '/')) {
+				in += 3;
+				while ((out > path) && (*(out - 1) != '/')) {
+					out--;
+				}
+				if (out > path) {
+					out--;
+				}
+				continue;
+			} else if ((in[2] == '.') && ((in[3] == '\0') || ((in + 3) == query))) {
+				in += 3;
+				while ((out > path) && (*(out - 1) != '/')) {
+					out--;
+				}
+				if (out > path) {
+					out--;
+				}
+				*out++ = '/';
+				continue;
+			}
+		}
+
+		/* Move the first segment to output: leading char (often '/') plus
+		 * all non-'/' bytes up to the next segment boundary.
+		 */
+		*out++ = *in++;
+		while ((*in != '\0') && (in != query) && (*in != '/')) {
+			*out++ = *in++;
+		}
+	}
+
+	if (qtail_len > 0) {
+		memmove(out, query, qtail_len);
+		out += qtail_len;
+	}
+	*out = '\0';
 }
 
 struct http_resource_detail *get_resource_detail(const struct http_service_desc *service,
