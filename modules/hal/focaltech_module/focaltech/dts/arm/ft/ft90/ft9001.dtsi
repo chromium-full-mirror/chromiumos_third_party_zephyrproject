@@ -23,7 +23,7 @@
             reg = <0>;
             #address-cells = <1>;
             #size-cells = <1>;
-            cpu-power-states = <&idle &suspend>;
+            cpu-power-states = <&suspend>;
             mpu: mpu@e000ed90 {
                 compatible = "arm,armv7m-mpu";
                 reg = <0xe000ed90 0x40>;
@@ -31,13 +31,6 @@
         };
     };
     power-states {
-
-            idle: idle {
-                compatible = "zephyr,power-state";
-	 			power-state-name = "runtime-idle";
-	 			min-residency-us = <5000>;
-	 			exit-latency-us = <400>;
-            };
 
 			suspend: suspend {
 				compatible = "zephyr,power-state";
@@ -71,6 +64,7 @@
             status = "disabled";
         };
 
+
         rcc: rcc@40004000 {
             compatible = "ft,ft90-rcc";
             #clock-cells = <1>;
@@ -95,6 +89,12 @@
                 compatible = "ft,ft90-nv-flash", "soc-nv-flash";
                 reg = <0x10000000 0x200000>;
                 write-block-size = <1>;
+            };
+
+            otp: otp@8200000{
+                compatible = "ft,ft90-otp";
+                reg = <0x08200000 0x800>;
+                status = "disabled";
             };
         };
 

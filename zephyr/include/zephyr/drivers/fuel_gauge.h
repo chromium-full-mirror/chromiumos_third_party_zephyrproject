@@ -3,6 +3,7 @@
  * Copyright 2023 Microsoft Corporation
  * Copyright (c) 2025 Philipp Steiner <philipp.steiner1987@gmail.com>
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * Copyright (c) 2026 Analog Devices Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -134,6 +135,8 @@ enum fuel_gauge_prop_type {
 	FUEL_GAUGE_CC_CONFIG,
 	/** State of Health (SoH) (percent, 0-100)*/
 	FUEL_GAUGE_STATE_OF_HEALTH,
+	/** Thermistor Voltage Sense reading (uV)  */
+	FUEL_GAUGE_THERM_VOLTAGE_UV,
 
 	/** Reserved to demark end of common fuel gauge properties */
 	FUEL_GAUGE_COMMON_COUNT,
@@ -240,6 +243,8 @@ union fuel_gauge_prop_val {
 	uint8_t cc_config;
 	/** FUEL_GAUGE_STATE_OF_HEALTH */
 	uint8_t state_of_health;
+	/** FUEL_GAUGE_THERM_VOLTAGE_UV */
+	uint32_t therm_voltage_uv;
 };
 
 /**
@@ -265,7 +270,6 @@ struct sbs_gauge_device_chemistry {
 } __packed;
 
 /**
- * @typedef fuel_gauge_get_property_t
  * @brief Callback API for getting a fuel_gauge property.
  *
  * See fuel_gauge_get_property() for argument description
@@ -274,7 +278,6 @@ typedef int (*fuel_gauge_get_property_t)(const struct device *dev, fuel_gauge_pr
 					 union fuel_gauge_prop_val *val);
 
 /**
- * @typedef fuel_gauge_set_property_t
  * @brief Callback API for setting a fuel_gauge property.
  *
  * See fuel_gauge_set_property() for argument description
@@ -283,7 +286,6 @@ typedef int (*fuel_gauge_set_property_t)(const struct device *dev, fuel_gauge_pr
 					 union fuel_gauge_prop_val val);
 
 /**
- * @typedef fuel_gauge_get_buffer_property_t
  * @brief Callback API for getting a fuel_gauge buffer property.
  *
  * See fuel_gauge_get_buffer_property() for argument description
@@ -293,7 +295,6 @@ typedef int (*fuel_gauge_get_buffer_property_t)(const struct device *dev,
 						size_t dst_len);
 
 /**
- * @typedef fuel_gauge_battery_cutoff_t
  * @brief Callback API for doing a battery cutoff.
  *
  * See fuel_gauge_battery_cutoff() for argument description
@@ -330,7 +331,7 @@ __syscall int fuel_gauge_get_prop(const struct device *dev, fuel_gauge_prop_t pr
 static inline int z_impl_fuel_gauge_get_prop(const struct device *dev, fuel_gauge_prop_t prop,
 					     union fuel_gauge_prop_val *val)
 {
-	const struct fuel_gauge_driver_api *api = (const struct fuel_gauge_driver_api *)dev->api;
+	const struct fuel_gauge_driver_api *api = DEVICE_API_GET(fuel_gauge, dev);
 
 	if (api->get_property == NULL) {
 		return -ENOSYS;
@@ -360,10 +361,10 @@ static inline int z_impl_fuel_gauge_get_props(const struct device *dev,
 					      const fuel_gauge_prop_t *props,
 					      union fuel_gauge_prop_val *vals, size_t len)
 {
-	const struct fuel_gauge_driver_api *api = (const struct fuel_gauge_driver_api *)dev->api;
+	int ret;
 
 	for (size_t i = 0; i < len; i++) {
-		int ret = api->get_property(dev, props[i], vals + i);
+		ret = DEVICE_API_GET(fuel_gauge, dev)->get_property(dev, props[i], vals + i);
 
 		if (ret) {
 			return ret;
@@ -388,7 +389,7 @@ __syscall int fuel_gauge_set_prop(const struct device *dev, fuel_gauge_prop_t pr
 static inline int z_impl_fuel_gauge_set_prop(const struct device *dev, fuel_gauge_prop_t prop,
 					     union fuel_gauge_prop_val val)
 {
-	const struct fuel_gauge_driver_api *api = (const struct fuel_gauge_driver_api *)dev->api;
+	const struct fuel_gauge_driver_api *api = DEVICE_API_GET(fuel_gauge, dev);
 
 	if (api->set_property == NULL) {
 		return -ENOSYS;
@@ -444,7 +445,7 @@ static inline int z_impl_fuel_gauge_get_buffer_prop(const struct device *dev,
 						    fuel_gauge_prop_t prop_type, void *dst,
 						    size_t dst_len)
 {
-	const struct fuel_gauge_driver_api *api = (const struct fuel_gauge_driver_api *)dev->api;
+	const struct fuel_gauge_driver_api *api = DEVICE_API_GET(fuel_gauge, dev);
 
 	if (api->get_buffer_property == NULL) {
 		return -ENOSYS;
@@ -465,7 +466,7 @@ __syscall int fuel_gauge_battery_cutoff(const struct device *dev);
 
 static inline int z_impl_fuel_gauge_battery_cutoff(const struct device *dev)
 {
-	const struct fuel_gauge_driver_api *api = (const struct fuel_gauge_driver_api *)dev->api;
+	const struct fuel_gauge_driver_api *api = DEVICE_API_GET(fuel_gauge, dev);
 
 	if (api->battery_cutoff == NULL) {
 		return -ENOSYS;

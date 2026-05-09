@@ -16,12 +16,14 @@
 #include <string.h>
 
 #include <zephyr/autoconf.h>
+#include <zephyr/bluetooth/assigned_numbers.h>
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/bluetooth/iso.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/kernel.h>
+#include <zephyr/kernel/thread_stack.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_core.h>
 #include <zephyr/net_buf.h>
@@ -43,9 +45,6 @@
 
 LOG_MODULE_REGISTER(lc3, CONFIG_LOG_DEFAULT_LEVEL);
 
-#define LC3_ENCODER_STACK_SIZE 4096
-#define LC3_ENCODER_PRIORITY   5
-
 struct lc3_data {
 	void *fifo_reserved; /* 1st word reserved for use by FIFO */
 	struct net_buf *buf;
@@ -54,8 +53,7 @@ struct lc3_data {
 	bool do_plc;
 };
 
-K_MEM_SLAB_DEFINE_STATIC(lc3_data_slab, sizeof(struct lc3_data), CONFIG_BT_ISO_RX_BUF_COUNT,
-			 __alignof__(struct lc3_data));
+K_MEM_SLAB_DEFINE_STATIC_TYPE(lc3_data_slab, struct lc3_data, CONFIG_BT_ISO_RX_BUF_COUNT);
 
 static int16_t lc3_rx_buf[LC3_MAX_NUM_SAMPLES_MONO];
 static K_FIFO_DEFINE(lc3_in_fifo);
@@ -259,11 +257,11 @@ static void do_lc3_decode(struct lc3_data *data)
 		const uint8_t frame_blocks_per_sdu = stream->lc3_frame_blocks_per_sdu;
 		size_t frame_cnt;
 
-		frame_cnt = 0;
+		frame_cnt = 0U;
 		for (uint8_t i = 0U; i < frame_blocks_per_sdu; i++) {
 			const size_t decoded_frames = decode_frame_block(data, frame_cnt);
 
-			if (decoded_frames == 0) {
+			if (decoded_frames == 0U) {
 				break;
 			}
 

@@ -15,8 +15,8 @@
 	//compatible = "ft,ft9001-eval";
 
 	chosen {
-		//zephyr,console = &usart1;
-		//zephyr,shell-uart = &usart1;
+		zephyr,console = &usart3;
+		zephyr,shell-uart = &usart3;
 		zephyr,flash = &flash0;
 		zephyr,sram = &sram0;
 		zephyr,sram2 = &sramd0;
@@ -24,6 +24,7 @@
 		zephyr,flash-controller = &efm;
 		zephyr,entropy = &trng;
 	};
+
 
 };
 /*&usart0 {
@@ -46,7 +47,7 @@
 		hw-flow-control;
 };*/
 
-&usart2 {
+&usart3 {
         status = "okay";
         current-speed = <115200>;
 		parity = "none";
@@ -81,6 +82,9 @@
     pinctrl-names = "default";
 };
 
+&otp {
+	status = "okay";
+};
 
 &spi2 {
 	status = "okay";
@@ -115,10 +119,12 @@ zephyr_udc0: &usb {
 	//pinctrl-names = "default";
 	status = "okay";
 };
-/*
+
 &wdt0 {
 	status = "okay";
 };
+
+/*
 &tc0 {
 	status = "okay";
 };*/
