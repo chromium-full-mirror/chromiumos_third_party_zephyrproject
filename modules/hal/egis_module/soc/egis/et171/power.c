@@ -108,76 +108,77 @@ static void suspend()
 	sys_write32(clk_en & clk_off, 0xF0100014); /* Remain USB, SPIM, SRAM */
 	__asm__ volatile ("" ::: "memory");
 
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(uart0), okay) && CONFIG_UART_INTERRUPT_DRIVEN
-	/* Don't switch clock when UART RX is ready for receiving */
-#if CONFIG_PM_SOC_ET171_PREVENT_UART_RX_INCORRECT
-	const bool switch_clock = !(sys_read32(0xF0200024) & BIT(0));
-	if (!switch_clock) {
-		__asm__ volatile("wfi");
-	} else {
-#else
-	{
-#endif /* if CONFIG_PM_SOC_ET171_PREVENT_UART_RX_INCORRECT */
+	const bool switch_clock = true
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(spi1), okay)
+		/* Don't switch clock when SPI1 is still busy */
+		&& !(sys_read32(0xF0F00038) & BIT(4))
 #endif
-
-	/*== switch to external clock =====================================================*/
-	uint64_t begin_time = read_mtime64();
-	__asm__ volatile ("" ::: "memory");
-	sys_write32(0x00000000, 0xF0100004);
-	__asm__ volatile ("" ::: "memory");
-
-	/*== turn off internal clock ======================================================*/
-	const uint32_t osc360m = sys_read32(0xF0100210);
-	sys_write32(osc360m & ~BIT(30), 0xF0100210);
-	__asm__ volatile ("" ::: "memory");
-
-	/*== update mtimecmp ==============================================================*/
-	const uint64_t cmp_time = read_mtimecmp();
-	const bool cmp_check = cmp_time > begin_time;
-	if (cmp_check) {
-		const uint64_t new_cmp_time = begin_time + (cmp_time - begin_time) * lo_freq / hi_freq;
-		write_mtimecmp(new_cmp_time);
+#if CONFIG_PM_SOC_ET171_PREVENT_UART_RX_INCORRECT
+		/* Don't switch clock when UART RX is ready for receiving */
+		&& !(sys_read32(0xF0200024) & BIT(0))
+#endif
+		;
+	if (!switch_clock)
+	{
+		__asm__ volatile("wfi");
 	}
+	else
+	{
+		/*== switch to external clock =====================================================*/
+		uint64_t begin_time = read_mtime64();
+		__asm__ volatile ("" ::: "memory");
+		sys_write32(0x00000000, 0xF0100004);
+		__asm__ volatile ("" ::: "memory");
 
-	/*== idle =========================================================================*/
-	__asm__ volatile("wfi");
-	__asm__ volatile ("" ::: "memory");
+		/*== turn off internal clock ======================================================*/
+		const uint32_t osc360m = sys_read32(0xF0100210);
+		sys_write32(osc360m & ~BIT(30), 0xF0100210);
+		__asm__ volatile ("" ::: "memory");
 
-	/*== restore mtimecmp =============================================================*/
-	if (cmp_check) {
-		write_mtimecmp(cmp_time);
-	}
+		/*== update mtimecmp ==============================================================*/
+		const uint64_t cmp_time = read_mtimecmp();
+		const bool cmp_check = cmp_time > begin_time;
+		if (cmp_check) {
+			const uint64_t new_cmp_time = begin_time + (cmp_time - begin_time) * lo_freq / hi_freq;
+			write_mtimecmp(new_cmp_time);
+		}
 
-	/*== turn on internal clock =======================================================*/
-	sys_write32(osc360m, 0xF0100210);
-	__asm__ volatile ("" ::: "memory");
+		/*== idle =========================================================================*/
+		__asm__ volatile("wfi");
+		__asm__ volatile ("" ::: "memory");
 
-	/*== switch to internal clock =====================================================*/
-	uint64_t end_time = read_mtime64();
-	__asm__ volatile ("" ::: "memory");
-	sys_write32(clk_setting, 0xF0100004);
-	__asm__ volatile ("" ::: "memory");
+		/*== restore mtimecmp =============================================================*/
+		if (cmp_check) {
+			write_mtimecmp(cmp_time);
+		}
 
-	/*== update mtime =================================================================*/
-	uint64_t adj_time = (end_time - begin_time) * hi_freq / lo_freq;
-	__asm__ volatile ("" ::: "memory");
-	write_mtime(read_mtime64() + adj_time);
-	__asm__ volatile ("" ::: "memory");
+		/*== turn on internal clock =======================================================*/
+		sys_write32(osc360m, 0xF0100210);
+		__asm__ volatile ("" ::: "memory");
 
-	/*== Check mtime ==========================================================*/
-	if (cmp_check) {
-		if (!(csr_read(mip) & MIP_MTIP)) {
-			uint64_t check_time = read_mtime64();
-			if (check_time > cmp_time) {
-				/* MIP_MTIP is read only, try to set MIP_MTIP by write_mtimecmp() */
-				write_mtimecmp(check_time + 32);
+		/*== switch to internal clock =====================================================*/
+		uint64_t end_time = read_mtime64();
+		__asm__ volatile ("" ::: "memory");
+		sys_write32(clk_setting, 0xF0100004);
+		__asm__ volatile ("" ::: "memory");
+
+		/*== update mtime =================================================================*/
+		uint64_t adj_time = (end_time - begin_time) * hi_freq / lo_freq;
+		__asm__ volatile ("" ::: "memory");
+		write_mtime(read_mtime64() + adj_time);
+		__asm__ volatile ("" ::: "memory");
+
+		/*== Check mtime ==========================================================*/
+		if (cmp_check) {
+			if (!(csr_read(mip) & MIP_MTIP)) {
+				uint64_t check_time = read_mtime64();
+				if (check_time > cmp_time) {
+					/* MIP_MTIP is read only, try to set MIP_MTIP by write_mtimecmp() */
+					write_mtimecmp(check_time + 32);
+				}
 			}
 		}
-	}
-
-#if DT_NODE_HAS_STATUS(DT_NODELABEL(uart0), okay) && CONFIG_UART_INTERRUPT_DRIVEN
 	} /* switch_clock */
-#endif
 
 	/*== turn on periphery clock ======================================================*/
 	sys_write32(clk_en, 0xF0100014);
