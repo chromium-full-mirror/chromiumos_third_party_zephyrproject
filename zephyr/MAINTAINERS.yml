@@ -155,9 +155,9 @@
 ACPI:
   status: odd fixes
   files:
-    - lib/acpi/
+    - arch/common/acpi/
     - include/zephyr/acpi/
-    - tests/lib/acpi/
+    - tests/arch/common/acpi/
     - dts/bindings/acpi/
     - include/zephyr/dt-bindings/acpi/
   labels:
@@ -800,6 +800,7 @@ Bouffalolab Platforms:
     - boards/sipeed/m1s_dock/
     - boards/sipeed/maix_m0s_dock/
     - drivers/*/*bflb*
+    - drivers/sensor/bflb/
     - dts/riscv/bflb/
     - dts/bindings/*/bflb,*
     - soc/bflb/
@@ -1049,6 +1050,7 @@ Continuous Integration:
     - nashif
   collaborators:
     - fabiobaltieri
+    - henrikbrixandersen
     - kartben
   files:
     - .github/
@@ -2167,7 +2169,6 @@ Documentation Infrastructure:
 "Drivers: Mbox":
   status: odd fixes
   collaborators:
-    - wearyzen
     - ithinuel
   files:
     - include/zephyr/drivers/mbox.h
@@ -3887,7 +3888,7 @@ NXP Platforms (MCU):
     - tests/boards/vmu_rt1170/
   files-exclude:
     - dts/arm/nxp/imx/nxp_imx*
-    - boards/nxp/frdm_imx*/
+    - boards/nxp/frdm_imx[0-9]*/
   files-regex-exclude:
     - .*s32.*
   file-groups:
@@ -5677,9 +5678,7 @@ Twister:
   collaborators:
     - PerMac
     - hakehuang
-    - golowanow
     - gchwier
-    - LukaszMrugala
     - KamilxPaszkiet
     - fundakol
   files:
@@ -5705,6 +5704,7 @@ USB:
     - tmon-nordic
   collaborators:
     - josuah
+    - MarkWangChinese
   files:
     - drivers/usb/
     - dts/bindings/usb/
@@ -6560,7 +6560,6 @@ West:
     - valeriosetti
     - tomi-font
   collaborators:
-    - wearyzen
     - ithinuel
   files:
     - modules/mbedtls/
@@ -6715,7 +6714,6 @@ West:
     - tomi-font
   collaborators:
     - Vge0rge
-    - wearyzen
     - ithinuel
     - valeriosetti
     - JordanYates
@@ -6739,7 +6737,6 @@ West:
     - tomi-font
   collaborators:
     - Vge0rge
-    - wearyzen
     - ithinuel
     - valeriosetti
     - JordanYates
@@ -6787,7 +6784,6 @@ West:
     - tomi-font
   collaborators:
     - Vge0rge
-    - wearyzen
     - ithinuel
     - valeriosetti
     - JordanYates

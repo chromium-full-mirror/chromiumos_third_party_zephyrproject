@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2024 Arm Limited.
+ * Copyright (c) 2009-2025 Arm Limited.
  * Copyright (c) 2018-2022 Arm China.
  * All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
@@ -1003,6 +1003,31 @@ typedef struct
 #define SCB_CACR_FORCEWT_Pos                2U                                            /*!< SCB CACR: FORCEWT Position */
 #define SCB_CACR_FORCEWT_Msk               (1UL << SCB_CACR_FORCEWT_Pos)                  /*!< SCB CACR: FORCEWT Mask */
 
+/** \brief SCB Secure Fault Status Register Definitions */
+#define SCB_SFSR_LSERR_Pos                  7U                                            /*!< SCB SFSR: LSERR Position */
+#define SCB_SFSR_LSERR_Msk                 (1UL << SCB_SFSR_LSERR_Pos)                    /*!< SCB SFSR: LSERR Mask */
+
+#define SCB_SFSR_SFARVALID_Pos              6U                                            /*!< SCB SFSR: SFARVALID Position */
+#define SCB_SFSR_SFARVALID_Msk             (1UL << SCB_SFSR_SFARVALID_Pos)                /*!< SCB SFSR: SFARVALID Mask */
+
+#define SCB_SFSR_LSPERR_Pos                 5U                                            /*!< SCB SFSR: LSPERR Position */
+#define SCB_SFSR_LSPERR_Msk                (1UL << SCB_SFSR_LSPERR_Pos)                   /*!< SCB SFSR: LSPERR Mask */
+
+#define SCB_SFSR_INVTRAN_Pos                4U                                            /*!< SCB SFSR: INVTRAN Position */
+#define SCB_SFSR_INVTRAN_Msk               (1UL << SCB_SFSR_INVTRAN_Pos)                  /*!< SCB SFSR: INVTRAN Mask */
+
+#define SCB_SFSR_AUVIOL_Pos                 3U                                            /*!< SCB SFSR: AUVIOL Position */
+#define SCB_SFSR_AUVIOL_Msk                (1UL << SCB_SFSR_AUVIOL_Pos)                   /*!< SCB SFSR: AUVIOL Mask */
+
+#define SCB_SFSR_INVER_Pos                  2U                                            /*!< SCB SFSR: INVER Position */
+#define SCB_SFSR_INVER_Msk                 (1UL << SCB_SFSR_INVER_Pos)                    /*!< SCB SFSR: INVER Mask */
+
+#define SCB_SFSR_INVIS_Pos                  1U                                            /*!< SCB SFSR: INVIS Position */
+#define SCB_SFSR_INVIS_Msk                 (1UL << SCB_SFSR_INVIS_Pos)                    /*!< SCB SFSR: INVIS Mask */
+
+#define SCB_SFSR_INVEP_Pos                  0U                                            /*!< SCB SFSR: INVEP Position */
+#define SCB_SFSR_INVEP_Msk                 (1UL /*<< SCB_SFSR_INVEP_Pos*/)                /*!< SCB SFSR: INVEP Mask */
+
 /*@} end of group CMSIS_SCB */
 
 
@@ -1027,6 +1052,19 @@ typedef struct
 /** \brief SCnSCB Interrupt Controller Type Register Definitions */
 #define SCnSCB_ICTR_INTLINESNUM_Pos         0U                                         /*!< ICTR: INTLINESNUM Position */
 #define SCnSCB_ICTR_INTLINESNUM_Msk        (0xFUL /*<< SCnSCB_ICTR_INTLINESNUM_Pos*/)  /*!< ICTR: INTLINESNUM Mask */
+
+/** \brief SCnSCB Coprocessor Power Control Register Definitions */
+#define SCnSCB_CPPWR_SUS11_Pos             23U                                         /*!< CPPWR: SUS11 Position */
+#define SCnSCB_CPPWR_SUS11_Msk             (1UL << SCnSCB_CPPWR_SUS11_Pos)             /*!< CPPWR: SUS11 Mask */
+
+#define SCnSCB_CPPWR_SU11_Pos              22U                                         /*!< CPPWR: SU11 Position */
+#define SCnSCB_CPPWR_SU11_Msk              (1UL << SCnSCB_CPPWR_SU11_Pos)              /*!< CPPWR: SU11 Mask */
+
+#define SCnSCB_CPPWR_SUS10_Pos             21U                                         /*!< CPPWR: SUS10 Position */
+#define SCnSCB_CPPWR_SUS10_Msk             (1UL << SCnSCB_CPPWR_SUS10_Pos)             /*!< CPPWR: SUS10 Mask */
+
+#define SCnSCB_CPPWR_SU10_Pos              20U                                         /*!< CPPWR: SU10 Position */
+#define SCnSCB_CPPWR_SU10_Msk              (1UL << SCnSCB_CPPWR_SU10_Pos)              /*!< CPPWR: SU10 Mask */
 
 /*@} end of group CMSIS_SCnotSCB */
 
@@ -1724,8 +1762,8 @@ typedef struct
 #else
         uint32_t RESERVED0[3];
 #endif
-  __IOM uint32_t SFSR;                   /*!< Offset: 0x014 (R/W)  Secure Fault Status Register */
-  __IOM uint32_t SFAR;                   /*!< Offset: 0x018 (R/W)  Secure Fault Address Register */
+  __IOM uint32_t SFSR;                   /*!< Offset: 0x014 (R/W)  Secure Fault Status Register (deprecated: use SCB->SFSR) */
+  __IOM uint32_t SFAR;                   /*!< Offset: 0x018 (R/W)  Secure Fault Address Register (deprecated: use SCB->SFAR) */
 } SAU_Type;
 
 /** \brief SAU Control Register Definitions */
@@ -1760,7 +1798,8 @@ typedef struct
 
 #endif /* defined (__SAUREGION_PRESENT) && (__SAUREGION_PRESENT == 1U) */
 
-/** \brief SAU Secure Fault Status Register Definitions */
+/** \brief SAU Secure Fault Status Register Definitions
+    \deprecated Use SCB_SFSR_* definitions instead which correctly map to SCB->SFSR */
 #define SAU_SFSR_LSERR_Pos                  7U                                            /*!< SAU SFSR: LSERR Position */
 #define SAU_SFSR_LSERR_Msk                 (1UL << SAU_SFSR_LSERR_Pos)                    /*!< SAU SFSR: LSERR Mask */
 
@@ -3044,7 +3083,7 @@ __STATIC_INLINE void TZ_SAU_Disable(void)
 /**
   \brief   Set Debug Authentication Control Register
   \details writes to Debug Authentication Control register.
-  \param [in]  value  value to be writen.
+  \param [in]  value  value to be written.
  */
 __STATIC_INLINE void DCB_SetAuthCtrl(uint32_t value)
 {
@@ -3071,7 +3110,7 @@ __STATIC_INLINE uint32_t DCB_GetAuthCtrl(void)
 /**
   \brief   Set Debug Authentication Control Register (non-secure)
   \details writes to non-secure Debug Authentication Control register when in secure state.
-  \param [in]  value  value to be writen
+  \param [in]  value  value to be written
  */
 __STATIC_INLINE void TZ_DCB_SetAuthCtrl_NS(uint32_t value)
 {
@@ -3286,6 +3325,11 @@ __STATIC_FORCEINLINE void SCB_DisableDCache (void)
     uint32_t ccsidr;
     uint32_t sets;
     uint32_t ways;
+
+    /* Return if D-cache is not enabled (prevent flushing junk after POR) */
+    if ((SCB->CCR & SCB_CCR_DC_Msk) == 0U) {
+      return;
+    }
 
     SCB->CSSELR = 0U;                       /* select Level 1 data cache */
     __DSB();

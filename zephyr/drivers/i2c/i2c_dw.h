@@ -29,6 +29,7 @@ extern "C" {
 #define I2C_DW_MAGIC_KEY 0x44570140
 
 typedef void (*i2c_isr_cb_t)(const struct device *port);
+typedef int (*i2c_api_check_bus_t)(const struct device *dev);
 
 #define IC_ACTIVITY   (1 << 0)
 #define IC_ENABLE_BIT (1 << 0)
@@ -77,6 +78,47 @@ typedef void (*i2c_isr_cb_t)(const struct device *port);
 #define I2C_FSP_LCNT ((CONFIG_I2C_DW_CLOCK_SPEED * 2) / 8)
 #define I2C_HS_HCNT  ((CONFIG_I2C_DW_CLOCK_SPEED * 6) / 8)
 #define I2C_HS_LCNT  ((CONFIG_I2C_DW_CLOCK_SPEED * 7) / 8)
+
+#ifdef CONFIG_I2C_DW_IC_CLK_FREQ_OPTIMIZATION
+
+/* The below SCL macros calculations are valid
+ * if IC_CLK_FREQ_OPTIMIZATION is on
+ * Refer section 2.14.2 of DW spec
+ */
+
+#define I2C_MIN_SCL_LCNT         6
+#define I2C_MIN_SCL_HCNT         5
+#define I2C_SCL_HCNT_OFFSET      3
+
+/* Min SCL High Time is 5 cycles. High Time = HCNT + spike_len + 3 */
+#define I2C_ENSURE_MIN_SCL_HCNT(x, spk_len)    \
+	((((x) + (spk_len) + I2C_SCL_HCNT_OFFSET) < I2C_MIN_SCL_HCNT) ? \
+	(I2C_MIN_SCL_HCNT - ((spk_len) + I2C_SCL_HCNT_OFFSET)) : (x))
+
+/* Min SCL Low Time is 6 cycles */
+#define I2C_ENSURE_MIN_SCL_LCNT(x, spk_len)    \
+	(((x) < I2C_MIN_SCL_LCNT) ? I2C_MIN_SCL_LCNT : (x))
+
+#else /* CONFIG_I2C_DW_IC_CLK_FREQ_OPTIMIZATION */
+
+/* The below SCL macros calculations are valid
+ * if IC_CLK_FREQ_OPTIMIZATION is off
+ * Refer section 2.14.1 of DW spec
+ */
+#define I2C_MIN_SCL_LCNT(spk)  ((spk) + 8)
+#define I2C_MIN_SCL_HCNT(spk)  ((spk) + 6)
+
+/* Min SCL High Time is spike_len + 6 cycles */
+#define I2C_ENSURE_MIN_SCL_HCNT(x, spk_len)	\
+	(((x) < I2C_MIN_SCL_HCNT(spk_len)) ?	\
+	I2C_MIN_SCL_HCNT(spk_len) : (x))
+
+/* Min SCL Low Time is spike_len + 8 cycles */
+#define I2C_ENSURE_MIN_SCL_LCNT(x, spk_len)	\
+	(((x) < I2C_MIN_SCL_LCNT(spk_len)) ?	\
+	I2C_MIN_SCL_LCNT(spk_len) : (x))
+
+#endif /* CONFIG_I2C_DW_IC_CLK_FREQ_OPTIMIZATION */
 
 /*
  * DesignWare speed values don't directly translate from the Zephyr speed
@@ -158,9 +200,13 @@ struct i2c_dw_dev_config {
 
 	i2c_api_recover_bus_t recover_bus_cb;
 	struct device *recover_bus_dev;
+	i2c_api_check_bus_t check_bus_cb;
+	const struct device *check_bus_dev;
 #if CONFIG_I2C_ALLOW_NO_STOP_TRANSACTIONS
 	bool need_setup;
 #endif
+	uint32_t i2c_stat_not_ready;
+	uint32_t not_ready_cnt;
 };
 
 #define Z_REG_READ(__sz)  sys_read##__sz
@@ -201,6 +247,9 @@ struct i2c_dw_dev_config {
 void i2c_dw_register_recover_bus_cb(const struct device *dw_i2c_dev,
 				    i2c_api_recover_bus_t recover_bus_cb,
 				    const struct device *wrapper_dev);
+
+void i2c_dw_register_check_bus_cb(const struct device *dw_i2c_dev, i2c_api_check_bus_t check_bus_cb,
+				  const struct device *wrapper_dev);
 
 #ifdef __cplusplus
 }
