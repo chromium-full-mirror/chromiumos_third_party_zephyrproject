@@ -35,6 +35,12 @@ Kernel
 Boards
 ******
 
+* The Kconfig options :kconfig:option:`CONFIG_SRAM_SIZE` and
+  :kconfig:option:`CONFIG_SRAM_BASE_ADDRESS` have been deprecated, boards should instead use the
+  devicetree ``zephyr.sram`` chosen node to specify the RAM node which will be used (whose values
+  populated the Kconfig values). If either option is manually adjusted, it will cause
+  :kconfig:option:`CONFIG_SRAM_DEPRECATED_KCONFIG_SET` to be set which indicates this deprecation.
+
 Device Drivers and Devicetree
 *****************************
 
@@ -120,6 +126,31 @@ NXP
   timer when :kconfig:option:`CONFIG_PM` is enabled. The SoC DTSI now sets the
   ``zephyr,system-timer`` chosen property, so boards that added the overlay
   described in the Zephyr 4.4 migration guide can remove it.
+
+SD Host Controller
+==================
+
+* Renamed the Kconfig option ``CONFIG_SDHC_STM32_POLLING_SUPPORT`` to
+  :kconfig:option:`CONFIG_SDHC_STM32_DMA_MODE`. The new symbol enables DMA
+  (default ``y``); set it to ``n`` to use polling mode. (:github:`101617`)
+
+* Renamed the Kconfig option ``CONFIG_SDHC_STM32_SDIO`` to
+  :kconfig:option:`CONFIG_SDHC_STM32_SDMMC`. (:github:`101617`)
+
+* The devicetree compatible ``st,stm32-sdio`` was renamed. Use
+  :dtcompatible:`st,stm32-sdmmc` instead. With this compatible, the legacy
+  disk driver and the SDHC driver can target the same node. To migrate to the
+  SDHC STM32 SDMMC driver, disable the legacy disk driver:
+
+  .. code-block:: kconfig
+
+     CONFIG_SDMMC_STM32=n
+
+  (:github:`101617`)
+
+* For :dtcompatible:`st,stm32-sdmmc`, the ``sdhi-on-gpios`` property has been
+  consolidated into the existing ``pwr-gpios`` property. Replace
+  ``sdhi-on-gpios`` with ``pwr-gpios`` in out-of-tree devicetree nodes.
 
 STM32
 =====

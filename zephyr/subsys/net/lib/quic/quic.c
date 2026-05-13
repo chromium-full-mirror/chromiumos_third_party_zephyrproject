@@ -78,8 +78,8 @@ static const struct socket_op_vtable quic_stream_fd_op_vtable;
 static enum quic_stream_states quic_stream_get_state(struct quic_stream *stream);
 static const struct smf_state quic_stream_bidirectional_states[];
 
-K_MEM_SLAB_DEFINE_STATIC(endpoints_slab, sizeof(struct quic_endpoint),
-			 CONFIG_QUIC_MAX_ENDPOINTS, sizeof(intptr_t));
+K_MEM_SLAB_DEFINE_STATIC_TYPE(endpoints_slab, struct quic_endpoint,
+			      CONFIG_QUIC_MAX_ENDPOINTS);
 static struct quic_endpoint *endpoints[CONFIG_QUIC_MAX_ENDPOINTS];
 static struct k_mutex endpoints_lock;
 
@@ -148,7 +148,7 @@ static K_MUTEX_DEFINE(quic_closed_contexts_lock);
 static bool quic_prepare_closed_context_stats(struct quic_context *ctx,
 					      struct quic_closed_context_stats *stats)
 {
-	if (ctx == NULL || stats == NULL || ctx->is_listening) {
+	if (ctx->is_listening) {
 		return false;
 	}
 
@@ -170,7 +170,7 @@ static bool quic_prepare_closed_context_stats(struct quic_context *ctx,
 static void quic_store_closed_context_stats(struct quic_context *ctx,
 					    struct quic_closed_context_stats *stats)
 {
-	if (ctx == NULL || stats == NULL || !stats->valid) {
+	if (!stats->valid) {
 		return;
 	}
 
@@ -229,10 +229,6 @@ void quic_closed_context_stats_foreach(quic_closed_context_stats_cb_t cb, void *
 static void quic_stats_set_context_metadata(struct quic_context *ctx,
 					    const struct quic_endpoint *ep)
 {
-	if (ctx == NULL || ep == NULL) {
-		return;
-	}
-
 	ctx->stats_is_server = ep->is_server;
 	memcpy(&ctx->stats_local_addr, &ep->local_addr, sizeof(ctx->stats_local_addr));
 	memcpy(&ctx->stats_remote_addr, &ep->remote_addr, sizeof(ctx->stats_remote_addr));
@@ -307,7 +303,7 @@ struct quic_pkt {
 };
 
 #define QUIC_SLAB_DEFINE(name, count) \
-	K_MEM_SLAB_DEFINE_STATIC(name, sizeof(struct quic_pkt), count, sizeof(intptr_t));
+	K_MEM_SLAB_DEFINE_STATIC_TYPE(name, struct quic_pkt, count);
 
 QUIC_SLAB_DEFINE(quic_pkts, CONFIG_QUIC_PKT_COUNT);
 
