@@ -15,6 +15,10 @@ LOG_MODULE_DECLARE(soc, CONFIG_SOC_LOG_LEVEL);
 #include <et171_hal/et171.h>
 #include <et171_hal/et171_hal_smu.h>
 
+#include <andes_csr.h>
+#include <zephyr/arch/riscv/csr.h>
+#define MMISC_CTL_BRPE_EN BIT(3)
+
 #ifndef CONFIG_64BIT
 typedef union union64_t {
 	struct {
@@ -124,6 +128,12 @@ static void suspend()
 	}
 	else
 	{
+#if defined(CONFIG_DCACHE) && defined(CONFIG_XIP)
+		/* Prevent the i-cache to pre-fetch instructions from flash after clock switching. */
+		const unsigned int mmisc_ctl = csr_read_clear(NDS_MMISC_CTL, MMISC_CTL_BRPE_EN);
+		__asm__ volatile ("" ::: "memory");
+#endif
+
 		/*== switch to external clock =====================================================*/
 		uint64_t begin_time = read_mtime64();
 		__asm__ volatile ("" ::: "memory");
@@ -161,6 +171,13 @@ static void suspend()
 		__asm__ volatile ("" ::: "memory");
 		sys_write32(clk_setting, 0xF0100004);
 		__asm__ volatile ("" ::: "memory");
+
+#if defined(CONFIG_DCACHE) && defined(CONFIG_XIP)
+		if (mmisc_ctl & MMISC_CTL_BRPE_EN) {
+			csr_set(NDS_MMISC_CTL, MMISC_CTL_BRPE_EN);
+		}
+		__asm__ volatile ("" ::: "memory");
+#endif
 
 		/*== update mtime =================================================================*/
 		uint64_t adj_time = (end_time - begin_time) * hi_freq / lo_freq;
