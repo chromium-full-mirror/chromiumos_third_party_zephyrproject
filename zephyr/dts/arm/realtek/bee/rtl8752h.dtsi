@@ -18,6 +18,7 @@
 		zephyr,flash = &flash;
 		zephyr,flash-controller = &fmc;
 		zephyr,sram = &data_ram_app_0;
+		zephyr,entropy = &trng;
 	};
 
 	cpus {
@@ -358,6 +359,23 @@
 			reg = <0x40004000 0x30>;
 			clocks = <&cctl APB_CLK(QDEC)>;
 			interrupts = <19 0>;
+			status = "disabled";
+		};
+
+		trng: trng@400c2400 {
+			compatible = "realtek,bee-trng";
+			reg = <0x400c2400 0x68>;
+			status = "okay";
+		};
+
+		dma0: dma@400272c0 {
+			compatible = "realtek,bee-dma";
+			reg = <0x400272c0 0x4b0>;
+			interrupts = <20 0>, <21 0>, <22 0>;
+			dma-channels = <3>;
+			clocks = <&cctl APB_CLK(GDMA)>;
+			dma-port = <0>;
+			#dma-cells = <3>;
 			status = "disabled";
 		};
 	};

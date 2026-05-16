@@ -14,6 +14,10 @@
 #include <zephyr/dt-bindings/pwm/pwm.h>
 
 / {
+	chosen {
+		zephyr,entropy = &trng;
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -505,6 +509,24 @@
 			reg = <0x40001800 0x40>;
 			interrupts = <8 0>;
 			channels = <4>;
+			status = "disabled";
+		};
+
+		trng: trng@400c2400 {
+			compatible = "realtek,bee-trng";
+			reg = <0x400c2400 0x68>;
+			status = "okay";
+		};
+
+		dma0: dma@400242c0 {
+			compatible = "realtek,bee-dma";
+			reg = <0x400242c0 0x4b0>;
+			interrupts = <19 0>, <20 0>, <21 0>, <22 0>, <23 0>,
+				     <24 0>, <25 0>, <26 0>, <27 0>;
+			dma-channels = <9>;
+			clocks = <&cctl APB_CLK(GDMA)>;
+			dma-port = <0>;
+			#dma-cells = <3>;
 			status = "disabled";
 		};
 	};

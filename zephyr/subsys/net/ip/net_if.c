@@ -3724,6 +3724,67 @@ out:
 	return ret;
 }
 
+bool net_if_ipv4_addr_onlink(struct net_if **iface, const struct net_in_addr *addr)
+{
+	struct net_if *best_iface = NULL;
+	uint8_t best_len = 0U;
+
+	if (iface == NULL || *iface == NULL) {
+		return false;
+	}
+
+	STRUCT_SECTION_FOREACH(net_if, tmp) {
+		struct net_if_ipv4 *ipv4;
+
+		if (*iface != tmp) {
+			continue;
+		}
+
+		net_if_lock(tmp);
+
+		ipv4 = tmp->config.ip.ipv4;
+		if (ipv4 == NULL) {
+			net_if_unlock(tmp);
+			continue;
+		}
+
+		ARRAY_FOR_EACH(ipv4->unicast, i) {
+			uint32_t mask;
+			uint32_t subnet;
+			uint8_t mask_len;
+
+			if (!ipv4->unicast[i].ipv4.is_used ||
+			    ipv4->unicast[i].ipv4.address.family != NET_AF_INET) {
+				continue;
+			}
+
+			mask = ipv4->unicast[i].netmask.s_addr;
+			subnet = UNALIGNED_GET(&addr->s_addr) & mask;
+
+			if ((ipv4->unicast[i].ipv4.address.in_addr.s_addr & mask) != subnet) {
+				continue;
+			}
+
+			mask_len = (uint8_t)__builtin_popcount(net_ntohl(mask));
+			if (mask_len <= best_len) {
+				continue;
+			}
+
+			best_len = mask_len;
+			best_iface = tmp;
+		}
+
+		net_if_unlock(tmp);
+	}
+
+	if (best_iface != NULL) {
+		*iface = best_iface;
+		return true;
+	}
+
+	return false;
+}
+
 bool net_if_ipv4_addr_mask_cmp(struct net_if *iface,
 			       const struct net_in_addr *addr)
 {
@@ -4252,99 +4313,6 @@ out:
 	return ret;
 }
 
-/* Using this function is problematic as if we have multiple
- * addresses configured, which one to return. Use heuristic
- * in this case and return the first one found. Please use
- * net_if_ipv4_get_netmask_by_addr() instead.
- */
-struct net_in_addr net_if_ipv4_get_netmask(struct net_if *iface)
-{
-	struct net_in_addr netmask = { 0 };
-	struct net_if_ipv4 *ipv4;
-
-	net_if_lock(iface);
-
-	if (net_if_config_ipv4_get(iface, NULL) < 0) {
-		goto out;
-	}
-
-	ipv4 = iface->config.ip.ipv4;
-	if (ipv4 == NULL) {
-		goto out;
-	}
-
-	ARRAY_FOR_EACH(ipv4->unicast, i) {
-		if (!ipv4->unicast[i].ipv4.is_used ||
-		    ipv4->unicast[i].ipv4.address.family != NET_AF_INET) {
-			continue;
-		}
-
-		netmask = iface->config.ip.ipv4->unicast[i].netmask;
-		break;
-	}
-
-out:
-	net_if_unlock(iface);
-
-	return netmask;
-}
-
-/* Using this function is problematic as if we have multiple
- * addresses configured, which one to set. Use heuristic
- * in this case and set the first one found. Please use
- * net_if_ipv4_set_netmask_by_addr() instead.
- */
-static void net_if_ipv4_set_netmask_deprecated(struct net_if *iface,
-					       const struct net_in_addr *netmask)
-{
-	struct net_if_ipv4 *ipv4;
-
-	net_if_lock(iface);
-
-	if (net_if_config_ipv4_get(iface, NULL) < 0) {
-		goto out;
-	}
-
-	ipv4 = iface->config.ip.ipv4;
-	if (ipv4 == NULL) {
-		goto out;
-	}
-
-	ARRAY_FOR_EACH(ipv4->unicast, i) {
-		if (!ipv4->unicast[i].ipv4.is_used ||
-		    ipv4->unicast[i].ipv4.address.family != NET_AF_INET) {
-			continue;
-		}
-
-		net_ipaddr_copy(&ipv4->unicast[i].netmask, netmask);
-		break;
-	}
-
-out:
-	net_if_unlock(iface);
-}
-
-void net_if_ipv4_set_netmask(struct net_if *iface,
-			     const struct net_in_addr *netmask)
-{
-	net_if_ipv4_set_netmask_deprecated(iface, netmask);
-}
-
-bool z_impl_net_if_ipv4_set_netmask_by_index(int index,
-					     const struct net_in_addr *netmask)
-{
-	struct net_if *iface;
-
-	iface = net_if_get_by_index(index);
-	if (!iface) {
-		return false;
-	}
-
-	net_if_ipv4_set_netmask_deprecated(iface, netmask);
-
-	return true;
-}
-
 bool z_impl_net_if_ipv4_set_netmask_by_addr_by_index(int index,
 						     const struct net_in_addr *addr,
 						     const struct net_in_addr *netmask)
@@ -4362,25 +4330,6 @@ bool z_impl_net_if_ipv4_set_netmask_by_addr_by_index(int index,
 }
 
 #ifdef CONFIG_USERSPACE
-bool z_vrfy_net_if_ipv4_set_netmask_by_index(int index,
-					     const struct net_in_addr *netmask)
-{
-	struct net_in_addr netmask_addr;
-	struct net_if *iface;
-
-	iface = z_vrfy_net_if_get_by_index(index);
-	if (!iface) {
-		return false;
-	}
-
-	K_OOPS(k_usermode_from_copy(&netmask_addr, (void *)netmask,
-				sizeof(netmask_addr)));
-
-	return z_impl_net_if_ipv4_set_netmask_by_index(index, &netmask_addr);
-}
-
-#include <zephyr/syscalls/net_if_ipv4_set_netmask_by_index_mrsh.c>
-
 bool z_vrfy_net_if_ipv4_set_netmask_by_addr_by_index(int index,
 						     const struct net_in_addr *addr,
 						     const struct net_in_addr *netmask)
@@ -6620,7 +6569,8 @@ static void set_default_name(struct net_if *iface)
 
 		snprintk(name, sizeof(name), "thread%d", count++);
 	} else if (IS_ENABLED(CONFIG_NET_VLAN) &&
-		   (net_if_l2(iface) == &NET_L2_GET_NAME(VIRTUAL))) {
+		   (net_if_l2(iface) == &NET_L2_GET_NAME(VIRTUAL)) &&
+		   net_eth_is_vlan_interface(iface)) {
 		static int count;
 
 		snprintk(name, sizeof(name), "vlan%d", count++);
@@ -6649,10 +6599,6 @@ void net_if_init(void)
 	net_tc_tx_init();
 
 	STRUCT_SECTION_FOREACH(net_if, iface) {
-#if defined(CONFIG_NET_INTERFACE_NAME)
-		memset(net_if_get_config(iface)->name, 0,
-		       sizeof(iface->config.name));
-#endif
 
 		init_iface(iface);
 
