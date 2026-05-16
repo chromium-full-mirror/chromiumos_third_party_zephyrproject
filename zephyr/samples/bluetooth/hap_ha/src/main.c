@@ -32,7 +32,7 @@ static uint8_t unicast_server_addata[] = {
 	BT_AUDIO_UNICAST_ANNOUNCEMENT_TARGETED, /* Target Announcement */
 	BT_BYTES_LIST_LE16(HAP_CONTEXT),
 	BT_BYTES_LIST_LE16(HAP_CONTEXT),
-	0x00, /* Metadata length */
+	0x00U, /* Metadata length */
 };
 
 static uint8_t csis_rsi_addata[BT_CSIP_RSI_SIZE];
@@ -53,6 +53,9 @@ static struct bt_le_ext_adv *ext_adv;
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+	ARG_UNUSED(conn);
+	ARG_UNUSED(reason);
+
 	/* Restart advertising after disconnection */
 	k_work_schedule(&adv_work, K_SECONDS(1));
 }
@@ -98,6 +101,8 @@ static const struct bt_le_ext_adv_cb adv_cb = {
 static void adv_work_handler(struct k_work *work)
 {
 	int err;
+
+	ARG_UNUSED(work);
 
 	if (ext_adv == NULL) {
 		/* Create a connectable advertising set */

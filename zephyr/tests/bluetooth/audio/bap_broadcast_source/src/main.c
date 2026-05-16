@@ -24,6 +24,7 @@
 #include <zephyr/net_buf.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 #include <zephyr/ztest_assert.h>
 #include <zephyr/ztest_test.h>
 
@@ -36,12 +37,18 @@ DEFINE_FFF_GLOBALS;
 
 static void mock_init_rule_before(const struct ztest_unit_test *test, void *fixture)
 {
+	ARG_UNUSED(test);
+	ARG_UNUSED(fixture);
+
 	mock_bap_broadcast_source_init();
 	mock_bap_stream_init();
 }
 
 static void mock_destroy_rule_after(const struct ztest_unit_test *test, void *fixture)
 {
+	ARG_UNUSED(test);
+	ARG_UNUSED(fixture);
+
 	mock_bap_stream_cleanup();
 }
 
@@ -163,11 +170,12 @@ static void bap_broadcast_source_test_suite_after(void *f)
 {
 	struct bap_broadcast_source_test_suite_fixture *fixture = f;
 	struct bt_bap_broadcast_source_param *param;
+	int err;
 
 	if (fixture->source != NULL) {
-		int err;
-
-		(void)bt_bap_broadcast_source_stop(fixture->source);
+		err = bt_bap_broadcast_source_stop(fixture->source);
+		zassert_true(err == 0 || err == -EBADMSG || err == -EALREADY,
+			     "Unexpected error: %d", err);
 
 		err = bt_bap_broadcast_source_delete(fixture->source);
 		zassert_equal(0, err, "Unable to delete broadcast source: err %d", err);
@@ -184,7 +192,8 @@ static void bap_broadcast_source_test_suite_after(void *f)
 	free(param->params);
 	free(param);
 
-	bt_bap_broadcast_source_unregister_cb(&mock_bap_broadcast_source_cb);
+	err = bt_bap_broadcast_source_unregister_cb(&mock_bap_broadcast_source_cb);
+	zassert_true(err == 0 || err == -ENOENT, "Unexpected error: %d", err);
 }
 
 static void bap_broadcast_source_test_suite_teardown(void *f)
@@ -262,7 +271,9 @@ ZTEST_F(bap_broadcast_source_test_suite, test_broadcast_source_create_start_send
 			zassert_equal(bt_audio_codec_cfg_get_frame_dur(codec_cfg),
 				      BT_AUDIO_CODEC_CFG_DURATION_10);
 			/* verify bis specific codec data */
-			bt_audio_codec_cfg_get_chan_allocation(codec_cfg, &chan_allocation, false);
+			zassert_ok(bt_audio_codec_cfg_get_chan_allocation(codec_cfg,
+									  &chan_allocation, false),
+				   "Failed to get channel allocation");
 			zassert_equal(chan_allocation,
 				      BT_AUDIO_LOCATION_FRONT_LEFT | BT_AUDIO_LOCATION_FRONT_RIGHT);
 			/* Since BAP doesn't care about the `buf` we can just provide NULL */
@@ -1399,6 +1410,8 @@ static bool bap_broadcast_source_foreach_stream_cb(struct bt_bap_stream *stream,
 {
 	size_t *cnt = user_data;
 
+	ARG_UNUSED(stream);
+
 	(*cnt)++;
 
 	return true;
@@ -1423,6 +1436,8 @@ static bool bap_broadcast_source_foreach_stream_return_early_cb(struct bt_bap_st
 								void *user_data)
 {
 	size_t *cnt = user_data;
+
+	ARG_UNUSED(stream);
 
 	(*cnt)++;
 

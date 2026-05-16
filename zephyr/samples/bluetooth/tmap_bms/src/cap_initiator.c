@@ -25,6 +25,7 @@
 #include <zephyr/net_buf.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 #include <zephyr/types.h>
 
 #define BROADCAST_ENQUEUE_COUNT 2U
@@ -34,8 +35,8 @@ NET_BUF_POOL_FIXED_DEFINE(tx_pool,
 			  BT_ISO_SDU_BUF_SIZE(CONFIG_BT_ISO_TX_MTU),
 			  CONFIG_BT_CONN_TX_USER_DATA_SIZE, NULL);
 
-static K_SEM_DEFINE(sem_broadcast_started, 0, 1);
-static K_SEM_DEFINE(sem_broadcast_stopped, 0, 1);
+static K_SEM_DEFINE(sem_broadcast_started, 0U, 1U);
+static K_SEM_DEFINE(sem_broadcast_stopped, 0U, 1U);
 
 static struct bt_cap_stream broadcast_source_stream;
 static struct bt_cap_stream *broadcast_stream;
@@ -122,6 +123,8 @@ static void broadcast_sent_cb(struct bt_bap_stream *stream)
 
 static void audio_timer_timeout(struct k_work *work)
 {
+	ARG_UNUSED(work);
+
 	broadcast_sent_cb(&broadcast_stream->bap_stream);
 }
 
@@ -345,7 +348,7 @@ void cap_initiator_setup(void)
 		}
 
 		/* Run for a little while */
-		k_sleep(K_SECONDS(10));
+		k_sleep(K_SECONDS(10U));
 
 		err = bt_cap_initiator_broadcast_audio_update(broadcast_source,
 							      new_metadata,
@@ -356,7 +359,7 @@ void cap_initiator_setup(void)
 		}
 
 		/* Run for a little while */
-		k_sleep(K_SECONDS(10));
+		k_sleep(K_SECONDS(10U));
 
 		err = bt_cap_initiator_broadcast_audio_stop(broadcast_source);
 		if (err != 0) {

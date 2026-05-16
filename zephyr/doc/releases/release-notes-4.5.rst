@@ -50,6 +50,23 @@ API Changes
 Removed APIs and options
 ========================
 
+* The following deprecated networking options and APIs have been removed:
+
+    * ``CONFIG_NET_TC_SKIP_FOR_HIGH_PRIO``
+    * ``CONFIG_NET_SOCKETS_POLL_MAX``
+    * ``net_ipv6_set_hop_limit()``
+    * ``net_if_ipv4_get_netmask()``
+    * ``net_if_ipv4_set_netmask()``
+    * ``net_if_ipv4_set_netmask_by_index()``
+    * ``openthread_state_changed_cb_register()``
+    * ``openthread_state_changed_cb_unregister()``
+    * ``openthread_start()``
+    * ``openthread_api_mutex_lock()``
+    * ``openthread_api_mutex_try_lock()``
+    * ``openthread_api_mutex_unlock()``
+    * ``struct openthread_state_changed_cb``
+    * ``TLS_CREDENTIAL_SERVER_CERTIFICATE``
+
 Deprecated APIs and options
 ===========================
 
@@ -63,6 +80,12 @@ Deprecated APIs and options
   * Renamed :c:func:`lora_recv_duty_cycle` to :c:func:`lora_recv_duty_cycle_async`
     to be consistent with the existing sync/async naming convention.
 
+* Ring buffer
+
+  * The ring buffer item API (:c:func:`ring_buf_item_init`, :c:func:`ring_buf_item_put`,
+    :c:func:`ring_buf_item_get`, :c:func:`ring_buf_item_space_get`) has been deprecated in favor of
+    :c:struct:`sys_ringq` (see :ref:`fixed_size_ringq_api`).
+
 New APIs and options
 ====================
 ..
@@ -71,9 +94,14 @@ New APIs and options
   like you need to add more details, add them in the API documentation code
   instead.
 
-.. zephyr-keep-sorted-start re(^\* \w)
+.. zephyr-keep-sorted-start re(^\* \w) ignorecase
+
+* Audio
+
+  * :c:member:`pcm_stream_cfg.gain_db`
 
 * :c:func:`lora_recv_duty_cycle_async`
+* :c:struct:`sys_ringq` (see :ref:`fixed_size_ringq_api`)
 
 .. zephyr-keep-sorted-stop
 
@@ -106,6 +134,9 @@ New Samples
 ..
   Same as above, this will also be recomputed at the time of the release.
  Just link the sample, further details go in the sample documentation itself.
+
+* :zephyr:code-sample:`mctp_i2c_bus_host` (renamed from ``mctp_i2c_bus_owner``)
+* :zephyr:code-sample:`mctp_i3c_bus_host` (renamed from ``mctp_i3c_bus_owner``)
 
 Libraries / Subsystems
 **********************

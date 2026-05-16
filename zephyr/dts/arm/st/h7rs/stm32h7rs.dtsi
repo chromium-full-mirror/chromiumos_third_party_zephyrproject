@@ -82,7 +82,7 @@
 
 	dtcm: memory@20000000 {
 		compatible = "zephyr,memory-region", "arm,dtcm";
-		reg = <0x20000000 DT_SIZE_K(128)>;
+		reg = <0x20000000 DT_SIZE_K(64)>;
 		zephyr,memory-region = "DTCM";
 	};
 
@@ -190,6 +190,7 @@
 
 			#address-cells = <1>;
 			#size-cells = <1>;
+			ranges;
 
 			flash0: flash@8000000 {
 				compatible = "st,stm32-nv-flash", "soc-nv-flash";
@@ -1001,7 +1002,7 @@
 			status = "disabled";
 
 			mdio: mdio {
-				compatible = "st,stm32-mdio";
+				compatible = "st,stm32-mdio", "snps,dwmac-mdio";
 				#address-cells = <1>;
 				#size-cells = <0>;
 				status = "disabled";

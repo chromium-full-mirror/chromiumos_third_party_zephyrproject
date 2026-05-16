@@ -16,6 +16,7 @@
 #include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/fff.h>
 #include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
 #include <zephyr/ztest_assert.h>
 #include <zephyr/ztest_test.h>
 
@@ -26,11 +27,17 @@
 
 static void mock_init_rule_before(const struct ztest_unit_test *test, void *fixture)
 {
+	ARG_UNUSED(test);
+	ARG_UNUSED(fixture);
+
 	test_mocks_init();
 }
 
 static void mock_destroy_rule_after(const struct ztest_unit_test *test, void *fixture)
 {
+	ARG_UNUSED(test);
+	ARG_UNUSED(fixture);
+
 	test_mocks_cleanup();
 }
 
@@ -66,8 +73,10 @@ static void cap_initiator_test_suite_before(void *f)
 static void cap_initiator_test_suite_after(void *f)
 {
 	struct cap_initiator_test_suite_fixture *fixture = f;
+	int err;
 
-	bt_cap_initiator_unregister_cb(&mock_cap_initiator_cb);
+	err = bt_cap_initiator_unregister_cb(&mock_cap_initiator_cb);
+	zassert_true(err == 0 || err == -EINVAL, "Unexpected error: %d", err);
 
 	for (size_t i = 0; i < ARRAY_SIZE(fixture->conns); i++) {
 		mock_bt_conn_disconnected(&fixture->conns[i], BT_HCI_ERR_REMOTE_USER_TERM_CONN);

@@ -23,6 +23,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
+#include <zephyr/toolchain.h>
 #include <zephyr/ztest_assert.h>
 #include <zephyr/ztest_test.h>
 
@@ -63,6 +64,8 @@ static void cap_commander_broadcast_assistant_recv_state_cb(
 	struct bt_conn *conn, int err, const struct bt_bap_scan_delegator_recv_state *state)
 {
 	uint8_t index;
+
+	ARG_UNUSED(err);
 
 	index = bt_conn_index(conn);
 	src_id[index] = state->src_id;
@@ -113,12 +116,16 @@ static void cap_commander_test_broadcast_reception_before(void *f)
 static void cap_commander_test_broadcast_reception_after(void *f)
 {
 	struct cap_commander_test_broadcast_reception_fixture *fixture = f;
+	int err;
 
-	bt_cap_commander_unregister_cb(&mock_cap_commander_cb);
-	bt_bap_broadcast_assistant_unregister_cb(&fixture->broadcast_assistant_cb);
+	err = bt_cap_commander_unregister_cb(&mock_cap_commander_cb);
+	zassert_true(err == 0 || err == -EINVAL, "Unexpected error: %d", err);
+	err = bt_bap_broadcast_assistant_unregister_cb(&fixture->broadcast_assistant_cb);
+	zassert_true(err == 0 || err == -EALREADY, "Unexpected error: %d", err);
 
 	/* We need to cleanup since the CAP commander remembers state */
-	(void)bt_cap_commander_cancel();
+	err = bt_cap_commander_cancel();
+	zassert_true(err == 0 || err == -EALREADY, "Unexpected error: %d", err);
 
 	for (size_t i = 0; i < ARRAY_SIZE(fixture->conns); i++) {
 		mock_bt_conn_disconnected(&fixture->conns[i], BT_HCI_ERR_REMOTE_USER_TERM_CONN);

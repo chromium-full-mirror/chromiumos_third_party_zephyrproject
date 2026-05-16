@@ -131,6 +131,7 @@
 
 			#address-cells = <1>;
 			#size-cells = <1>;
+			ranges;
 
 			flash0: flash@8000000 {
 				compatible = "st,stm32-nv-flash", "soc-nv-flash";
@@ -747,6 +748,12 @@
 		compatible = "st,stm32-vbat";
 		ratio = <4>;
 		io-channels = <&adc1 2>;
+		status = "disabled";
+	};
+
+	vddcore: vddcore {
+		compatible = "st,stm32-vddcore";
+		io-channels = <&adc1 6>;
 		status = "disabled";
 	};
 

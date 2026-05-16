@@ -155,9 +155,9 @@
 ACPI:
   status: odd fixes
   files:
-    - lib/acpi/
+    - arch/common/acpi/
     - include/zephyr/acpi/
-    - tests/lib/acpi/
+    - tests/arch/common/acpi/
     - dts/bindings/acpi/
     - include/zephyr/dt-bindings/acpi/
   labels:
@@ -590,6 +590,7 @@ Bluetooth HCI:
     - HoZHel
     - cvinayak
     - HaavardRei
+    - merin-infineon
   files:
     - include/zephyr/drivers/bluetooth/
     - include/zephyr/drivers/bluetooth.h
@@ -765,6 +766,10 @@ Board/SoC configuration:
 
 Boards/SoCs:
   status: odd fixes
+  collaborators:
+    - kartben
+    - nordicjm
+    - sylvioalves
   files:
     - boards/
     - soc/
@@ -800,6 +805,7 @@ Bouffalolab Platforms:
     - boards/sipeed/m1s_dock/
     - boards/sipeed/maix_m0s_dock/
     - drivers/*/*bflb*
+    - drivers/sensor/bflb/
     - dts/riscv/bflb/
     - dts/bindings/*/bflb,*
     - soc/bflb/
@@ -1049,6 +1055,7 @@ Continuous Integration:
     - nashif
   collaborators:
     - fabiobaltieri
+    - henrikbrixandersen
     - kartben
   files:
     - .github/
@@ -1155,6 +1162,7 @@ Demand Paging:
     - ceolin
     - peter-mitsis
     - nashif
+    - npitre
   files:
     - subsys/mem_mgmt/demand_paging/
     - tests/kernel/mem_protect/demand_paging/
@@ -1288,9 +1296,9 @@ Documentation:
   status: maintained
   maintainers:
     - kartben
-    - carlescufi
   collaborators:
     - nashif
+    - carlescufi
   files:
     - CODE_OF_CONDUCT.md
     - CONTRIBUTING.rst
@@ -1664,8 +1672,6 @@ Documentation Infrastructure:
 "Drivers: EDAC":
   status: maintained
   maintainers:
-    - finikorg
-  collaborators:
     - yvesll
   files:
     - drivers/edac/
@@ -1799,7 +1805,7 @@ Documentation Infrastructure:
     - tests/drivers/firmware/
     - include/zephyr/drivers/firmware/
     - dts/bindings/firmware/
-    - doc/hardware/arch/arm-scmi.rst
+    - doc/hardware/firmware/
     - samples/drivers/firmware/
   labels:
     - "area: Firmware"
@@ -1914,7 +1920,6 @@ Documentation Infrastructure:
   status: maintained
   maintainers:
     - rriveramcrus
-  collaborators:
     - Liam-Ogletree
   files:
     - drivers/haptics/
@@ -2167,7 +2172,6 @@ Documentation Infrastructure:
 "Drivers: Mbox":
   status: odd fixes
   collaborators:
-    - wearyzen
     - ithinuel
   files:
     - include/zephyr/drivers/mbox.h
@@ -2442,6 +2446,8 @@ Documentation Infrastructure:
   status: maintained
   maintainers:
     - danieldegrasse
+  collaborators:
+    - lucien-nxp
   files:
     - drivers/sdhc/
     - tests/drivers/sdhc/
@@ -2600,6 +2606,7 @@ Documentation Infrastructure:
     - andyross
   collaborators:
     - teburd
+    - npitre
   files:
     - drivers/timer/
     - include/zephyr/drivers/timer/
@@ -3086,6 +3093,7 @@ Infineon Platforms:
     - jsbatch
     - Peterson-Brett
     - lauracarlesso
+    - merin-infineon
   files:
     - boards/cypress/
     - boards/infineon/
@@ -3293,6 +3301,7 @@ Kernel:
     - cfriedt
     - npitre
     - TaiJuWu
+    - Mattemagikern
   files:
     - doc/kernel/
     - include/zephyr/kernel*.h
@@ -3887,7 +3896,7 @@ NXP Platforms (MCU):
     - tests/boards/vmu_rt1170/
   files-exclude:
     - dts/arm/nxp/imx/nxp_imx*
-    - boards/nxp/frdm_imx*/
+    - boards/nxp/frdm_imx[0-9]*/
   files-regex-exclude:
     - .*s32.*
   file-groups:
@@ -5549,6 +5558,7 @@ Test Framework (Ztest):
     - jeremybettis
     - yperess
     - asemjonovs
+    - Mattemagikern
   files:
     - subsys/testsuite/
     - tests/ztest/
@@ -5560,6 +5570,22 @@ Test Framework (Ztest):
     - "area: Testsuite"
   tests:
     - testing
+
+Testing:
+  status: maintained
+  maintainers:
+    - PerMac
+    - hakehuang
+  collaborators:
+    - nashif
+  files: []
+  description: >-
+    This area is for testing activities on hardware and in emulators. It is not
+    meant to be a catch-all for tests, but rather a place to identify
+    collaboratorts and files related to testing activities that don't fit in
+    other areas.
+    Anyone involved with testing and filing/triaging issues who are not active
+    in other areas are encouraged to be listed here as collaborators.
 
 Testing with Renode:
   # This area is to be converted to a subarea
@@ -5670,6 +5696,17 @@ Tracing:
   tests:
     - tracing
 
+Trenz Electronic Platforms:
+  status: maintained
+  maintainers:
+    - yashi
+  files:
+    - boards/trenz/
+  labels:
+    - "platform: Trenz Electronic"
+  description: >-
+    Trenz Electronic development boards.
+
 Twister:
   status: maintained
   maintainers:
@@ -5677,9 +5714,7 @@ Twister:
   collaborators:
     - PerMac
     - hakehuang
-    - golowanow
     - gchwier
-    - LukaszMrugala
     - KamilxPaszkiet
     - fundakol
   files:
@@ -5705,6 +5740,7 @@ USB:
     - tmon-nordic
   collaborators:
     - josuah
+    - MarkWangChinese
   files:
     - drivers/usb/
     - dts/bindings/usb/
@@ -6188,6 +6224,7 @@ West:
     - jsbatch
     - Peterson-Brett
     - lauracarlesso
+    - merin-infineon
   files:
     - modules/Kconfig.infineon
     - modules/hal_infineon/
@@ -6560,7 +6597,6 @@ West:
     - valeriosetti
     - tomi-font
   collaborators:
-    - wearyzen
     - ithinuel
   files:
     - modules/mbedtls/
@@ -6715,7 +6751,6 @@ West:
     - tomi-font
   collaborators:
     - Vge0rge
-    - wearyzen
     - ithinuel
     - valeriosetti
     - JordanYates
@@ -6739,7 +6774,6 @@ West:
     - tomi-font
   collaborators:
     - Vge0rge
-    - wearyzen
     - ithinuel
     - valeriosetti
     - JordanYates
@@ -6787,7 +6821,6 @@ West:
     - tomi-font
   collaborators:
     - Vge0rge
-    - wearyzen
     - ithinuel
     - valeriosetti
     - JordanYates
@@ -6795,6 +6828,7 @@ West:
     - modules/trusted-firmware-m/
     - samples/tfm_integration/
     - doc/services/tfm/
+    - tests/modules/tf-m/
   labels:
     - "area: TF-M"
   tests:
@@ -6829,6 +6863,14 @@ West:
   files: []
   labels:
     - "area: Rust"
+
+Wiki:
+  status: maintained
+  maintainers:
+    - kartben
+  collaborators:
+    - SusanRemm
+  files: []
 
 Wurth Elektronik Platforms:
   status: maintained
