@@ -105,6 +105,7 @@ static inline void disable_unused_pad()
 	Z_LISTIFY_PINS_DEFINE(0, DT_NODELABEL(ext_wdt), APPEND_USED_PAD, (;), used_pad);
 #endif
 
+	ET171_AOSMU->PAD_PD = CONFIG_EGIS_PAD_PULLDOWN;
     ET171_AOSMU->PAD_IE = used_pad
 #ifdef CONFIG_XIP
 		| PAD_SPIM1_MODE0
