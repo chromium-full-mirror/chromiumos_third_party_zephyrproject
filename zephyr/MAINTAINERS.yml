@@ -1411,6 +1411,21 @@ Documentation Infrastructure:
   tests:
     - sample.drivers.auxdisplay
 
+"Drivers: Buzzer":
+  status: maintained
+  maintainers:
+    - carlocaione
+  files:
+    - doc/hardware/peripherals/buzzer.rst
+    - drivers/buzzer/
+    - dts/bindings/buzzer/
+    - include/zephyr/drivers/buzzer.h
+    - samples/drivers/buzzer/
+  labels:
+    - "area: Buzzer"
+  tests:
+    - sample.drivers.buzzer
+
 "Drivers: CAN":
   status: maintained
   maintainers:
@@ -4831,6 +4846,7 @@ Raspberry Pi Pico Platforms:
     - boards/waveshare/rp2040_zero/
     - boards/wiznet/w5500_evb_pico*/
     - boards/wiznet/w6100_evb_pico*/
+    - boards/wiznet/w6300_evb_pico*/
     - dts/arm/raspberrypi/rpi_pico/
     - dts/bindings/*/raspberrypi,pico*
     - dts/vendor/raspberrypi/
