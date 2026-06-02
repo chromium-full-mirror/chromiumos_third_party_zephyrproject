@@ -348,16 +348,22 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
 	const struct wifi_status *status =
 		(const struct wifi_status *) cb->info;
 	const struct shell *sh = context.sh;
+	int st = status->status;
 
 	if (context.disconnecting) {
-		if (status->status) {
-			PR_WARNING("Disconnection request failed (%d)\n", status->status);
+		if (st == WIFI_REASON_DISCONN_SUCCESS || st == WIFI_REASON_DISCONN_USER_REQUEST) {
+			PR("Disconnection request done\n");
 		} else {
-			PR("Disconnection request done (%d)\n", status->status);
+			PR_WARNING("Disconnection request failed (%s/%d)\n",
+				   wifi_disconn_reason_txt(st), st);
 		}
 		context.disconnecting = false;
 	} else {
-		PR("Disconnected\n");
+		if (st && st != WIFI_REASON_DISCONN_UNSPECIFIED) {
+			PR("Disconnected (%s/%d)\n", wifi_disconn_reason_txt(st), st);
+		} else {
+			PR("Disconnected\n");
+		}
 	}
 }
 
@@ -695,7 +701,7 @@ static int __wifi_args_to_params(const struct shell *sh, size_t argc, char *argv
 	params->bandwidth = WIFI_FREQ_BANDWIDTH_20MHZ;
 	params->verify_peer_cert = false;
 
-	while ((opt = sys_getopt_long(argc, argv, "s:p:k:e:w:b:c:m:t:a:B:K:S:T:A:V:I:P:g:Rh:i:",
+	while ((opt = sys_getopt_long(argc, argv, "s:p:k:e:x:w:b:c:m:t:a:B:K:S:T:A:V:I:P:g:Rh:i:",
 				  long_options, &opt_index)) != -1) {
 		state = sys_getopt_state_get();
 		switch (opt) {

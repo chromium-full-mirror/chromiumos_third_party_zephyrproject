@@ -19,6 +19,7 @@
 #include <sys/types.h>
 
 #include <zephyr/autoconf.h>
+#include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/assigned_numbers.h>
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/audio/bap.h>
@@ -27,10 +28,10 @@
 #include <zephyr/bluetooth/audio/gmap.h>
 #include <zephyr/bluetooth/audio/lc3.h>
 #include <zephyr/bluetooth/audio/pacs.h>
-#include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/crypto.h>
+#include <zephyr/bluetooth/data.h>
 #include <zephyr/bluetooth/gap.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci_types.h>
@@ -43,18 +44,18 @@
 #include <zephyr/shell/shell_string_conv.h>
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/atomic.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/clock.h>
 #include <zephyr/sys/printk.h>
-#include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/time_units.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
 #include <zephyr/sys_clock.h>
 #include <zephyr/toolchain.h>
 
+#include "audio.h"
 #include "common/bt_shell_private.h"
 #include "host/shell/bt.h"
-#include "audio.h"
 
 /* Determines if we can initiate streaming */
 #define IS_BAP_INITIATOR                                                                           \
@@ -1202,26 +1203,36 @@ static int cmd_config(const struct shell *sh, size_t argc, char *argv[])
 		}
 
 		if (strcmp(arg, "loc") == 0) {
-			unsigned long loc_bits;
+			i++;
 
-			arg = argv[++i];
-			loc_bits = shell_strtoul(arg, 0, &err);
-			if (err != 0) {
-				shell_error(sh, "Could not parse loc_bits: %d", err);
-
-				return -ENOEXEC;
-			}
-
-			if (loc_bits > BT_AUDIO_LOCATION_ANY) {
-				shell_error(sh, "Invalid loc_bits: %lu", loc_bits);
-
-				return -ENOEXEC;
-			}
-
-			location = (enum bt_audio_location)loc_bits;
-		} else if (strcmp(arg, "preset") == 0) {
 			if (argc > i) {
-				arg = argv[++i];
+				unsigned long loc_bits;
+
+				arg = argv[i];
+				loc_bits = shell_strtoul(arg, 0, &err);
+				if (err != 0) {
+					shell_error(sh, "Could not parse loc_bits: %d", err);
+
+					return -ENOEXEC;
+				}
+
+				if (loc_bits > BT_AUDIO_LOCATION_ANY) {
+					shell_error(sh, "Invalid loc_bits: %lu", loc_bits);
+
+					return -ENOEXEC;
+				}
+
+				location = (enum bt_audio_location)loc_bits;
+			} else {
+				shell_help(sh);
+
+				return SHELL_CMD_HELP_PRINTED;
+			}
+		} else if (strcmp(arg, "preset") == 0) {
+			i++;
+
+			if (argc > i) {
+				arg = argv[i];
 
 				named_preset = bap_get_named_preset(true, dir, arg);
 				if (named_preset == NULL) {
@@ -1247,17 +1258,20 @@ static int cmd_config(const struct shell *sh, size_t argc, char *argv[])
 	struct bt_audio_codec_cfg *codec_cfg = &uni_stream->codec_cfg;
 
 	for (size_t i = 0U; i < codec_cfg->data_len;) {
-		const uint8_t len = codec_cfg->data[i++];
+		const uint8_t len = codec_cfg->data[i];
 		uint8_t *value;
 		uint8_t data_len;
 		uint8_t type;
+
+		i++;
 
 		if (len == 0 || len > codec_cfg->data_len - i) {
 			/* Invalid len field */
 			return false;
 		}
 
-		type = codec_cfg->data[i++];
+		type = codec_cfg->data[i];
+		i++;
 		value = &codec_cfg->data[i];
 
 		if (type == BT_AUDIO_CODEC_CFG_CHAN_ALLOC) {
@@ -1318,10 +1332,12 @@ static int set_group_param(
 			stream_param->stream = stream;
 			if (stream_dir(stream) == BT_AUDIO_DIR_SINK) {
 				stream_param->qos = &uni_stream->qos;
-				pair_param[sink_cnt++].tx_param = stream_param;
+				pair_param[sink_cnt].tx_param = stream_param;
+				sink_cnt++;
 			} else {
 				stream_param->qos = &uni_stream->qos;
-				pair_param[source_cnt++].rx_param = stream_param;
+				pair_param[source_cnt].rx_param = stream_param;
+				source_cnt++;
 			}
 
 			cnt++;
@@ -3887,11 +3903,13 @@ static int cmd_init(const struct shell *sh, size_t argc, char *argv[])
 #endif /* CONFIG_BT_BAP_UNICAST_SERVER */
 
 #if defined(CONFIG_BT_PAC_SNK)
-	bt_pacs_cap_register(BT_AUDIO_DIR_SINK, &cap_sink);
+	err = bt_pacs_cap_register(BT_AUDIO_DIR_SINK, &cap_sink);
+	__ASSERT(err == 0, "Failed to register sink capabilities: %d", err);
 #endif /* CONFIG_BT_PAC_SNK */
 #if defined(CONFIG_BT_PAC_SRC)
-	bt_pacs_cap_register(BT_AUDIO_DIR_SOURCE, &cap_source);
-#endif /* CONFIG_BT_PAC_SNK */
+	err = bt_pacs_cap_register(BT_AUDIO_DIR_SOURCE, &cap_source);
+	__ASSERT(err == 0, "Failed to register source capabilities: %d", err);
+#endif /* CONFIG_BT_PAC_SRC */
 
 	if (IS_ENABLED(CONFIG_BT_PAC_SNK_LOC)) {
 		err = bt_pacs_set_location(BT_AUDIO_DIR_SINK, LOCATION);

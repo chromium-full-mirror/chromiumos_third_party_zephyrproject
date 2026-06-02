@@ -186,30 +186,11 @@ void board_early_init_hook(void)
 #endif
 
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(edma0))
-	CLOCK_EnableClock(kCLOCK_Dma0);
-	RESET_ClearPeripheralReset(kDMA0_RST_SHIFT_RSTn);
 	edma_enable_all_request(0);
 #endif
 
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(edma1))
-	CLOCK_EnableClock(kCLOCK_Dma1);
-	RESET_ClearPeripheralReset(kDMA1_RST_SHIFT_RSTn);
 	edma_enable_all_request(1);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(iocon))
-	RESET_ClearPeripheralReset(kIOPCTL0_RST_SHIFT_RSTn);
-	CLOCK_EnableClock(kCLOCK_Iopctl0);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(iocon1))
-	RESET_ClearPeripheralReset(kIOPCTL1_RST_SHIFT_RSTn);
-	CLOCK_EnableClock(kCLOCK_Iopctl1);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(iocon2))
-	RESET_ClearPeripheralReset(kIOPCTL2_RST_SHIFT_RSTn);
-	CLOCK_EnableClock(kCLOCK_Iopctl2);
 #endif
 
 #ifdef CONFIG_BOARD_MIMXRT700_EVK_MIMXRT798S_CM33_CPU0
@@ -316,61 +297,6 @@ void board_early_init_hook(void)
 	CLOCK_SetClkDiv(kCLOCK_DivFlexioClk, 1U);
 #endif
 
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio0))
-	CLOCK_EnableClock(kCLOCK_Gpio0);
-	RESET_ClearPeripheralReset(kGPIO0_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio1))
-	CLOCK_EnableClock(kCLOCK_Gpio1);
-	RESET_ClearPeripheralReset(kGPIO1_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio2))
-	CLOCK_EnableClock(kCLOCK_Gpio2);
-	RESET_ClearPeripheralReset(kGPIO2_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio3))
-	CLOCK_EnableClock(kCLOCK_Gpio3);
-	RESET_ClearPeripheralReset(kGPIO3_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio4))
-	CLOCK_EnableClock(kCLOCK_Gpio4);
-	RESET_ClearPeripheralReset(kGPIO4_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio5))
-	CLOCK_EnableClock(kCLOCK_Gpio5);
-	RESET_ClearPeripheralReset(kGPIO5_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio6))
-	CLOCK_EnableClock(kCLOCK_Gpio6);
-	RESET_ClearPeripheralReset(kGPIO6_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio7))
-	CLOCK_EnableClock(kCLOCK_Gpio7);
-	RESET_ClearPeripheralReset(kGPIO7_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio8))
-	CLOCK_EnableClock(kCLOCK_Gpio8);
-	RESET_ClearPeripheralReset(kGPIO8_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio9))
-	CLOCK_EnableClock(kCLOCK_Gpio9);
-	RESET_ClearPeripheralReset(kGPIO9_RST_SHIFT_RSTn);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(gpio10))
-	CLOCK_EnableClock(kCLOCK_Gpio10);
-	RESET_ClearPeripheralReset(kGPIO10_RST_SHIFT_RSTn);
-#endif
-
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(ctimer0))
 	SET_UP_CTIMER_CLOCK(0);
 #endif
@@ -415,7 +341,8 @@ void board_early_init_hook(void)
 	CLOCK_SetClkDiv(kCLOCK_DivOstimerClk, 1U);
 #endif
 
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(usb0)) && CONFIG_UDC_NXP_EHCI
+#if ((DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(usb0)) && CONFIG_UDC_NXP_EHCI) || \
+	(DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(usbh0)) && (CONFIG_UHC_NXP_EHCI)))
 	/* Power on COM VDDN domain for USB */
 	POWER_DisablePD(kPDRUNCFG_DSR_VDDN_COM);
 
@@ -516,11 +443,6 @@ void board_early_init_hook(void)
 		kCLOCK_DivLcdifClk,
 		(CLOCK_GetMainPfdFreq(kCLOCK_Pfd2) /
 		  DT_PROP(DT_CHILD(DT_NODELABEL(lcdif), display_timings), clock_frequency)));
-
-	CLOCK_EnableClock(kCLOCK_Lcdif);
-
-	/* Clear LCDIF reset. */
-	RESET_ClearPeripheralReset(kLCDIF_RST_SHIFT_RSTn);
 #endif
 
 #if DT_NODE_HAS_COMPAT_STATUS(DT_NODELABEL(lcdif), nxp_mipi_dbi_dcnano_lcdif, okay)
@@ -540,22 +462,12 @@ void board_early_init_hook(void)
 						DT_PROP(DT_NODELABEL(lcdif), clock_frequency));
 	CLOCK_SetClkDiv(kCLOCK_DivMediaMainClk, 1U);
 	CLOCK_AttachClk(kMAIN_PLL_PFD2_to_MEDIA_MAIN);
-
-	CLOCK_EnableClock(kCLOCK_Lcdif);
-
-	/* Clear LCDIF reset. */
-	RESET_ClearPeripheralReset(kLCDIF_RST_SHIFT_RSTn);
 #endif
 
 #if (DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(i3c2)) || \
 		DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(i3c3)))
 	CLOCK_AttachClk(kSENSE_BASE_to_I3C23);
 	CLOCK_SetClkDiv(kCLOCK_DivI3c23Clk, 4U);
-#endif
-
-#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(acmp))
-	CLOCK_EnableClock(kCLOCK_Acmp0);
-	RESET_ClearPeripheralReset(kACMP0_RST_SHIFT_RSTn);
 #endif
 
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(pmc_tmpsns))
@@ -568,9 +480,6 @@ void board_early_init_hook(void)
 	POWER_DisablePD(kPDRUNCFG_APD_LCDIF);
 	POWER_DisablePD(kPDRUNCFG_PPD_LCDIF);
 	POWER_ApplyPD();
-
-	CLOCK_EnableClock(kCLOCK_Lcdif);
-	RESET_ClearPeripheralReset(kLCDIF_RST_SHIFT_RSTn);
 
 
 	CLOCK_InitMainPfd(kCLOCK_Pfd2, 17);

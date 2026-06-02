@@ -5,3 +5,12 @@ config EGIS_JTAG
 	bool "Enable debug with JTAG"
 	depends on SOC_EGIS_ET171
 	default y
+
+config EGIS_PAD_PULLDOWN
+	hex
+	depends on SOC_EGIS_ET171
+	default 0x0000001F
+	help
+	  Used to fine-tune the I/O level of each pad, even if it is not
+	  bonded out. This can be used for more detailed tuning of power
+	  consumption.

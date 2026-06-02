@@ -45,6 +45,8 @@ $defs:
       extra_sections: {}
       expect_reboot:
         type: boolean
+      build:
+        type: boolean
       required_applications:
         type: array
         items:
@@ -157,6 +159,10 @@ $defs:
             additionalProperties: false
           bsim_exe_name:
             type: string
+          tests_scripts:
+            type: array
+            items:
+              type: string
           ztest_suite_repeat:
             type: integer
           ztest_test_repeat:

@@ -38,8 +38,7 @@ def mock_twister_env():
 def test_testplan_add_testsuites_short(class_testplan):
     """ Testing add_testcase function of Testsuite class in twister """
     # Test 1: Check the list of testsuites after calling add testsuites function is as expected
-    class_testplan.SAMPLE_FILENAME = 'test_sample_app.yaml'
-    class_testplan.TESTSUITE_FILENAME = 'test_data.yaml'
+    class_testplan.TEST_DEFINITION_FILENAME = ['test_sample_app.yaml', 'test_data.yaml']
     class_testplan.add_testsuites()
 
     tests_rel_dir = 'scripts/tests/twister/test_data/testsuites/tests/'
@@ -263,6 +262,55 @@ def test_apply_filters_part3(class_testplan, all_testsuites_dict, platforms_list
     assert not filtered_instances
 
 
+# Regression guard for #33247 / #32835: a testsuite with integration_platforms
+# must produce the documented platform scope in both integration (-G) and
+# non-integration modes, including non-default platforms listed in
+# integration_platforms.
+#
+# Fixture testsuite at test_data/testsuites_integration/tests/test_integration/
+# test_data.yaml declares integration_platforms: [demo_board_2, demo_board_3].
+# demo_board_1 and demo_board_3 are default platforms (testing.default: true);
+# demo_board_2 is not. The fixture lives outside the test_data/testsuites/ tree
+# scanned by the shared all_testsuites_dict fixture so that the integration-
+# platforms validation (which needs platforms loaded first) does not break the
+# other tests in this file.
+@pytest.mark.parametrize("integration_flag, expected_platforms", [
+    # -G: scope is exactly the integration_platforms set.
+    (True,  {'demo_board_2', 'demo_board_3'}),
+    # no -G: scope is default platforms ∪ integration_platforms, so the
+    # non-default demo_board_2 must still appear (this is the case that
+    # silently regressed in #32835).
+    (False, {'demo_board_1', 'demo_board_2', 'demo_board_3'}),
+], ids=["with_-G_flag", "without_-G_flag"])
+def test_integration_platforms_scope(class_testplan, test_data,
+                                     integration_flag, expected_platforms):
+    plan = class_testplan
+
+    # Load platforms via the normal add_configurations() path so platform_names
+    # gets both the "<board>/<soc>" form and the bare "<board>" alias that
+    # verify_platforms_existence checks against.
+    plan.env.board_roots = [os.path.abspath(os.path.join(test_data, "board_config"))]
+    plan.add_configurations()
+
+    # Point test_roots at the isolated fixture tree and load it ourselves.
+    plan.env.test_roots = [
+        os.path.join(test_data, "testsuites_integration", "tests"),
+    ]
+    plan.TEST_DEFINITION_FILENAME = ['test_data.yaml']
+    plan.add_testsuites()
+
+    plan.options.integration = integration_flag
+    plan.apply_filters()
+
+    selected = {
+        inst.platform.name.split('/')[0]
+        for key, inst in plan.instances.items()
+        if 'test_integration.check_integration_platforms' in key
+        and inst.status != TwisterStatus.FILTER
+    }
+    assert selected == expected_platforms
+
+
 def get_testsuite_for_given_test(plan: TestPlan, testname: str) -> TestSuite | None:
     """ Helper function to get testsuite object for a given testname"""
     for _, testsuite in plan.testsuites.items():
@@ -438,7 +486,7 @@ def test_quarantine_short(class_testplan, platforms_list, test_data,
     class_testplan.options.all = True
     class_testplan.platforms = platforms_list
     class_testplan.platform_names = [p.name for p in platforms_list]
-    class_testplan.TESTSUITE_FILENAME = 'test_data.yaml'
+    class_testplan.TEST_DEFINITION_FILENAME = 'test_data.yaml'
     class_testplan.add_testsuites()
 
     quarantine_list = [
@@ -1316,7 +1364,7 @@ def test_testplan_add_testsuites(tmp_path, testsuite_filter, use_alt_root, detai
     # │ ├ wrong_test
     # │ │ └ testcase.yaml
     # │ ├ good_sample
-    # │ │ └ sample.yaml
+    # │ │ └ tests.yaml
     # │ ├ duplicate_test
     # │ │ └ testcase.yaml
     # │ └ others
