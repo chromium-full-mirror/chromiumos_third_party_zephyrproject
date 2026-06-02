@@ -13,6 +13,8 @@
 
 #define DT_DRV_COMPAT snps_designware_i2c
 
+#define I2C_DW_PINCTRL_ENABLED DT_ANY_INST_HAS_PROP_STATUS_OKAY(pinctrl_0)
+
 #if DT_ANY_INST_ON_BUS_STATUS_OKAY(pcie)
 BUILD_ASSERT(IS_ENABLED(CONFIG_PCIE), "DW I2C in DT needs CONFIG_PCIE");
 #include <zephyr/drivers/pcie/pcie.h>
@@ -138,6 +140,11 @@ typedef int (*i2c_api_check_bus_t)(const struct device *dev);
 
 #define SDA_HOLD_INVALID UINT32_MAX
 
+/* convert sda hold time in nanoseconds to DW I2C clock ticks at build time */
+#define HOLD_TIME_TO_TICKS(i2c_sda_hold_time_ns)                                                \
+	   ((uint32_t)DIV_ROUND_UP((uint64_t)(CONFIG_I2C_DW_CLOCK_SPEED) * (i2c_sda_hold_time_ns), \
+							   1000000000ULL))
+
 struct i2c_dw_rom_config {
 	DEVICE_MMIO_ROM;
 	i2c_isr_cb_t config_func;
@@ -150,7 +157,7 @@ struct i2c_dw_rom_config {
 	uint8_t fs_spk_len;
 	uint8_t hs_spk_len;
 
-#if defined(CONFIG_PINCTRL)
+#if I2C_DW_PINCTRL_ENABLED
 	const struct pinctrl_dev_config *pcfg;
 #endif
 #if defined(CONFIG_RESET)
