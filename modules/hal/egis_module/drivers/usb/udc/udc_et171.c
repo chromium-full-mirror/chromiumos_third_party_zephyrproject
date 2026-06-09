@@ -375,6 +375,30 @@ static void udc_et171_transfer__cb_complete(struct CUSBD_Ep *ep, struct CUSBD_Re
 }
 
 static void work_cb_complete(struct CUSBD_Ep *ep, struct CUSBD_Req * req) {
+
+	if (USB_EP_DIR_IS_IN(ep->address)) {
+		if (req->status == 0 && req->actual > 0) {
+			const struct device *dev = req->context;
+			struct udc_data *data = dev->data;
+			void* pD = data->priv;
+
+			struct udc_ep_config *cfg = udc_get_ep_cfg(dev, ep->address);
+			struct net_buf* buf = udc_buf_peek(cfg);
+			uint32_t status;
+
+			if (buf && udc_ep_buf_has_zlp(buf)) {
+				udc_ep_buf_clear_zlp(buf);
+				req->length = 0;
+				LOCK_PROCESS(queue_transfer);
+				status = ep->ops->reqQueue(pD, ep, req);
+				UNLOCK_PROCESS(queue_transfer);
+				if (status == 0) {
+					return;
+				}
+			}
+		}
+	}
+
 	if (USB_EP_GET_IDX(ep->address) == 0) { // controller
 		udc_et171_ep0_transfer__cb_complete(ep, req);
 	} else {
