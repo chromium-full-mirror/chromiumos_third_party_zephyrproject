@@ -9,7 +9,6 @@
 #include <string.h>
 #include <zephyr/sys/math_extras.h>
 #include <zephyr/sys/rb.h>
-#include <zephyr/kernel_structs.h>
 #include <zephyr/sys/sys_io.h>
 #include <ksched.h>
 #include <zephyr/syscall.h>
@@ -94,6 +93,9 @@ const char *otype_to_str(enum k_objects otype)
 	 */
 	case K_OBJ_ANY:
 		ret = "generic";
+		break;
+	case K_OBJ_DRIVER_ANY:
+		ret = "generic driver";
 		break;
 #include <zephyr/otype-to-str.h>
 	default:
@@ -675,6 +677,16 @@ static void unref_check(struct k_object *ko, uintptr_t index)
 	case K_OBJ_STACK:
 		k_stack_cleanup((struct k_stack *)ko->name);
 		break;
+	case K_OBJ_TIMER:
+		/* k_timer_cleanup() does not check whether the timer has
+		 * been initialized; calling it on an uninitialized timer
+		 * would read garbage from an uninitialized dnode. Guard
+		 * explicitly here.
+		 */
+		if ((ko->flags & K_OBJ_FLAG_INITIALIZED) != 0U) {
+			k_timer_cleanup((struct k_timer *)ko->name);
+		}
+		break;
 	default:
 		/* Nothing to do */
 		break;
@@ -854,9 +866,16 @@ void k_object_access_all_grant(const void *object)
 int k_object_validate(struct k_object *ko, enum k_objects otype,
 		       enum _obj_init_check init)
 {
-	if (unlikely((ko == NULL) ||
-		((otype != K_OBJ_ANY) && (ko->type != otype)))) {
+	if (unlikely(ko == NULL)) {
 		return -EBADF;
+	}
+
+	if (unlikely((otype != K_OBJ_ANY) && (otype != ko->type))) {
+		if ((otype != K_OBJ_DRIVER_ANY) ||
+		    (ko->type < K_OBJ_DRIVER_FIRST) ||
+		    (ko->type > K_OBJ_DRIVER_LAST)) {
+			return -EBADF;
+		}
 	}
 
 	/* Manipulation of any kernel objects by a user thread requires that

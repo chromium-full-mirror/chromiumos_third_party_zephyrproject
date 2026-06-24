@@ -238,6 +238,12 @@
 			nxp,kinetis-port = <&portd>;
 		};
 
+		inputmux0: inputmux@40001000 {
+			compatible = "nxp,inputmux";
+			reg = <0x40001000 0x1000>;
+			#inputmux-cells = <2>;
+		};
+
 		i3c0: i3c@40002000 {
 			compatible = "nxp,mcux-i3c";
 			reg = <0x40002000 0x1000>;
@@ -367,6 +373,13 @@
 			reg = <0x400ad000 0x1000>;
 			interrupts = <57 0>;
 			resets = <&reset NXP_SYSCON_RESET(0, 25)>;
+			status = "disabled";
+		};
+
+		waketimer0: wake-timer@400ae000 {
+			compatible = "nxp,wake-timer";
+			reg = <0x400ae000 0x1000>;
+			interrupts = <58 0>;
 			status = "disabled";
 		};
 

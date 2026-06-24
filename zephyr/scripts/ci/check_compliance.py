@@ -1492,14 +1492,17 @@ Missing SoC names or CONFIG_SOC vs soc.yml out of sync:
             cwd=GIT_TOP,
         )
 
+        self_folder = Path(__file__).resolve().parent
+
         if hasattr(self, 'UNDEF_KCONFIG_ALLOWLIST'):
             # Overridden at the class level
             undef_kconfig_allowlist = self.UNDEF_KCONFIG_ALLOWLIST
+            allowlist_hint = f"{type(self).__name__}.UNDEF_KCONFIG_ALLOWLIST"
         else:
             # Load from the text file
-            self_folder = Path(__file__).resolve().parent
             default_allowlist_file = self_folder / 'undef_kconfig_allowlist.txt'
             undef_kconfig_allowlist = get_set_from_file(str(default_allowlist_file))
+            allowlist_hint = str(default_allowlist_file)
 
         # Load extensions to UNDEF_KCONFIG_ALLOWLIST
         undef_kconfig_allowlist_extra = []
@@ -1508,7 +1511,6 @@ Missing SoC names or CONFIG_SOC vs soc.yml out of sync:
             undef_kconfig_allowlist_extra = get_set_from_file(path)
 
         # Load the per-file allowlist: files listed here are skipped entirely
-        self_folder = Path(__file__).resolve().parent
         default_files_allowlist_file = self_folder / 'undef_kconfig_files_allowlist.txt'
         undef_kconfig_files_allowlist = get_set_from_file(str(default_files_allowlist_file))
 
@@ -1555,7 +1557,7 @@ Missing SoC names or CONFIG_SOC vs soc.yml out of sync:
 
         self.failure(f"""
 Found references to undefined Kconfig symbols. If any of these are false
-positives, then add them to {default_allowlist_file}.
+positives, then add them to {allowlist_hint}.
 
 If the reference is for a comment like /* CONFIG_FOO_* */ (or
 /* CONFIG_FOO_*_... */), then please use exactly that form (with the '*'). The
@@ -1830,11 +1832,13 @@ class LicenseAndCopyrightCheck(ComplianceTest):
 
         # Only scan text files for now, in the future we may want to leverage REUSE standard's
         # ability to also associate license/copyright info with binary files.
+        filtered_files = []
         for file in changed_files:
             full_path = GIT_TOP / file
             mime_type = magic.from_file(os.fspath(full_path), mime=True)
-            if not mime_type.startswith("text/"):
-                changed_files.remove(file)
+            if mime_type.startswith("text/"):
+                filtered_files.append(file)
+        changed_files = filtered_files
 
         project = Project.from_directory(GIT_TOP)
         report = ProjectSubsetReport.generate(project, changed_files, multiprocessing=False)
@@ -2130,7 +2134,8 @@ class ImageSize(ComplianceTest):
 
             if size > limit:
                 self.failure(
-                    f"Image file too large: {file} reduce size to less than {limit >> 10}kB"
+                    f"Image file too large: {file} reduce size to less than {limit >> 10}kB.\n"
+                    "See https://docs.zephyrproject.org/latest/contribute/documentation/guidelines.html#recommended-image-formats-based-on-content"
                 )
 
 
@@ -2645,7 +2650,7 @@ def added_lines(fname):
 
 class MmuRegionsCheck(ComplianceTest):
     """
-    Check that mmu_regions.c files do not add new non-GIC MMU region entries.
+    Check that mmu_regions.c files do not add new static MMU region entries.
 
     Only lines added in the current changeset are checked, so pre-existing
     entries do not block unrelated changes to the same file.
@@ -2655,8 +2660,12 @@ class MmuRegionsCheck(ComplianceTest):
     zephyr,memory-attr devicetree property instead of static mmu_regions.c
     entries.
 
-    GIC entries are excluded as the interrupt controller cannot use the
-    device MMIO API.
+    On arm64 the GIC register banks are mapped by the arch core (see
+    arch/arm64/core/mmu.c), so GIC entries there are redundant and are
+    flagged as well. The GICv3 ITS is a separate node, but it is mapped by
+    its own driver through the device MMIO API, so ITS entries are redundant
+    too. On aarch32 the GIC still has to be mapped in mmu_regions.c, so GIC
+    entries are left untouched there.
     """
 
     name = "MmuRegionsCheck"
@@ -2664,8 +2673,14 @@ class MmuRegionsCheck(ComplianceTest):
 
     COMPAT_FOREACH_RE = re.compile(r'MMU_REGION_DT_COMPAT_FOREACH_FLAT_ENTRY\s*\(')
     FLAT_ENTRY_RE = re.compile(r'MMU_REGION_FLAT_ENTRY\s*\(')
-    GIC_RE = re.compile(r'"[Gg][Ii][Cc]|DT_NODELABEL\s*\(\s*gic|arm_gic')
+    GIC_RE = re.compile(
+        r'"(?:[Gg][Ii][Cc][^"]*|[Ii][Tt][Ss])|'
+        r'DT_NODELABEL\s*\(\s*(?:gic(?:\b|_)|its\b)|'
+        r'arm_gic|gic[-_]v3[-_]its'
+    )
     DEVICE_ATTR_RE = re.compile(r'MT_DEVICE|DEVICE_ATTR')
+    # arm64 maps the GIC in the arch core; aarch32 still needs it in the SoC.
+    ARM64_MMU_INCLUDE_RE = re.compile(r'arch/arm64/arm_mmu\.h')
 
     DESC_COMPAT_ENTRY = (
         "Driver compat MMU region entry. Use the device MMIO API "
@@ -2683,6 +2698,13 @@ class MmuRegionsCheck(ComplianceTest):
         "Non-GIC memory MMU region entry. Use the zephyr,memory-attr "
         "devicetree property to describe memory regions instead of "
         "static mmu_regions.c entries."
+    )
+    DESC_GIC_ENTRY = (
+        "Redundant GIC/ITS MMU region entry. On arm64 the GIC register banks "
+        "are mapped automatically by the arch core (arch/arm64/core/mmu.c), "
+        "and GICv3 ITS nodes are mapped by their own driver through the "
+        "device MMIO API, so this entry is no longer needed and should be "
+        "removed."
     )
 
     @staticmethod
@@ -2704,7 +2726,11 @@ class MmuRegionsCheck(ComplianceTest):
         self.fmtd_failure('warning', 'MmuRegionsCheck', fname, line=line_no, desc=desc)
 
     def _check_file(self, fname, text, added_set):
-        """Check a single mmu_regions file for non-GIC entries on added lines."""
+        """Check a single mmu_regions file for redundant entries on added lines."""
+        # On arm64 the GIC is mapped by the arch core, so GIC entries are
+        # redundant there. aarch32 still maps it in the SoC, so leave those.
+        gic_mapped_by_arch = bool(self.ARM64_MMU_INCLUDE_RE.search(text))
+
         for m in self.COMPAT_FOREACH_RE.finditer(text):
             line_no = text[: m.start()].count('\n') + 1
             if line_no in added_set:
@@ -2712,10 +2738,12 @@ class MmuRegionsCheck(ComplianceTest):
 
         for m in self.FLAT_ENTRY_RE.finditer(text):
             entry = self._extract_entry(text, m.start())
-            if self.GIC_RE.search(entry):
-                continue
             line_no = text[: m.start()].count('\n') + 1
             if line_no not in added_set:
+                continue
+            if self.GIC_RE.search(entry):
+                if gic_mapped_by_arch:
+                    self._report(fname, text, m, self.DESC_GIC_ENTRY)
                 continue
             if self.DEVICE_ATTR_RE.search(entry):
                 self._report(fname, text, m, self.DESC_DEVICE_ENTRY)

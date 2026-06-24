@@ -16,6 +16,7 @@
 
 #include <zephyr/autoconf.h>
 #include <zephyr/bluetooth/assigned_numbers.h>
+#include <zephyr/bluetooth/audio/ascs.h>
 #include <zephyr/bluetooth/audio/audio.h>
 #include <zephyr/bluetooth/audio/bap_lc3_preset.h>
 #include <zephyr/bluetooth/audio/bap.h>
@@ -105,7 +106,7 @@ static void print_codec_cfg(const struct bt_audio_codec_cfg *codec_cfg)
 			printk("  Channel allocation: 0x%x\n", chan_allocation);
 		}
 
-		printk("  Octets per frame: %d (negative means value not pressent)\n",
+		printk("  Octets per frame: %d (negative means value not present)\n",
 		       bt_audio_codec_cfg_get_octets_per_frame(codec_cfg));
 		printk("  Frames per SDU: %d\n",
 		       bt_audio_codec_cfg_get_frame_blocks_per_sdu(codec_cfg, true));
@@ -376,8 +377,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 		return;
 	}
 
-	bt_conn_unref(default_conn);
-	default_conn = NULL;
+	bt_conn_drop(&default_conn);
 
 	if (IS_ENABLED(CONFIG_BT_ASCS_ASE_SRC)) {
 		/* reset data */
