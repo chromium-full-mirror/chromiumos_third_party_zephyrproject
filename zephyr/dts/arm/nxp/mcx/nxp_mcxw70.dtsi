@@ -102,6 +102,22 @@
 				#address-cells = <1>;
 				#size-cells = <1>;
 			};
+
+			ifr0: flash@1000000 {
+				compatible = "nxp,mcxw-ifr";
+				write-block-size = <16>;
+				erase-block-size = <DT_SIZE_K(8)>;
+				reg = <0x1000000 DT_SIZE_K(32)>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				/* nvmem-layout: hw_params uses sector 1 (User Sector) */
+				ieee802154_eui64_ifr0: ieee802154-eui64@1002000 {
+					reg = <0x1002000 0x8>;
+					#nvmem-cell-cells = <0>;
+					status = "disabled";
+				};
+			};
 		};
 
 		stcm: sram@30000000 {
@@ -187,6 +203,12 @@
 
 	pinctrl: pinctrl {
 		compatible = "nxp,port-pinctrl";
+	};
+
+	hw_params: hw-params {
+		compatible = "nxp,mcxw-hw-params";
+		nvmem-cells = <&ieee802154_eui64_ifr0>;
+		nvmem-cell-names = "ieee802154_eui64";
 	};
 };
 
@@ -378,9 +400,12 @@
 		interrupts = <97 1>;
 	};
 
-	crc: crc@23000 {
+	crc: crc@18000 {
 		compatible = "nxp,crc";
-		reg = <0x23000 0x1000>;
+		reg = <0x18000 0x1000>;
+		clocks = <&clk_ctrl MCXW_CLOCK(0xd8, MCXW_CLK_IP_MUX_NONE,
+					       MCXW_CLK_DIV_NONE,
+					       MCXW_CLK_MODE_ENABLED_LP_STALL)>;
 		status = "disabled";
 	};
 };
@@ -402,9 +427,10 @@
 	};
 
 	wuu_0: system-modules@14000 {
-		compatible = "nxp,wuu";
+		compatible = "nxp,wuc-wuu", "nxp,wuu";
 		reg = <0x14000 0x5c>;
 		interrupts = <24 0>;
+		#wakeup-ctrl-cells = <1>;
 	};
 
 	clk_ctrl: clock-controller {
@@ -596,6 +622,11 @@
 		status = "disabled";
 		interrupts = <18 0>;
 		clk-divider = <0x0>;
+	};
+
+	uid: uid@1f068 {
+		compatible = "nxp,lpc-uid";
+		reg = <0x1f068 0x10>;
 	};
 };
 

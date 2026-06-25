@@ -38,8 +38,9 @@ struct scmi_channel;
  *
  * @param chan pointer to SCMI channel on which the reply
  * arrived
+ * @param hdr is the share memory Message header
  */
-typedef void (*scmi_channel_cb)(struct scmi_channel *chan);
+typedef void (*scmi_channel_cb)(struct scmi_channel *chan, uint32_t hdr);
 
 /**
  * @struct scmi_channel
@@ -50,10 +51,10 @@ typedef void (*scmi_channel_cb)(struct scmi_channel *chan);
  * channels is represented by a `struct scmi_channel`.
  */
 struct scmi_channel {
-	/** channel private data */
+	/** Channel private data */
 	void *data;
 	/**
-	 * callback function. This is meant to be set by
+	 * Callback function. This is meant to be set by
 	 * the SCMI core and should be called by the SCMI
 	 * transport layer driver whenever a reply has
 	 * been received.
@@ -61,7 +62,7 @@ struct scmi_channel {
 	scmi_channel_cb cb;
 	/** @cond INTERNAL_HIDDEN */
 	/**
-	 * channel lock. This is meant to be initialized
+	 * Channel lock. This is meant to be initialized
 	 * and used only by the SCMI core to assure that
 	 * only one protocol can send/receive messages
 	 * through a channel at a given moment.
@@ -69,7 +70,7 @@ struct scmi_channel {
 	struct k_mutex lock;
 
 	/**
-	 * binary semaphore. This is meant to be initialized
+	 * Binary semaphore. This is meant to be initialized
 	 * and used only by the SCMI core. Its purpose is to
 	 * signal that a reply has been received.
 	 */
@@ -79,7 +80,7 @@ struct scmi_channel {
 	bool ready;
 	/** @endcond */
 	/**
-	 * indicates if the channel requires polling-only operation.
+	 * Indicates if the channel requires polling-only operation.
 	 * When set to true, the channel cannot use interrupt-based
 	 * messaging and must always poll for responses.
 	 */
@@ -303,8 +304,7 @@ static inline bool scmi_transport_channel_is_free(const struct device *transport
 /**
  * @brief Perform SCMI core initialization
  *
- * @param transport pointer to the device structure for
- * the transport layer
+ * @param transport Pointer to the device structure for the transport layer
  *
  * @return 0 on success, negative errno value on failure.
  */
