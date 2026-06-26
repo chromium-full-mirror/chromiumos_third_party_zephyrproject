@@ -435,6 +435,11 @@ typedef int (*counter_api_enable_capture)(const struct device *dev, uint8_t chan
 /** @brief Callback API to disable counter capture on a channel. */
 typedef int (*counter_api_disable_capture)(const struct device *dev, uint8_t chan_id);
 
+/** @brief Callback API to set counter calibration in parts per billion. */
+typedef int (*counter_api_set_calibration)(const struct device *dev, int32_t calibration);
+/** @brief Callback API to get counter calibration in parts per billion. */
+typedef int (*counter_api_get_calibration)(const struct device *dev, int32_t *calibration);
+
 /**
  * @driver_ops{Counter}
  */
@@ -547,6 +552,16 @@ __subsystem struct counter_driver_api {
 	 */
 	counter_api_disable_capture disable_capture;
 #endif /* CONFIG_COUNTER_CAPTURE */
+#if defined(CONFIG_COUNTER_CALIBRATION) || defined(__DOXYGEN__)
+	/**
+	 * @driver_ops_optional @copybrief counter_set_calibration
+	 */
+	counter_api_set_calibration set_calibration;
+	/**
+	 * @driver_ops_optional @copybrief counter_get_calibration
+	 */
+	counter_api_get_calibration get_calibration;
+#endif /* CONFIG_COUNTER_CALIBRATION */
 };
 /**
  * @}
@@ -693,7 +708,9 @@ __syscall uint64_t counter_us_to_ticks_64(const struct device *dev, uint64_t us)
 
 static inline uint64_t z_impl_counter_us_to_ticks_64(const struct device *dev, uint64_t us)
 {
-	return (us * z_counter_get_frequency(dev)) / USEC_PER_SEC;
+	uint64_t freq = z_counter_get_frequency(dev);
+
+	return (us / USEC_PER_SEC) * freq + ((us % USEC_PER_SEC) * freq) / USEC_PER_SEC;
 }
 
 /**
@@ -723,7 +740,9 @@ __syscall uint64_t counter_ticks_to_us_64(const struct device *dev, uint64_t tic
 
 static inline uint64_t z_impl_counter_ticks_to_us_64(const struct device *dev, uint64_t ticks)
 {
-	return (ticks * USEC_PER_SEC) / z_counter_get_frequency(dev);
+	uint64_t freq = z_counter_get_frequency(dev);
+
+	return (ticks / freq) * USEC_PER_SEC + ((ticks % freq) * USEC_PER_SEC) / freq;
 }
 
 /**
@@ -755,7 +774,9 @@ __syscall uint64_t counter_ns_to_ticks_64(const struct device *dev, uint64_t ns)
 
 static inline uint64_t z_impl_counter_ns_to_ticks_64(const struct device *dev, uint64_t ns)
 {
-	return (ns * z_counter_get_frequency(dev)) / NSEC_PER_SEC;
+	uint64_t freq = z_counter_get_frequency(dev);
+
+	return (ns / NSEC_PER_SEC) * freq + ((ns % NSEC_PER_SEC) * freq) / NSEC_PER_SEC;
 }
 
 /**
@@ -785,7 +806,9 @@ __syscall uint64_t counter_ticks_to_ns_64(const struct device *dev, uint64_t tic
 
 static inline uint64_t z_impl_counter_ticks_to_ns_64(const struct device *dev, uint64_t ticks)
 {
-	return (ticks * NSEC_PER_SEC) / z_counter_get_frequency(dev);
+	uint64_t freq = z_counter_get_frequency(dev);
+
+	return (ticks / freq) * NSEC_PER_SEC + ((ticks % freq) * NSEC_PER_SEC) / freq;
 }
 
 /**
@@ -1564,6 +1587,56 @@ static inline int z_impl_counter_disable_capture(const struct device *dev, uint8
 
 /** @} */
 #endif /* CONFIG_COUNTER_CAPTURE */
+
+#if defined(CONFIG_COUNTER_CALIBRATION) || defined(__DOXYGEN__)
+/**
+ * @brief Set counter calibration value.
+ *
+ * Calibration is specified in parts per billion (ppb). A positive value
+ * speeds up the counter, a negative value slows it down.
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param calibration Calibration value in ppb.
+ *
+ * @retval 0 If successful.
+ * @retval -EINVAL if calibration value is out of range.
+ * @retval -ENOSYS if not supported by the driver.
+ */
+__syscall int counter_set_calibration(const struct device *dev, int32_t calibration);
+
+static inline int z_impl_counter_set_calibration(const struct device *dev, int32_t calibration)
+{
+	const struct counter_driver_api *api = DEVICE_API_GET(counter, dev);
+
+	if (!api->set_calibration) {
+		return -ENOSYS;
+	}
+
+	return api->set_calibration(dev, calibration);
+}
+
+/**
+ * @brief Get counter calibration value.
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param calibration Pointer to store the calibration value in ppb.
+ *
+ * @retval 0 If successful.
+ * @retval -ENOSYS if not supported by the driver.
+ */
+__syscall int counter_get_calibration(const struct device *dev, int32_t *calibration);
+
+static inline int z_impl_counter_get_calibration(const struct device *dev, int32_t *calibration)
+{
+	const struct counter_driver_api *api = DEVICE_API_GET(counter, dev);
+
+	if (!api->get_calibration) {
+		return -ENOSYS;
+	}
+
+	return api->get_calibration(dev, calibration);
+}
+#endif /* CONFIG_COUNTER_CALIBRATION */
 
 #ifdef __cplusplus
 }

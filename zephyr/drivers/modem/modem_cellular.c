@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2023 Bjarki Arge Andreasen
+ * Copyright (c) 2026 Leica Geosystems AG
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -78,6 +79,8 @@ static const char *modem_cellular_state_str(enum modem_cellular_state state)
 		return "open dlci1";
 	case MODEM_CELLULAR_STATE_OPEN_DLCI2:
 		return "open dlci2";
+	case MODEM_CELLULAR_STATE_RUN_BOARD_INIT_SCRIPT:
+		return "run board init script";
 	case MODEM_CELLULAR_STATE_WAIT_FOR_APN:
 		return "wait for apn";
 	case MODEM_CELLULAR_STATE_AWAIT_REGISTERED:
@@ -142,6 +145,8 @@ static const char *modem_cellular_event_str(enum modem_cellular_event event)
 		return "apn set";
 	case MODEM_CELLULAR_EVENT_RING:
 		return "RING";
+	case MODEM_CELLULAR_EVENT_PERIODIC_KICK:
+		return "periodic kick";
 	}
 
 	return "";
@@ -160,6 +165,7 @@ static bool modem_cellular_apn_change_allowed(enum modem_cellular_state st)
 	case MODEM_CELLULAR_STATE_CONNECT_CMUX:
 	case MODEM_CELLULAR_STATE_OPEN_DLCI1:
 	case MODEM_CELLULAR_STATE_OPEN_DLCI2:
+	case MODEM_CELLULAR_STATE_RUN_BOARD_INIT_SCRIPT:
 	case MODEM_CELLULAR_STATE_WAIT_FOR_APN:
 		return true;
 	default:
@@ -450,26 +456,43 @@ void modem_cellular_chat_on_cxreg(struct modem_chat *chat, char **argv, uint16_t
 				  void *user_data)
 {
 	struct modem_cellular_data *data = (struct modem_cellular_data *)user_data;
-	enum cellular_registration_status registration_status = 0;
+	enum cellular_registration_status registration_status = CELLULAR_REGISTRATION_UNKNOWN;
+	enum cellular_registration_status registration_prev;
+	uint8_t num_args;
+	uint8_t base;
 
 	/* This receives both +C*REG? read command answers and unsolicited notifications.
 	 * Their syntax differs in that the former has one more parameter, <n>, which is first.
 	 */
 	if (argc >= 3 && argv[2][0] != '"') {
 		/* +CEREG: <n>,<stat>[,<tac>[...]] */
-		registration_status = atoi(argv[2]);
+		base = 2;
 	} else if (argc >= 2) {
 		/* +CEREG: <stat>[,<tac>[...]] */
-		registration_status = atoi(argv[1]);
+		base = 1;
 	} else {
 		return;
 	}
+	/* Long form of the various CXREG options:
+	 *   +CREG: <stat>[,<lac>,<ci>[,<AcT>]]
+	 *   +CGREG:<stat>[,<lac>,<ci>[,<AcT>,<rac>]]
+	 *   +CEREG: <stat>[,[<tac>],[<ci>],[<AcT>]]
+	 */
+	num_args = argc - base;
+	registration_status = atoi(argv[base]);
+	if (num_args >= 4) {
+		data->access_tech = strtol(argv[base + 3], NULL, 10);
+	}
+	LOG_DBG("REG %d AcT %d", registration_status, data->access_tech);
 
 	if (strcmp(argv[0], "+CREG: ") == 0) {
+		registration_prev = data->registration_status_gsm;
 		data->registration_status_gsm = registration_status;
 	} else if (strcmp(argv[0], "+CGREG: ") == 0) {
+		registration_prev = data->registration_status_gprs;
 		data->registration_status_gprs = registration_status;
 	} else { /* CEREG */
+		registration_prev = data->registration_status_lte;
 		data->registration_status_lte = registration_status;
 	}
 
@@ -477,6 +500,18 @@ void modem_cellular_chat_on_cxreg(struct modem_chat *chat, char **argv, uint16_t
 		modem_cellular_delegate_event(data, MODEM_CELLULAR_EVENT_REGISTERED);
 	} else {
 		modem_cellular_delegate_event(data, MODEM_CELLULAR_EVENT_DEREGISTERED);
+		/* If we transitioned into a deregistered state, issue a NETWORK_STATUS event,
+		 * as we cannot guarantee periodic network status AT commands will respond normally.
+		 */
+		if (registration_prev != registration_status) {
+			struct cellular_evt_network_status evt = {
+				.status = registration_status,
+				.access_tech = data->access_tech,
+			};
+
+			modem_cellular_emit_event(data, CELLULAR_EVENT_NETWORK_STATUS_CHANGED,
+						  &evt);
+		}
 	}
 	modem_cellular_emit_reg_state(data, registration_status);
 }
@@ -550,7 +585,9 @@ MODEM_CHAT_MATCH_DEFINE(cimi_match __maybe_unused, "", "", modem_cellular_chat_o
 MODEM_CHAT_MATCH_DEFINE(cgmi_match __maybe_unused, "", "", modem_cellular_chat_on_cgmi);
 MODEM_CHAT_MATCH_DEFINE(cgmr_match __maybe_unused, "", "", modem_cellular_chat_on_cgmr);
 
-MODEM_CHAT_MATCHES_DEFINE(abort_matches, MODEM_CHAT_MATCH("ERROR", "", NULL));
+MODEM_CHAT_MATCHES_DEFINE(abort_matches,
+			  MODEM_CHAT_MATCH("ERROR", "", NULL),
+			  MODEM_CHAT_MATCH("+CME ERROR", "", NULL));
 
 MODEM_CHAT_MATCHES_DEFINE(__maybe_unused dial_abort_matches,
 			  MODEM_CHAT_MATCH("ERROR", "", NULL),
@@ -988,6 +1025,24 @@ static int modem_cellular_on_run_init_script_state_enter(struct modem_cellular_d
 	return modem_pipe_open_async(data->uart_pipe);
 }
 
+static void modem_cellular_enter_recovery_state(struct modem_cellular_data *data)
+{
+	const struct modem_cellular_config *config = data->dev->config;
+
+	/* Release CMUX if it was attached, so the UART pipe can be reattached
+	 * cleanly on the next connect attempt. No-op when CMUX is not attached.
+	 */
+	modem_cmux_release(&data->cmux);
+
+	if (modem_cellular_gpio_is_enabled(&config->reset_gpio) && config->reset_on_recovery) {
+		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_RESET_PULSE);
+	} else if (modem_cellular_gpio_is_enabled(&config->power_gpio)) {
+		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_POWER_ON_PULSE);
+	} else {
+		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_IDLE);
+	}
+}
+
 static void modem_cellular_run_init_script_event_handler(struct modem_cellular_data *data,
 							 enum modem_cellular_event evt)
 {
@@ -1029,18 +1084,7 @@ static void modem_cellular_run_init_script_event_handler(struct modem_cellular_d
 		break;
 
 	case MODEM_CELLULAR_EVENT_SCRIPT_FAILED:
-		if (modem_cellular_gpio_is_enabled(&config->reset_gpio) &&
-		    config->reset_on_recovery) {
-			modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_RESET_PULSE);
-			break;
-		}
-
-		if (modem_cellular_gpio_is_enabled(&config->power_gpio)) {
-			modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_POWER_ON_PULSE);
-			break;
-		}
-
-		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_IDLE);
+		modem_cellular_enter_recovery_state(data);
 		break;
 
 	default:
@@ -1075,6 +1119,10 @@ static void modem_cellular_connect_cmux_event_handler(struct modem_cellular_data
 	case MODEM_CELLULAR_EVENT_CMUX_CONNECTED:
 		modem_cellular_notify_user_pipes_connected(data);
 		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_OPEN_DLCI1);
+		break;
+
+	case MODEM_CELLULAR_EVENT_CMUX_DISCONNECTED:
+		modem_cellular_enter_recovery_state(data);
 		break;
 
 	case MODEM_CELLULAR_EVENT_SUSPEND:
@@ -1115,6 +1163,30 @@ static int modem_cellular_on_open_dlci1_state_leave(struct modem_cellular_data *
 	return 0;
 }
 
+static const struct modem_chat_script *modem_cellular_board_init_script(const struct device *dev)
+{
+	STRUCT_SECTION_FOREACH(modem_cellular_board_init, board_init) {
+		if (board_init->dev == dev) {
+			return board_init->script;
+		}
+	}
+
+	return NULL;
+}
+
+static void modem_cellular_enter_apn_state(struct modem_cellular_data *data)
+{
+	const struct modem_cellular_config *config = data->dev->config;
+
+	if (config->use_default_pdp_context) {
+		modem_cellular_enter_state_network_or_dial(data);
+	} else if (!modem_cellular_needs_apn(data)) {
+		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_RUN_APN_SCRIPT);
+	} else {
+		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_WAIT_FOR_APN);
+	}
+}
+
 static int modem_cellular_on_open_dlci2_state_enter(struct modem_cellular_data *data)
 {
 	modem_pipe_attach(data->dlci2_pipe, modem_cellular_dlci2_pipe_handler, data);
@@ -1124,18 +1196,15 @@ static int modem_cellular_on_open_dlci2_state_enter(struct modem_cellular_data *
 static void modem_cellular_open_dlci2_event_handler(struct modem_cellular_data *data,
 						    enum modem_cellular_event evt)
 {
-	const struct modem_cellular_config *config = data->dev->config;
-
 	switch (evt) {
 	case MODEM_CELLULAR_EVENT_DLCI2_OPENED:
 		data->cmd_pipe = data->dlci2_pipe;
 
-		if (config->use_default_pdp_context) {
-			modem_cellular_enter_state_network_or_dial(data);
-		} else if (!modem_cellular_needs_apn(data)) {
-			modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_RUN_APN_SCRIPT);
+		if (modem_cellular_board_init_script(data->dev) != NULL) {
+			modem_cellular_enter_state(data,
+						   MODEM_CELLULAR_STATE_RUN_BOARD_INIT_SCRIPT);
 		} else {
-			modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_WAIT_FOR_APN);
+			modem_cellular_enter_apn_state(data);
 		}
 		break;
 
@@ -1190,6 +1259,48 @@ static bool modem_cellular_is_script_retry_exceeded(struct modem_cellular_data *
 	return false;
 }
 
+static int modem_cellular_on_run_board_init_script_state_enter(struct modem_cellular_data *data)
+{
+	modem_chat_attach(&data->chat, data->dlci1_pipe);
+
+	/* The registered script is const; copy it to attach the driver's
+	 * completion callback.
+	 */
+	data->board_init_script = *modem_cellular_board_init_script(data->dev);
+	modem_chat_script_set_callback(&data->board_init_script,
+				       modem_cellular_chat_callback_handler);
+
+	/* Allow modem time to enter command mode before running the board script */
+	modem_cellular_start_timer(data, K_MSEC(200));
+	return 0;
+}
+
+static void modem_cellular_run_board_init_script_event_handler(struct modem_cellular_data *data,
+							       enum modem_cellular_event evt)
+{
+	switch (evt) {
+	case MODEM_CELLULAR_EVENT_TIMEOUT:
+		modem_chat_run_script_async(&data->chat, &data->board_init_script);
+		break;
+	case MODEM_CELLULAR_EVENT_SCRIPT_SUCCESS:
+		modem_cellular_script_success(data);
+		modem_cellular_enter_apn_state(data);
+		break;
+	case MODEM_CELLULAR_EVENT_SCRIPT_FAILED:
+		modem_cellular_script_failed(data);
+		if (modem_cellular_is_script_retry_exceeded(data)) {
+			modem_cellular_delegate_event(data, MODEM_CELLULAR_EVENT_SUSPEND);
+		} else {
+			modem_cellular_start_timer(data, MODEM_CELLULAR_PERIODIC_SCRIPT_TIMEOUT);
+		}
+		break;
+	case MODEM_CELLULAR_EVENT_SUSPEND:
+		modem_cellular_enter_state(data, MODEM_CELLULAR_STATE_INIT_POWER_OFF);
+		break;
+	default:
+		break;
+	}
+}
 
 static int modem_cellular_on_run_apn_script_state_enter(struct modem_cellular_data *data)
 {
@@ -1371,7 +1482,27 @@ static void modem_cellular_await_registered_event_handler(struct modem_cellular_
 		break;
 
 	case MODEM_CELLULAR_EVENT_TIMEOUT:
+		if (atomic_get(&data->periodic_paused)) {
+			data->periodic_timeout_skipped = true;
+			break;
+		}
 		modem_chat_run_script_async(&data->chat, config->vendor->scripts.periodic);
+		break;
+
+	case MODEM_CELLULAR_EVENT_PERIODIC_KICK:
+		if (atomic_get(&data->periodic_paused)) {
+			break;
+		}
+		if (!data->periodic_timeout_skipped) {
+			modem_cellular_start_timer(data, MODEM_CELLULAR_PERIODIC_SCRIPT_TIMEOUT);
+			break;
+		}
+		data->periodic_timeout_skipped = false;
+		if (modem_chat_run_script_async(&data->chat, config->vendor->scripts.periodic) <
+		    0) {
+			LOG_WRN("periodic kick busy, rearming timer");
+			modem_cellular_start_timer(data, MODEM_CELLULAR_PERIODIC_SCRIPT_TIMEOUT);
+		}
 		break;
 
 	case MODEM_CELLULAR_EVENT_REGISTERED:
@@ -1437,7 +1568,27 @@ static void modem_cellular_registered_event_handler(struct modem_cellular_data *
 		break;
 
 	case MODEM_CELLULAR_EVENT_TIMEOUT:
+		if (atomic_get(&data->periodic_paused)) {
+			data->periodic_timeout_skipped = true;
+			break;
+		}
 		modem_chat_run_script_async(&data->chat, config->vendor->scripts.periodic);
+		break;
+
+	case MODEM_CELLULAR_EVENT_PERIODIC_KICK:
+		if (atomic_get(&data->periodic_paused)) {
+			break;
+		}
+		if (!data->periodic_timeout_skipped) {
+			modem_cellular_start_timer(data, MODEM_CELLULAR_PERIODIC_SCRIPT_TIMEOUT);
+			break;
+		}
+		data->periodic_timeout_skipped = false;
+		if (modem_chat_run_script_async(&data->chat, config->vendor->scripts.periodic) <
+		    0) {
+			LOG_WRN("periodic kick busy, rearming timer");
+			modem_cellular_start_timer(data, MODEM_CELLULAR_PERIODIC_SCRIPT_TIMEOUT);
+		}
 		break;
 
 	case MODEM_CELLULAR_EVENT_DEREGISTERED:
@@ -1692,6 +1843,10 @@ static int modem_cellular_on_state_enter(struct modem_cellular_data *data)
 		ret = modem_cellular_on_open_dlci2_state_enter(data);
 		break;
 
+	case MODEM_CELLULAR_STATE_RUN_BOARD_INIT_SCRIPT:
+		ret = modem_cellular_on_run_board_init_script_state_enter(data);
+		break;
+
 	case MODEM_CELLULAR_STATE_RUN_APN_SCRIPT:
 		ret = modem_cellular_on_run_apn_script_state_enter(data);
 		break;
@@ -1874,6 +2029,10 @@ static void modem_cellular_event_handler(struct modem_cellular_data *data,
 
 	case MODEM_CELLULAR_STATE_OPEN_DLCI2:
 		modem_cellular_open_dlci2_event_handler(data, evt);
+		break;
+
+	case MODEM_CELLULAR_STATE_RUN_BOARD_INIT_SCRIPT:
+		modem_cellular_run_board_init_script_event_handler(data, evt);
 		break;
 
 	case MODEM_CELLULAR_STATE_WAIT_FOR_APN:
@@ -2185,6 +2344,39 @@ static int modem_cellular_set_callback(const struct device *dev, cellular_event_
 	return ret;
 }
 
+int cellular_modem_pause_periodic_script(const struct device *dev)
+{
+	const struct modem_cellular_config *config = dev->config;
+	struct modem_cellular_data *data = dev->data;
+
+	if (config->vendor->scripts.periodic == NULL) {
+		return -ENOTSUP;
+	}
+
+	if (!atomic_cas(&data->periodic_paused, 0, 1)) {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int cellular_modem_resume_periodic_script(const struct device *dev)
+{
+	const struct modem_cellular_config *config = dev->config;
+	struct modem_cellular_data *data = dev->data;
+
+	if (config->vendor->scripts.periodic == NULL) {
+		return -ENOTSUP;
+	}
+
+	if (!atomic_cas(&data->periodic_paused, 1, 0)) {
+		return -EINVAL;
+	}
+
+	modem_cellular_delegate_event(data, MODEM_CELLULAR_EVENT_PERIODIC_KICK);
+	return 0;
+}
+
 DEVICE_API(cellular, modem_cellular_api) = {
 	.get_signal = modem_cellular_get_signal,
 	.get_modem_info = modem_cellular_get_modem_info,
@@ -2279,6 +2471,8 @@ int modem_cellular_init(const struct device *dev)
 
 	k_sem_init(&data->suspended_sem, 0, 1);
 
+	data->access_tech = CELLULAR_ACCESS_TECHNOLOGY_UNKNOWN;
+
 	if (modem_cellular_gpio_is_enabled(&config->wake_gpio)) {
 		gpio_pin_configure_dt(&config->wake_gpio, GPIO_OUTPUT_INACTIVE);
 	}
@@ -2351,6 +2545,7 @@ int modem_cellular_init(const struct device *dev)
 			.transmit_buf_size = ARRAY_SIZE(data->cmux_transmit_buf),
 			.enable_runtime_power_management = config->cmux_enable_runtime_power_save,
 			.close_pipe_on_power_save = config->cmux_close_pipe_on_power_save,
+			.no_powersave_handshake = config->cmux_no_powersave_handshake,
 			.idle_timeout = config->cmux_idle_timeout,
 		};
 
