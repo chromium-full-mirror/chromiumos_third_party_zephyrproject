@@ -114,6 +114,12 @@ static int mcux_lpc_syscon_clock_control_on(const struct device *dev,
 	}
 #endif
 
+#if defined(CONFIG_CRC_DRIVER_NXP)
+	if ((uint32_t)sub_system == MCUX_CRC_CLK) {
+		CLOCK_EnableClock(kCLOCK_Crc0);
+	}
+#endif
+
 #if defined(CONFIG_PINCTRL_NXP_PORT)
 	switch ((uint32_t)sub_system) {
 #if defined(CONFIG_SOC_FAMILY_MCXA) || defined(CONFIG_SOC_FAMILY_MCXL)
@@ -389,6 +395,12 @@ static int mcux_lpc_syscon_clock_control_on(const struct device *dev,
 #endif
 #endif /* defined(CONFIG_WDT_MCUX_WWDT) */
 
+#if DT_HAS_COMPAT_STATUS_OKAY(nxp_slcd)
+	if ((uint32_t)sub_system == MCUX_SLCD_CLK) {
+		CLOCK_EnableClock(kCLOCK_GateSLCD0);
+	}
+#endif
+
 	return 0;
 }
 
@@ -627,6 +639,10 @@ static int mcux_lpc_syscon_clock_control_get_subsys_rate(const struct device *de
 		*rate = CLOCK_GetFreq(kCLOCK_BusClk);
 		break;
 #endif
+
+	case MCUX_SYSTEM_CLK:
+		*rate = CLOCK_GetFreq(kCLOCK_CoreSysClk);
+		break;
 
 #if defined(CONFIG_I3C_MCUX)
 	case MCUX_I3C_CLK:
@@ -889,6 +905,12 @@ static int mcux_lpc_syscon_clock_control_get_subsys_rate(const struct device *de
 #endif
 		break;
 #endif
+#endif
+
+#if DT_HAS_COMPAT_STATUS_OKAY(nxp_slcd)
+	case MCUX_SLCD_CLK:
+		*rate = 16384U; /* Fix 16.384kHz */
+		break;
 #endif
 	}
 

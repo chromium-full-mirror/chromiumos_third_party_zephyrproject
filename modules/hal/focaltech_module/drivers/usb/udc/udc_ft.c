@@ -1461,10 +1461,6 @@ static void ft_udbd_isr(const struct device *dev)
     {
         send_sof_once=0;
         if(priv->usb_enum_err>=3){
-    
-            LOG_ERR("usb reset 3 times,usb host must be err,reset usb");
-            HAL_RESET_SoftReset();
-   
             priv->usb_enum_err=0;
         }
 
