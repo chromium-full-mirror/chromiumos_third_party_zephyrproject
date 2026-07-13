@@ -217,7 +217,7 @@ cy_rslt_t ifx_cat1_uart_set_baud(const struct device *dev, uint32_t baudrate)
 	const struct ifx_cat1_uart_config *const config = dev->config;
 
 	uint8_t best_oversample = IFX_UART_OVERSAMPLE_MIN;
-	uint8_t best_difference = 0xFF;
+	uint32_t best_difference = UINT32_MAX;
 	uint32_t divider;
 
 	uint32_t peri_frequency;
@@ -238,11 +238,26 @@ cy_rslt_t ifx_cat1_uart_set_baud(const struct device *dev, uint32_t baudrate)
 #else
 	peri_frequency = Cy_SysClk_ClkHfGetFrequency();
 #endif
+	/*
+	 * Select the oversample factor that yields the smallest absolute baud
+	 * rate error.  The error must be compared in absolute terms (Hz): an
+	 * integer-percentage comparison rounds every sub-1% candidate to 0 and
+	 * always selects the minimum oversample, which can leave a several-
+	 * tenths-of-a-percent error and degraded sampling margin that causes
+	 * intermittent framing errors on sustained transfers.
+	 */
 	for (uint8_t i = IFX_UART_OVERSAMPLE_MIN; i < IFX_UART_OVERSAMPLE_MAX + 1; i++) {
 		uint32_t tmp_divider = ((peri_frequency + ((baudrate * i) / 2))) / (baudrate * i);
+		uint32_t actual_baud;
+		uint32_t difference;
 
-		uint32_t actual_baud = (peri_frequency / (tmp_divider * i));
-		uint8_t difference = ifx_uart_baud_diff(actual_baud, baudrate);
+		if (tmp_divider == 0U) {
+			continue;
+		}
+
+		actual_baud = (peri_frequency / (tmp_divider * i));
+		difference = (actual_baud > baudrate) ? (actual_baud - baudrate)
+						      : (baudrate - actual_baud);
 
 		if (difference < best_difference) {
 			best_difference = difference;
@@ -250,13 +265,14 @@ cy_rslt_t ifx_cat1_uart_set_baud(const struct device *dev, uint32_t baudrate)
 		}
 	}
 
-	if (best_difference > IFX_UART_MAX_BAUD_PERCENT_DIFFERENCE) {
-		status = -EINVAL;
-	}
-
 	data->scb_config.oversample = best_oversample;
 
 	divider = ifx_uart_divider(peri_frequency, baudrate, best_oversample);
+
+	if (ifx_uart_baud_diff(peri_frequency / (divider * best_oversample), baudrate) >
+	    IFX_UART_MAX_BAUD_PERCENT_DIFFERENCE) {
+		return -EINVAL;
+	}
 
 	/* Set baud rate */
 	if ((data->clock.block & 0x02) == 0) {
@@ -559,6 +575,25 @@ static int ifx_cat1_uart_irq_is_pending(const struct device *dev)
 	uint32_t intcause = Cy_SCB_GetInterruptCause(config->reg_addr);
 
 	return (int)(intcause & (CY_SCB_TX_INTR | CY_SCB_RX_INTR));
+}
+
+/* Start processing interrupts in ISR.
+ * This function should be called the first thing in the ISR. Calling
+ * uart_irq_rx_ready(), uart_irq_tx_ready(), uart_irq_tx_complete()
+ * allowed only after this.
+ */
+static void ifx_cat1_uart_irq_update(const struct device *dev)
+{
+	const struct ifx_cat1_uart_config *const config = dev->config;
+
+	/*
+	 * Read interrupt cause and RX FIFO count have a side effect
+	 * to clear stale interrupt flags, so that FIFO is flushed
+	 * properly and the current hardware state is reflected.
+	 * This is required for proper UART operation.
+	 */
+	(void) (ifx_cat1_uart_irq_is_pending(dev));
+	(void) (Cy_SCB_UART_GetNumInRxFifo(config->reg_addr));
 }
 
 static void ifx_cat1_uart_irq_callback_set(const struct device *dev,
@@ -1375,6 +1410,7 @@ static DEVICE_API(uart, ifx_cat1_uart_driver_api) = {
 	.irq_err_enable = ifx_cat1_uart_irq_err_enable,
 	.irq_err_disable = ifx_cat1_uart_irq_err_disable,
 	.irq_is_pending = ifx_cat1_uart_irq_is_pending,
+	.irq_update = ifx_cat1_uart_irq_update,
 	.irq_callback_set = ifx_cat1_uart_irq_callback_set,
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 

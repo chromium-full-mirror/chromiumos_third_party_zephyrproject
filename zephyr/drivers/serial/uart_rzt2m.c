@@ -5,8 +5,8 @@
  */
 
 #include "uart_rzt2m.h"
-#include "zephyr/spinlock.h"
-#include "zephyr/sys/printk.h"
+#include <zephyr/spinlock.h>
+#include <zephyr/sys/printk.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/sys/util.h>
@@ -254,6 +254,8 @@ static int rzt2m_module_start(const struct device *dev)
 		dummy = *MSTPCRA;
 	} else {
 		LOG_ERR("SCI modules in the secure domain on RZT2M are not supported.");
+		k_spin_unlock(&data->lock, key);
+		irq_unlock(irqkey);
 		return -ENOTSUP;
 	}
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Elan Microelectronics Corp..
+# SPDX-FileCopyrightText: 2026 ELAN Microelectronics Corp.
 # SPDX-License-Identifier: Apache-2.0
 
 description: ELAN EM32 UART controller
@@ -31,3 +31,7 @@ properties:
 
   pinctrl-names:
     required: true
+
+  interrupts:
+    type: array
+    description: UART interrupt configuration.

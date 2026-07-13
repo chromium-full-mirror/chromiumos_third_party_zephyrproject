@@ -227,7 +227,7 @@
     DSI_IRQn                    = 143,  /*!< DSI Host controller global interrupt              */
     RESERVED_144                = 144,  /*!< reserved                                          */
     HASH_IRQn                   = 145,  /*!< HASH interrupt                                    */
-    RESERVED_146                = 146,  /*!< reserved                                          */
+    PKA_IRQn                    = 146,  /*!< PKA interrupt                                     */
     FPU_IRQn                    = 147,  /*!< FPU global interrupt                              */
     UART7_IRQn                  = 148,  /*!< UART7 global interrupt                            */
     RESERVED_329                = 149,   /*!< reserved                                          */
@@ -2521,6 +2521,24 @@ typedef struct
 } OCTOSPIM_TypeDef;
 
 /**
+  * @brief Public Key Accelerator (PKA)
+  */
+#define PKA_RAM_SIZE (5336U/4U)
+typedef struct
+{
+  __IO uint32_t CR;             /*!< PKA control register,                Address offset: 0x0000 */
+  __IO uint32_t SR;             /*!< PKA status register,                 Address offset: 0x0004 */
+  __IO uint32_t CLRFR;          /*!< PKA clear flag register,             Address offset: 0x0008 */
+       uint32_t Reserved1[253];                /*!< Reserved,                    Address offset: 0x000C-0x03FC */
+  __IO uint32_t RAM[PKA_RAM_SIZE];             /*!< PKA RAM,                    Address offset: 0x0400-0xXXXX */
+       uint32_t Reserved2[1788-PKA_RAM_SIZE];  /*!< Reserved                    Address offset: (0xXXXX+4)-0x1FEF */
+  __IO uint32_t HWCFGR;         /*!< PKA hardware configuration register, Address offset: 0x1FF0 */
+  __IO uint32_t VERR;           /*!< PKA version register,                Address offset: 0x1FF4 */
+  __IO uint32_t IPIDR;          /*!< PKA identification register,         Address offset: 0x1FF8 */
+  __IO uint32_t SIDR;           /*!< PKA size ID register,                Address offset: 0x1FFC */
+} PKA_TypeDef;
+
+/**
   * @brief PSSI
   */
 
@@ -3759,6 +3777,61 @@ typedef struct
   __IO uint32_t SIDR;            /*!< USART Size Identification register          Address offset: 0x3FC */
 } USART_TypeDef;
 
+
+/**
+  * @brief USB_EHCI HOST Registers
+  */
+typedef struct
+{
+  __IO uint32_t HCCAPBASE;        /*!< Capability Register,                       Address offset: 0x00 */
+  __IO uint32_t HCSPARAMS;        /*!< Structural Parameter Register              Address offset: 0x04 */
+  __IO uint32_t HCCPARAMS;        /*!< Capability Parameter Register,             Address offset: 0x08 */
+       uint32_t RESERVED1;        /*!< RESERVED1,                                 Address offset: 0x0C */
+  __IO uint32_t USBCMD;           /*!< USB Command Register,                      Address offset: 0x10 */
+  __IO uint32_t USBSTS;           /*!< USB Status Register,                       Address offset: 0x14 */
+  __IO uint32_t USBINTR;          /*!< USB Interrupt Enable Register,             Address offset: 0x18 */
+  __IO uint32_t FRINDEX;          /*!< USB Frame Index Register ,                 Address offset: 0x1C */
+  __IO uint32_t CTRLDSSEGMENT;    /*!< Control Data Structure Selector Register,  Address offset: 0x20 */
+  __IO uint32_t PERIODICLISTBASE; /*!< Periodic Frame List Base Address Register, Address offset: 0x24 */
+  __IO uint32_t ASYNCLISTADDR;    /*!< Asynchronous List Address Register,        Address offset: 0x28 */
+       uint32_t RESERVED2[9];     /*!< RESERVED2,                                 Address offset: 0x2C - 0x48 */
+  __IO uint32_t CONFIGFLAG;       /*!< Configure Flag Register,                   Address offset: 0x50 */
+  __IO uint32_t PORTSC[1];        /*!< Port Status and Control Register,          Address offset: 0x54 */
+       uint32_t RESERVED3[15];    /*!< RESERVED3,                                 Address offset: 0x58 - 0x90 */
+  __IO uint32_t INSNREG[7];       /*!< Implementation Register,                   Address offset: 0x94 - 0xAC */
+} USBH_EHCI_TypeDef;
+
+typedef struct
+{
+  /* Control and Status Registers */
+  __IO uint32_t HCREVISION;           /*!< Host Controller Revision,             Address offset: 0x00 */
+  __IO uint32_t HCCONTROL;            /*!< Host Controller Control,              Address offset: 0x04 */
+  __IO uint32_t HCCOMMANDSTATUS;      /*!< Host Controller Command Status,       Address offset: 0x08 */
+  __IO uint32_t HCINTERRUPTSTATUS;    /*!< Host Controller Interrupt Status,     Address offset: 0x0C */
+  __IO uint32_t HCINTERRUPTENABLE;    /*!< Host Controller Interrupt Enable,     Address offset: 0x10 */
+  /* Memory Pointers */
+  __IO uint32_t HCHCCA;               /*!< Host Controller Communication Area,   Address offset: 0x18 */
+  __IO uint32_t HCPERIODCURRENTED;    /*!< Current Isochronous or Interrupt ED,  Address offset: 0x1C */
+  __IO uint32_t HCCONTROLHEADED;      /*!< Control Head ED,                      Address offset: 0x20 */
+  __IO uint32_t HCCONTROLCURRENTED;   /*!< Control Current ED,                   Address offset: 0x24 */
+  __IO uint32_t HCBULKHEADED;         /*!< Bulk Head ED,                         Address offset: 0x28 */
+  __IO uint32_t HCBULKCURRENTED;      /*!< Bulk Current ED,                      Address offset: 0x2C */
+  __IO uint32_t HCDONEHEAD;           /*!< Done Head,                            Address offset: 0x30 */
+  /* Frame Counters */
+  __IO uint32_t HCFMINTERVAL;         /*!< Frame Interval,                       Address offset: 0x34 */
+  __IO uint32_t HCFMREMAINING;        /*!< Frame Remaining,                      Address offset: 0x38 */
+  __IO uint32_t HCFMNUMBER;           /*!< Frame Number,                         Address offset: 0x3C */
+  __IO uint32_t PERIODICSTART;        /*!< Periodic Start,                       Address offset: 0x40 */
+  __IO uint32_t HCLSTHRESHOLD;        /*!< Low-Speed Threshold,                  Address offset: 0x44 */
+  /* Root Hub Ports */
+  __IO uint32_t HCRHDESCRIPTORA;      /*!< Root Hub Descriptor A,                Address offset: 0x48 */
+  __IO uint32_t HCRHDESCRIPTORB;      /*!< Root Hub Descriptor B,                Address offset: 0x4C */
+  __IO uint32_t HCRHSTATUS;           /*!< Root Hub Status,                      Address offset: 0x50 */
+  __IO uint32_t HCRHPORTSTATUS0;      /*!< Root Hub Port Status (Port 1),          Address offset: 0x54 */
+       uint32_t RESERVED[16];         /*!< Reserved,                             Address offset: 0x58 - 0x90 */
+  __IO uint32_t INSNREG[2];           /*!< Implementation Registers,             Address offset: 0x94 - 0x9C */
+} USBH_OHCI_TypeDef;
+
 /*
  * @brief USB3 Global Register Block
  */
@@ -4232,6 +4305,7 @@ typedef struct
 #define HASH_BASE_NS                        (AHB3_PERIPH_BASE_NS + 0x010000UL)
 #define HASH_DIGEST_BASE_NS                 (HASH_BASE_NS + 0x310UL)
 #define RNG_BASE_NS                         (AHB3_PERIPH_BASE_NS + 0x020000UL)
+#define PKA_BASE_NS                         (AHB3_PERIPH_BASE_NS + 0x060000UL)
 #define RAMCFG_BASE_NS                      (AHB3_PERIPH_BASE_NS + 0x070000UL)
 #define RAMCFG_SYSRAM_BASE_NS               (RAMCFG_BASE_NS)
 #define RAMCFG_SRAM1_BASE_NS                (RAMCFG_BASE_NS + 0x000080UL)
@@ -4532,6 +4606,7 @@ typedef struct
 #define HASH_BASE_S                         (AHB3_PERIPH_BASE_S + 0x010000UL)
 #define HASH_DIGEST_BASE_S                  (HASH_BASE_S + 0x310UL)
 #define RNG_BASE_S                          (AHB3_PERIPH_BASE_S + 0x020000UL)
+#define PKA_BASE_S                          (AHB3_PERIPH_BASE_S + 0x060000UL)
 #define RAMCFG_BASE_S                       (AHB3_PERIPH_BASE_S + 0x070000UL)
 #define RAMCFG_SYSRAM_BASE_S                (RAMCFG_BASE_S)
 #define RAMCFG_SRAM1_BASE_S                 (RAMCFG_BASE_S + 0x000080UL)
@@ -4794,6 +4869,7 @@ typedef struct
 #define HASH_NS                             ((HASH_TypeDef *) HASH_BASE_NS)
 #define HASH_DIGEST_NS                      ((HASH_DIGEST_TypeDef *) HASH_DIGEST_BASE_NS)
 #define RNG_NS                              ((RNG_TypeDef *) RNG_BASE_NS)
+#define PKA_NS                              ((PKA_TypeDef *) PKA_BASE_NS)
 #define RAMCFG_SYSRAM_NS                    ((RAMCFG_TypeDef *) RAMCFG_SYSRAM_BASE_NS)
 #define RAMCFG_SRAM1_NS                     ((RAMCFG_TypeDef *) RAMCFG_SRAM1_BASE_NS)
 #define RAMCFG_SRAM2_NS                     ((RAMCFG_TypeDef *) RAMCFG_SRAM2_BASE_NS)
@@ -4894,6 +4970,8 @@ typedef struct
 #define SDMMC2_NS                           ((SDMMC_TypeDef *) SDMMC2_BASE_NS)
 #define SDMMC3_NS                           ((SDMMC_TypeDef *) SDMMC3_BASE_NS)
 #define ETH1_NS                             ((ETH_TypeDef *) ETH1_BASE_NS)
+#define USBH_OHCI_NS                        ((USBH_OHCI_TypeDef *) USBH_OHCI_BASE_NS)
+#define USBH_EHCI_NS                        ((USBH_EHCI_TypeDef *) USBH_EHCI_BASE_NS)
 #define USB3_NS                             ((USB3_TypeDef *) USB3DRD_BASE_NS)
 #define CA35SYSCFG_NS                       ((CA35SYSCFG_TypeDef *) CA35SYSCFG_BASE_NS)
 #define DDRPHYC_NS                          ((DDRPHYC_TypeDef *) DDRPHYC_BASE_NS)
@@ -5033,6 +5111,7 @@ typedef struct
 #define HASH_S                              ((HASH_TypeDef *) HASH_BASE_S)
 #define HASH_DIGEST_S                       ((HASH_DIGEST_TypeDef *) HASH_DIGEST_BASE_S)
 #define RNG_S                               ((RNG_TypeDef *) RNG_BASE_S)
+#define PKA_S                               ((PKA_TypeDef *) PKA_BASE_S)
 #define RAMCFG_SYSRAM_S                     ((RAMCFG_TypeDef *) RAMCFG_SYSRAM_BASE_S)
 #define RAMCFG_SRAM1_S                      ((RAMCFG_TypeDef *) RAMCFG_SRAM1_BASE_S)
 #define RAMCFG_SRAM2_S                      ((RAMCFG_TypeDef *) RAMCFG_SRAM2_BASE_S)
@@ -5133,6 +5212,8 @@ typedef struct
 #define SDMMC2_S                            ((SDMMC_TypeDef *) SDMMC2_BASE_S)
 #define SDMMC3_S                            ((SDMMC_TypeDef *) SDMMC3_BASE_S)
 #define ETH1_S                              ((ETH_TypeDef *) ETH1_BASE_S)
+#define USBH_OHCI_S                         ((USBH_OHCI_TypeDef *) USBH_OHCI_BASE_S)
+#define USBH_EHCI_S                         ((USBH_EHCI_TypeDef *) USBH_EHCI_BASE_S)
 #define USB3_S                              ((USB3_TypeDef *) USB3DRD_BASE_S)
 #define CA35SYSCFG_S                        ((CA35SYSCFG_TypeDef *) CA35SYSCFG_BASE_S)
 #define DDRPHYC_S                           ((DDRPHYC_TypeDef *) DDRPHYC_BASE_S)
@@ -5544,6 +5625,9 @@ typedef struct
 #define RNG                         RNG_S
 #define RNG_BASE                    RNG_BASE_S
 
+#define PKA                         PKA_S
+#define PKA_BASE                    PKA_BASE_S
+
 #define RAMCFG                      RAMCFG_S
 #define RAMCFG_BASE                 RAMCFG_BASE_S
 
@@ -5837,6 +5921,7 @@ typedef struct
 #define SDMMC3_BASE                 SDMMC3_BASE_S
 #define ETH1                        ETH1_S
 #define ETH1_BASE                   ETH1_BASE_S
+
 #define USBH_OHCI                   USBH_OHCI_S
 #define USBH_OHCI_BASE              USBH_OHCI_BASE_S
 
@@ -6266,6 +6351,8 @@ typedef struct
 #define RNG                         RNG_NS
 #define RNG_BASE                    RNG_BASE_NS
 
+#define PKA                         PKA_NS
+#define PKA_BASE                    PKA_BASE_NS
 
 #define RAMCFG                      RAMCFG_NS
 #define RAMCFG_BASE                 RAMCFG_BASE_NS
@@ -6556,6 +6643,7 @@ typedef struct
 #define SDMMC3_BASE                 SDMMC3_BASE_NS
 #define ETH1                        ETH1_NS
 #define ETH1_BASE                   ETH1_BASE_NS
+
 #define USBH_OHCI                   USBH_OHCI_NS
 #define USBH_OHCI_BASE              USBH_OHCI_BASE_NS
 
@@ -31346,6 +31434,375 @@ typedef struct
 #define OCTOSPIM_SIDR_SID                 OCTOSPIM_SIDR_SID_Msk                           /*!< Size identifier */
 
 
+/******************************************************************************/
+/*                                                                            */
+/*                       Public Key Accelerator (PKA)                         */
+/*                       refere to PKA2 v1.0 data-sheet                       */
+/*                                                                            */
+/******************************************************************************/
+#define PKA_VERSION_V2_0              (1U)                                 /*!< i.e. MP2 uses PKA version v2.0 */
+
+/*******************  Bits definition for PKA_CR register  **************/
+#define PKA_CR_EN_Pos              (0U)
+#define PKA_CR_EN_Msk              (0x1UL << PKA_CR_EN_Pos)                /*!< 0x00000001 */
+#define PKA_CR_EN                  PKA_CR_EN_Msk                           /*!< PKA enable */
+#define PKA_CR_START_Pos           (1U)
+#define PKA_CR_START_Msk           (0x1UL << PKA_CR_START_Pos)             /*!< 0x00000002 */
+#define PKA_CR_START               PKA_CR_START_Msk                        /*!< Start operation */
+#define PKA_CR_MODE_Pos            (8U)
+#define PKA_CR_MODE_Msk            (0x3FUL << PKA_CR_MODE_Pos)             /*!< 0x00003F00 */
+#define PKA_CR_MODE                PKA_CR_MODE_Msk                         /*!< MODE[5:0] PKA operation code */
+#define PKA_CR_MODE_0              (0x01UL << PKA_CR_MODE_Pos)              /*!< 0x00000100 */
+#define PKA_CR_MODE_1              (0x02UL << PKA_CR_MODE_Pos)              /*!< 0x00000200 */
+#define PKA_CR_MODE_2              (0x04UL << PKA_CR_MODE_Pos)              /*!< 0x00000400 */
+#define PKA_CR_MODE_3              (0x08UL << PKA_CR_MODE_Pos)              /*!< 0x00000800 */
+#define PKA_CR_MODE_4              (0x10UL << PKA_CR_MODE_Pos)              /*!< 0x00001000 */
+#define PKA_CR_MODE_5              (0x20UL << PKA_CR_MODE_Pos)              /*!< 0x00002000 */
+#define PKA_CR_PROCENDIE_Pos       (17U)
+#define PKA_CR_PROCENDIE_Msk       (0x1UL << PKA_CR_PROCENDIE_Pos)         /*!< 0x00020000 */
+#define PKA_CR_PROCENDIE           PKA_CR_PROCENDIE_Msk                    /*!< End of operation interrupt enable */
+#define PKA_CR_RAMERRIE_Pos        (19U)
+#define PKA_CR_RAMERRIE_Msk        (0x1UL << PKA_CR_RAMERRIE_Pos)          /*!< 0x00080000 */
+#define PKA_CR_RAMERRIE            PKA_CR_RAMERRIE_Msk                     /*!< RAM error interrupt enable */
+#define PKA_CR_ADDRERRIE_Pos       (20U)
+#define PKA_CR_ADDRERRIE_Msk       (0x1UL << PKA_CR_ADDRERRIE_Pos)         /*!< 0x00100000 */
+#define PKA_CR_ADDRERRIE           PKA_CR_ADDRERRIE_Msk                    /*!< addr error interrupt enable */
+#define PKA_CR_OPERRIE_Pos         (21U)
+#define PKA_CR_OPERRIE_Msk         (0x1UL << PKA_CR_OPERRIE_Pos)           /*!< 0x01000000 */
+#define PKA_CR_OPERRIE             PKA_CR_OPERRIE_Msk                      /*!< oper error interrupt enable */
+
+/*******************  Bits definition for PKA_SR register  **************/
+#define PKA_SR_INITOK_Pos          (0U)
+#define PKA_SR_INITOK_Msk          (0x1UL << PKA_SR_INITOK_Pos)            /*!< 0x00000001 */
+#define PKA_SR_INITOK              PKA_SR_INITOK_Msk                       /*!< init ok */
+#define PKA_SR_LMF_Pos            (1U)
+#define PKA_SR_LMF_Msk            (0x1UL << PKA_SR_LMF_Pos)           /*!< 0x00000002 */
+#define PKA_SR_LMF                PKA_SR_LMF_Msk                     /*!< Limited mode flag */
+#define PKA_SR_BUSY_Pos            (16U)
+#define PKA_SR_BUSY_Msk            (0x1UL << PKA_SR_BUSY_Pos)              /*!< 0x00010000 */
+#define PKA_SR_BUSY                PKA_SR_BUSY_Msk                         /*!< PKA operation is in progress */
+#define PKA_SR_PROCENDF_Pos        (17U)
+#define PKA_SR_PROCENDF_Msk        (0x1UL << PKA_SR_PROCENDF_Pos)          /*!< 0x00020000 */
+#define PKA_SR_PROCENDF            PKA_SR_PROCENDF_Msk                     /*!< PKA end of operation flag */
+#define PKA_SR_RAMERRF_Pos         (19U)
+#define PKA_SR_RAMERRF_Msk         (0x1UL << PKA_SR_RAMERRF_Pos)           /*!< 0x00080000 */
+#define PKA_SR_RAMERRF             PKA_SR_RAMERRF_Msk                      /*!< PKA RAM error flag */
+#define PKA_SR_ADDRERRF_Pos        (20U)
+#define PKA_SR_ADDRERRF_Msk        (0x1UL << PKA_SR_ADDRERRF_Pos)          /*!< 0x00100000 */
+#define PKA_SR_ADDRERRF            PKA_SR_ADDRERRF_Msk                     /*!< Address error flag */
+#define PKA_SR_OPERRF_Pos          (21U)
+#define PKA_SR_OPERRF_Msk          (0x1UL << PKA_SR_OPERRF_Pos)            /*!< 0x00200000 */
+#define PKA_SR_OPERRF              PKA_SR_OPERRF_Msk                       /*!< Operation error flag */
+
+/*******************  Bits definition for PKA_CLRFR register  **************/
+#define PKA_CLRFR_PROCENDFC_Pos    (17U)
+#define PKA_CLRFR_PROCENDFC_Msk    (0x1UL << PKA_CLRFR_PROCENDFC_Pos)      /*!< 0x00020000 */
+#define PKA_CLRFR_PROCENDFC        PKA_CLRFR_PROCENDFC_Msk                 /*!< Clear PKA end of operation flag */
+#define PKA_CLRFR_RAMERRFC_Pos     (19U)
+#define PKA_CLRFR_RAMERRFC_Msk     (0x1UL << PKA_CLRFR_RAMERRFC_Pos)       /*!< 0x00080000 */
+#define PKA_CLRFR_RAMERRFC         PKA_CLRFR_RAMERRFC_Msk                  /*!< Clear PKA RAM error flag */
+#define PKA_CLRFR_ADDRERRFC_Pos    (20U)
+#define PKA_CLRFR_ADDRERRFC_Msk    (0x1UL << PKA_CLRFR_ADDRERRFC_Pos)      /*!< 0x00100000 */
+#define PKA_CLRFR_ADDRERRFC        PKA_CLRFR_ADDRERRFC_Msk                 /*!< Clear address error flag */
+#define PKA_CLRFR_OPERRFC_Pos      (21U)
+#define PKA_CLRFR_OPERRFC_Msk      (0x1UL << PKA_CLRFR_OPERRFC_Pos)        /*!< 0x00200000 */
+#define PKA_CLRFR_OPERRFC          PKA_CLRFR_OPERRFC_Msk                   /*!< Clear operation error flag */
+
+/*******************  Bits definition for PKA_HWCFGR register  **************/
+#define PKA_HWCFGR_CFG1_Pos    (0U)
+#define PKA_HWCFGR_CFG1_Msk    (0x4UL << PKA_HWCFGR_CFG1_Pos)      /*!< 0x00000004 */
+#define PKA_HWCFGR_CFG1        PKA_CLRFR_CFG1_Msk                  /*!< DPAEN generic value */
+#define PKA_HWCFGR_CFG2_Pos    (4U)
+#define PKA_HWCFGR_CFG2_Msk    (0x4UL << PKA_HWCFGR_CFG2_Pos)      /*!< 0x00000040 */
+#define PKA_HWCFGR_CFG2        PKA_CLRFR_CFG2_Msk                  /*!< PKA64_SEL generic value */
+
+/*******************  Bits definition for PKA_VERR register  **************/
+#define PKA_VERR_MINREV_Pos    (0U)
+#define PKA_VERR_MINREV_Msk    (0x4UL << PKA_VERR_MINREV_Pos)      /*!< 0x00000004 */
+#define PKA_VERR_MINREV        PKA_CLRFR_MINREV_Msk                /*!< PKA Minor version */
+#define PKA_VERR_MAJREV_Pos    (4U)
+#define PKA_VERR_MAJREV_Msk    (0x4UL << PKA_VERR_MAJREV_Pos)      /*!< 0x00000040 */
+#define PKA_VERR_MAJREV        PKA_CLRFR_MAJREV_Msk                /*!< PKA Major version */
+
+/*******************  Bits definition for PKA_IPIDR register  **************/
+#define PKA_IPIDR_ID_Pos    (0U)
+#define PKA_IPIDR_ID_Msk    (0xFFFFFFFFUL << PKA_IPIDR_ID_Pos)     /*!< 0xFFFFFFFF */
+#define PKA_IPIDR_ID        PKA_CLRFR_ID_Msk                       /*!< PKA ID */
+
+/*******************  Bit definition for PKA_SIDR register  *******************/
+#define PKA_SIDR_SID_Pos          (0U)
+#define PKA_SIDR_SID_Msk          (0xFFFFFFFFUL << PKA_SIDR_SID_Pos)  /*!< 0xFFFFFFFF */
+#define PKA_SIDR_SID              PKA_SIDR_SID_Msk                   /*!< Size identification code */
+
+/*******************  Bits definition for PKA RAM  *************************/
+#define PKA_RAM_OFFSET                            0x400U                           /*!< PKA RAM address offset */
+
+/* Compute Montgomery parameter input data */
+#define PKA_MONTGOMERY_PARAM_IN_MOD_NB_BITS       ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus number of bits */
+#define PKA_MONTGOMERY_PARAM_IN_MODULUS           ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input modulus */
+
+/* Compute Montgomery parameter output data */
+#define PKA_MONTGOMERY_PARAM_OUT_PARAMETER        ((0x620U - PKA_RAM_OFFSET)>>2)   /*!< Output Montgomery parameter */
+
+/* Compute modular exponentiation input data */
+#define PKA_MODULAR_EXP_IN_EXP_NB_BITS            ((0x400U - PKA_RAM_OFFSET)>>2)   /*!< Input exponent number of bits */
+#define PKA_MODULAR_EXP_IN_OP_NB_BITS             ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_MODULAR_EXP_IN_MONTGOMERY_PARAM       ((0x620U - PKA_RAM_OFFSET)>>2)   /*!< Input storage area for Montgomery parameter */
+#define PKA_MODULAR_EXP_IN_EXPONENT_BASE          ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input base of the exponentiation */
+#define PKA_MODULAR_EXP_PROTECT_IN_EXPONENT_BASE  ((0x16C8U - PKA_RAM_OFFSET)>>2)  /*!< Input base of the exponentiation(protected) */
+#define PKA_MODULAR_EXP_IN_EXPONENT               ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Input exponent to process */
+#define PKA_MODULAR_EXP_PROTECT_IN_EXPONENT       ((0x14B8U - PKA_RAM_OFFSET)>>2)  /*!< Input exponent to process (protected) */
+#define PKA_MODULAR_EXP_IN_MODULUS                ((0x1088U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus */
+#define PKA_MODULAR_EXP_PROTECT_IN_MODULUS        ((0x838U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus (protected) */
+#define PKA_MODULAR_EXP_PROTECT_IN_PHI            ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input Phi (protected) */
+
+/* Compute modular exponentiation output data */
+#define PKA_MODULAR_EXP_OUT_MONTGOMERY_PARAM      ((0x620U - PKA_RAM_OFFSET)>>2)   /*!< Output storage area for Montgomery parameter */
+#define PKA_MODULAR_EXP_OUT_SM_ALGO_ACC1          ((0x838U - PKA_RAM_OFFSET)>>2)   /*!< Output SM algorithm accumulator 1 */
+#define PKA_MODULAR_EXP_OUT_RESULT                ((0x838U - PKA_RAM_OFFSET)>>2)   /*!< Output for modular exponentiation */
+#define PKA_MODULAR_EXP_OUT_ERROR                 ((0x1298U - PKA_RAM_OFFSET)>>2)  /*!< Output error code*/
+
+/* Compute ECC scalar multiplication input data */
+#define PKA_ECC_SCALAR_MUL_IN_EXP_NB_BITS         ((0x400U - PKA_RAM_OFFSET)>>2)   /*!< Input exponent number of bits */
+#define PKA_ECC_SCALAR_MUL_IN_OP_NB_BITS          ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_ECC_SCALAR_MUL_IN_A_COEFF_SIGN        ((0x410U - PKA_RAM_OFFSET)>>2)   /*!< Input sign of the 'a' coefficient */
+#define PKA_ECC_SCALAR_MUL_IN_A_COEFF             ((0x418U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'a' coefficient */
+#define PKA_ECC_SCALAR_MUL_IN_B_COEFF             ((0x520U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'b' coefficient */
+#define PKA_ECC_SCALAR_MUL_IN_MOD_GF              ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input modulus GF(p) */
+#define PKA_ECC_SCALAR_MUL_IN_N_PRIME_ORDER       ((0xF88U - PKA_RAM_OFFSET)>>2)   /*!< Input curve prime order n */
+
+#define PKA_ECC_SCALAR_MUL_IN_K                   ((0x12A0U - PKA_RAM_OFFSET)>>2)  /*!< Input 'k' of KP */
+#define PKA_ECC_SCALAR_MUL_IN_INITIAL_POINT_X     ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P X coordinate */
+#define PKA_ECC_SCALAR_MUL_IN_INITIAL_POINT_Y     ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Y coordinate */
+
+/* Compute ECC scalar multiplication output data */
+#define PKA_ECC_SCALAR_MUL_OUT_RESULT_X           ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Output result X coordinate */
+#define PKA_ECC_SCALAR_MUL_OUT_RESULT_Y           ((0x5D0U - PKA_RAM_OFFSET)>>2)   /*!< Output result Y coordinate */
+#define PKA_ECC_SCALAR_MUL_OUT_ERROR              ((0x680U - PKA_RAM_OFFSET)>>2)   /*!< Output error code */
+
+/* Compute ECC complete addition input data */
+#define PKA_ECC_COMPLETE_ADD_IN_MOD_NB_BITS         ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input curve modulus number of bits */
+#define PKA_ECC_COMPLETE_ADD_IN_A_COEFF_SIGN        ((0x410U - PKA_RAM_OFFSET)>>2)   /*!< Input sign of the 'a' coefficient */
+#define PKA_ECC_COMPLETE_ADD_IN_MOD_P               ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input curve modulus value p */
+#define PKA_ECC_COMPLETE_ADD_IN_A_COEFF             ((0x418U - PKA_RAM_OFFSET)>>2)   /*!< Curve coef a */
+#define PKA_ECC_COMPLETE_ADD_IN_POINT1_X            ((0x628U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P X coordinate */
+#define PKA_ECC_COMPLETE_ADD_IN_POINT1_Y            ((0x680U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Y coordinate */
+#define PKA_ECC_COMPLETE_ADD_IN_POINT1_Z            ((0x6D8U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Z coordinate */
+#define PKA_ECC_COMPLETE_ADD_IN_POINT2_X            ((0x730U - PKA_RAM_OFFSET)>>2)   /*!< Input second point P X coordinate */
+#define PKA_ECC_COMPLETE_ADD_IN_POINT2_Y            ((0x788U - PKA_RAM_OFFSET)>>2)   /*!< Input second point P Y coordinate */
+#define PKA_ECC_COMPLETE_ADD_IN_POINT2_Z            ((0x7E0U - PKA_RAM_OFFSET)>>2)   /*!< Input second point P Z coordinate */
+
+/* Compute ECC complete addition output data */
+#define PKA_ECC_COMPLETE_ADD_OUT_RESULT_X           ((0xD60U - PKA_RAM_OFFSET)>>2)   /*!< Output result X coordinate */
+#define PKA_ECC_COMPLETE_ADD_OUT_RESULT_Y           ((0xDB8U - PKA_RAM_OFFSET)>>2)   /*!< Output result Y coordinate */
+#define PKA_ECC_COMPLETE_ADD_OUT_RESULT_Z           ((0xE10U - PKA_RAM_OFFSET)>>2)   /*!< Output result Z coordinate */
+
+/* Compute ECC double base ladder input data */
+#define PKA_ECC_DOUBLE_LADDER_IN_PRIME_ORDER_NB_BITS ((0x400U - PKA_RAM_OFFSET)>>2)   /*!< Input curve prime order 'n' number of bits */
+#define PKA_ECC_DOUBLE_LADDER_IN_MOD_NB_BITS         ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input curve modulus 'p' number of bits */
+#define PKA_ECC_DOUBLE_LADDER_IN_A_COEFF_SIGN        ((0x410U - PKA_RAM_OFFSET)>>2)   /*!< Input sign of the 'a' coefficient */
+#define PKA_ECC_DOUBLE_LADDER_IN_A_COEFF             ((0x418U - PKA_RAM_OFFSET)>>2)   /*!< Curve coef a */
+#define PKA_ECC_DOUBLE_LADDER_IN_MOD_P               ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input curve modulus value p */
+#define PKA_ECC_DOUBLE_LADDER_IN_K_INTEGER           ((0x520U - PKA_RAM_OFFSET)>>2)   /*!< Input integer 'k' */
+#define PKA_ECC_DOUBLE_LADDER_IN_M_INTEGER           ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Input integer 'M' */
+#define PKA_ECC_DOUBLE_LADDER_IN_POINT1_X            ((0x628U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P X coordinate */
+#define PKA_ECC_DOUBLE_LADDER_IN_POINT1_Y            ((0x680U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Y coordinate */
+#define PKA_ECC_DOUBLE_LADDER_IN_POINT1_Z            ((0x6D8U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Z coordinate */
+#define PKA_ECC_DOUBLE_LADDER_IN_POINT2_X            ((0x730U - PKA_RAM_OFFSET)>>2)   /*!< Input second point P X coordinate */
+#define PKA_ECC_DOUBLE_LADDER_IN_POINT2_Y            ((0x788U - PKA_RAM_OFFSET)>>2)   /*!< Input second point P Y coordinate */
+#define PKA_ECC_DOUBLE_LADDER_IN_POINT2_Z            ((0x7E0U - PKA_RAM_OFFSET)>>2)   /*!< Input second point P Z coordinate */
+
+/* Compute ECC double base ladder output data */
+#define PKA_ECC_DOUBLE_LADDER_OUT_RESULT_X           ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Output result X coordinate */
+#define PKA_ECC_DOUBLE_LADDER_OUT_RESULT_Y           ((0x5D0U - PKA_RAM_OFFSET)>>2)   /*!< Output result Y coordinate */
+#define PKA_ECC_DOUBLE_LADDER_OUT_ERROR              ((0x520U - PKA_RAM_OFFSET)>>2)   /*!< Output error code */
+
+/* Compute ECC projective to affine input data */
+#define PKA_ECC_PROJECTIVE_AFF_IN_MOD_NB_BITS         ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input curve modulus 'p' number of bits */
+#define PKA_ECC_PROJECTIVE_AFF_IN_MOD_P               ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input curve modulus value p */
+#define PKA_ECC_PROJECTIVE_AFF_IN_POINT_X             ((0xD60U - PKA_RAM_OFFSET)>>2)   /*!< Input  point P X coordinate */
+#define PKA_ECC_PROJECTIVE_AFF_IN_POINT_Y             ((0xDB8U - PKA_RAM_OFFSET)>>2)   /*!< Input  point P Y coordinate */
+#define PKA_ECC_PROJECTIVE_AFF_IN_POINT_Z             ((0xE10U - PKA_RAM_OFFSET)>>2)   /*!< Input  point P Z coordinate */
+#define PKA_ECC_PROJECTIVE_AFF_IN_MONTGOMERY_PARAM_R2 ((0x4C8U - PKA_RAM_OFFSET)>>2)   /*!< Input  montgomery parameter R2 mod n */
+
+/* Compute ECC projective to affine output data */
+#define PKA_ECC_PROJECTIVE_AFF_OUT_RESULT_X           ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Output result X coordinate */
+#define PKA_ECC_PROJECTIVE_AFF_OUT_RESULT_Y           ((0x5D0U - PKA_RAM_OFFSET)>>2)   /*!< Output result Y coordinate */
+#define PKA_ECC_PROJECTIVE_AFF_OUT_ERROR              ((0x680U - PKA_RAM_OFFSET)>>2)   /*!< Output error code */
+
+/* Point check input data */
+#define PKA_POINT_CHECK_IN_MOD_NB_BITS            ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus number of bits */
+#define PKA_POINT_CHECK_IN_A_COEFF_SIGN           ((0x410U - PKA_RAM_OFFSET)>>2)   /*!< Input sign of the 'a' coefficient */
+#define PKA_POINT_CHECK_IN_A_COEFF                ((0x418U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'a' coefficient */
+#define PKA_POINT_CHECK_IN_B_COEFF                ((0x520U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'b' coefficient */
+#define PKA_POINT_CHECK_IN_MOD_GF                 ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus GF(p) */
+#define PKA_POINT_CHECK_IN_INITIAL_POINT_X        ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P X coordinate */
+#define PKA_POINT_CHECK_IN_INITIAL_POINT_Y        ((0x5D0U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Y coordinate */
+#define PKA_POINT_CHECK_IN_MONTGOMERY_PARAM       ((0x4C8U - PKA_RAM_OFFSET)>>2)   /*!< Input Montgomery parameter R2 mod n */
+
+/* Point check output data */
+#define PKA_POINT_CHECK_OUT_ERROR                 ((0x680U - PKA_RAM_OFFSET)>>2)   /*!< Output error code */
+
+/* ECDSA signature input data */
+#define PKA_ECDSA_SIGN_IN_ORDER_NB_BITS           ((0x400U - PKA_RAM_OFFSET)>>2)   /*!< Input order number of bits */
+#define PKA_ECDSA_SIGN_IN_MOD_NB_BITS             ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus number of bits */
+#define PKA_ECDSA_SIGN_IN_A_COEFF_SIGN            ((0x410U - PKA_RAM_OFFSET)>>2)   /*!< Input sign of the 'a' coefficient */
+#define PKA_ECDSA_SIGN_IN_A_COEFF                 ((0x418U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'a' coefficient */
+#define PKA_ECDSA_SIGN_IN_B_COEFF                 ((0x520U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'b' coefficient (positive) */
+#define PKA_ECDSA_SIGN_IN_MOD_GF                  ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input modulus GF(p) */
+#define PKA_ECDSA_SIGN_IN_K                       ((0x12A0U - PKA_RAM_OFFSET)>>2)  /*!< Input k value of the ECDSA */
+#define PKA_ECDSA_SIGN_IN_INITIAL_POINT_X         ((0x578U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P X coordinate */
+#define PKA_ECDSA_SIGN_IN_INITIAL_POINT_Y         ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Y coordinate */
+#define PKA_ECDSA_SIGN_IN_HASH_E                  ((0xFE8U - PKA_RAM_OFFSET)>>2)   /*!< Input e, hash of the message */
+#define PKA_ECDSA_SIGN_IN_PRIVATE_KEY_D           ((0xF28U - PKA_RAM_OFFSET)>>2)   /*!< Input d, private key */
+#define PKA_ECDSA_SIGN_IN_ORDER_N                 ((0xF88U - PKA_RAM_OFFSET)>>2)   /*!< Input n, order of the curve */
+
+/* ECDSA signature output data */
+#define PKA_ECDSA_SIGN_OUT_ERROR                  ((0xFE0U - PKA_RAM_OFFSET)>>2)   /*!< Output error code*/
+#define PKA_ECDSA_SIGN_OUT_SIGNATURE_R            ((0x730U - PKA_RAM_OFFSET)>>2)   /*!< Output signature r */
+#define PKA_ECDSA_SIGN_OUT_SIGNATURE_S            ((0x788U - PKA_RAM_OFFSET)>>2)   /*!< Output signature s */
+#define PKA_ECDSA_SIGN_OUT_FINAL_POINT_X          ((0x1400U - PKA_RAM_OFFSET)>>2)  /*!< Output kG x coordinate */
+#define PKA_ECDSA_SIGN_OUT_FINAL_POINT_Y          ((0x1458U - PKA_RAM_OFFSET)>>2)  /*!< Output kG y coordinate */
+
+/* ECDSA verification input data */
+#define PKA_ECDSA_VERIF_IN_ORDER_NB_BITS          ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input order number of bits */
+#define PKA_ECDSA_VERIF_IN_MOD_NB_BITS            ((0x4C8U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus number of bits */
+#define PKA_ECDSA_VERIF_IN_A_COEFF_SIGN           ((0x468U - PKA_RAM_OFFSET)>>2)   /*!< Input sign of the 'a' coefficient */
+#define PKA_ECDSA_VERIF_IN_A_COEFF                ((0x470U - PKA_RAM_OFFSET)>>2)   /*!< Input ECC curve 'a' coefficient */
+#define PKA_ECDSA_VERIF_IN_MOD_GF                 ((0x4D0U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus GF(p) */
+#define PKA_ECDSA_VERIF_IN_INITIAL_POINT_X        ((0x678U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P X coordinate */
+#define PKA_ECDSA_VERIF_IN_INITIAL_POINT_Y        ((0x6D0U - PKA_RAM_OFFSET)>>2)   /*!< Input initial point P Y coordinate */
+#define PKA_ECDSA_VERIF_IN_PUBLIC_KEY_POINT_X     ((0x12F8U - PKA_RAM_OFFSET)>>2)  /*!< Input public key point X coordinate */
+#define PKA_ECDSA_VERIF_IN_PUBLIC_KEY_POINT_Y     ((0x1350U - PKA_RAM_OFFSET)>>2)  /*!< Input public key point Y coordinate */
+#define PKA_ECDSA_VERIF_IN_SIGNATURE_R            ((0x10E0U - PKA_RAM_OFFSET)>>2)  /*!< Input r, part of the signature */
+#define PKA_ECDSA_VERIF_IN_SIGNATURE_S            ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input s, part of the signature */
+#define PKA_ECDSA_VERIF_IN_HASH_E                 ((0x13A8U - PKA_RAM_OFFSET)>>2)  /*!< Input e, hash of the message */
+#define PKA_ECDSA_VERIF_IN_ORDER_N                ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input n, order of the curve */
+
+/* ECDSA verification output data */
+#define PKA_ECDSA_VERIF_OUT_RESULT                ((0x5D0U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* RSA CRT exponentiation input data */
+#define PKA_RSA_CRT_EXP_IN_MOD_NB_BITS            ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operands number of bits */
+#define PKA_RSA_CRT_EXP_IN_DP_CRT                 ((0x730U - PKA_RAM_OFFSET)>>2)   /*!< Input Dp CRT parameter */
+#define PKA_RSA_CRT_EXP_IN_DQ_CRT                 ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Input Dq CRT parameter */
+#define PKA_RSA_CRT_EXP_IN_QINV_CRT               ((0x948U - PKA_RAM_OFFSET)>>2)   /*!< Input qInv CRT parameter */
+#define PKA_RSA_CRT_EXP_IN_PRIME_P                ((0xB60U - PKA_RAM_OFFSET)>>2)   /*!< Input Prime p */
+#define PKA_RSA_CRT_EXP_IN_PRIME_Q                ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input Prime q */
+#define PKA_RSA_CRT_EXP_IN_EXPONENT_BASE          ((0x12A0U - PKA_RAM_OFFSET)>>2)  /*!< Input base of the exponentiation */
+
+/* RSA CRT exponentiation output data */
+#define PKA_RSA_CRT_EXP_OUT_RESULT                ((0x838U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Modular reduction input data */
+#define PKA_MODULAR_REDUC_IN_OP_LENGTH            ((0x400U - PKA_RAM_OFFSET)>>2)   /*!< Input operand length */
+#define PKA_MODULAR_REDUC_IN_OPERAND              ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand */
+#define PKA_MODULAR_REDUC_IN_MOD_LENGTH           ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus length */
+#define PKA_MODULAR_REDUC_IN_MODULUS              ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input modulus */
+
+/* Modular reduction output data */
+#define PKA_MODULAR_REDUC_OUT_RESULT              ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Arithmetic addition input data */
+#define PKA_ARITHMETIC_ADD_NB_BITS                ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_ARITHMETIC_ADD_IN_OP1                 ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_ARITHMETIC_ADD_IN_OP2                 ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+
+/* Arithmetic addition output data */
+#define PKA_ARITHMETIC_ADD_OUT_RESULT             ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Arithmetic substraction input data */
+#define PKA_ARITHMETIC_SUB_NB_BITS                ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_ARITHMETIC_SUB_IN_OP1                 ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_ARITHMETIC_SUB_IN_OP2                 ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+
+/* Arithmetic substraction output data */
+#define PKA_ARITHMETIC_SUB_OUT_RESULT             ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Arithmetic multiplication input data */
+#define PKA_ARITHMETIC_MUL_NB_BITS                ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_ARITHMETIC_MUL_IN_OP1                 ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_ARITHMETIC_MUL_IN_OP2                 ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+
+/* Arithmetic multiplication output data */
+#define PKA_ARITHMETIC_MUL_OUT_RESULT             ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Comparison input data */
+#define PKA_COMPARISON_NB_BITS                    ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_COMPARISON_IN_OP1                     ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_COMPARISON_IN_OP2                     ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+
+/* Comparison output data */
+#define PKA_COMPARISON_OUT_RESULT                 ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Modular addition input data */
+#define PKA_MODULAR_ADD_NB_BITS                   ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_MODULAR_ADD_IN_OP1                    ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_MODULAR_ADD_IN_OP2                    ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+#define PKA_MODULAR_ADD_IN_OP3_MOD                ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input operand op3 (modulus) */
+
+/* Modular addition output data */
+#define PKA_MODULAR_ADD_OUT_RESULT                ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Modular inversion input data */
+#define PKA_MODULAR_INV_NB_BITS                   ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_MODULAR_INV_IN_OP1                    ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_MODULAR_INV_IN_OP2_MOD                ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 (modulus) */
+
+/* Modular inversion output data */
+#define PKA_MODULAR_INV_OUT_RESULT                ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Modular substraction input data */
+#define PKA_MODULAR_SUB_NB_BITS                   ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_MODULAR_SUB_IN_OP1                    ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_MODULAR_SUB_IN_OP2                    ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+#define PKA_MODULAR_SUB_IN_OP3_MOD                ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input operand op3 */
+
+/* Modular substraction output data */
+#define PKA_MODULAR_SUB_OUT_RESULT                ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Montgomery multiplication input data */
+#define PKA_MONTGOMERY_MUL_NB_BITS                ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_MONTGOMERY_MUL_IN_OP1                 ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_MONTGOMERY_MUL_IN_OP2                 ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+#define PKA_MONTGOMERY_MUL_IN_OP3_MOD             ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input modulus */
+
+/* Montgomery multiplication output data */
+#define PKA_MONTGOMERY_MUL_OUT_RESULT             ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* Generic Arithmetic input data */
+#define PKA_ARITHMETIC_ALL_OPS_NB_BITS            ((0x408U - PKA_RAM_OFFSET)>>2)   /*!< Input operand number of bits */
+#define PKA_ARITHMETIC_ALL_OPS_IN_OP1             ((0xA50U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op1 */
+#define PKA_ARITHMETIC_ALL_OPS_IN_OP2             ((0xC68U - PKA_RAM_OFFSET)>>2)   /*!< Input operand op2 */
+#define PKA_ARITHMETIC_ALL_OPS_IN_OP3             ((0x1088U - PKA_RAM_OFFSET)>>2)  /*!< Input operand op2 */
+
+/* Generic Arithmetic output data */
+#define PKA_ARITHMETIC_ALL_OPS_OUT_RESULT         ((0xE78U - PKA_RAM_OFFSET)>>2)   /*!< Output result */
+
+/* PKA functions list */
+#define PKA_DEFINE_IN_CMSIS                       (1U)                             /*!< i.e. PKA operation define are in CMSIS device not in PKA_HAL header */
+
+#define PKA_MODE_MODULAR_EXP                      ((uint32_t)0x00000000U)          /*!< Compute Montgomery parameter and modular exponentiation */
+#define PKA_MODE_MONTGOMERY_PARAM                 ((uint32_t)0x00000001U)          /*!< Compute Montgomery parameter only */
+#define PKA_MODE_MODULAR_EXP_FAST_MODE            ((uint32_t)0x00000002U)          /*!< Compute modular exponentiation only (fast, Montgomery parameter should be loaded) */
+#define PKA_MODE_MODULAR_EXP_PROTECT              ((uint32_t)0x00000003U)          /*!< Compute modular exponentiation protected */
+#define PKA_MODE_RSA_CRT_EXP                      ((uint32_t)0x00000007U)          /*!< RSA CRT exponentiation */
+#define PKA_MODE_MODULAR_INV                      ((uint32_t)0x00000008U)          /*!< Modular inversion */
+#define PKA_MODE_ARITHMETIC_ADD                   ((uint32_t)0x00000009U)          /*!< Arithmetic addition */
+#define PKA_MODE_ARITHMETIC_SUB                   ((uint32_t)0x0000000AU)          /*!< Arithmetic subtraction */
+#define PKA_MODE_ARITHMETIC_MUL                   ((uint32_t)0x0000000BU)          /*!< Arithmetic multiplication */
+#define PKA_MODE_COMPARISON                       ((uint32_t)0x0000000CU)          /*!< Comparison */
+#define PKA_MODE_MODULAR_RED                      ((uint32_t)0x0000000DU)          /*!< Modular reduction */
+#define PKA_MODE_MODULAR_ADD                      ((uint32_t)0x0000000EU)          /*!< Modular addition */
+#define PKA_MODE_MODULAR_SUB                      ((uint32_t)0x0000000FU)          /*!< Modular subtraction */
+#define PKA_MODE_MONTGOMERY_MUL                   ((uint32_t)0x00000010U)          /*!< Montgomery multiplication */
+#define PKA_MODE_ECC_MUL                          ((uint32_t)0x00000020U)          /*!< Compute ECC Fp scalar multiplication */
+#define PKA_MODE_ECC_COMPLETE_ADD                 ((uint32_t)0x00000023U)          /*!< ECC complete addition */
+#define PKA_MODE_ECDSA_SIGNATURE                  ((uint32_t)0x00000024U)          /*!< ECDSA signature */
+#define PKA_MODE_ECDSA_VERIFICATION               ((uint32_t)0x00000026U)          /*!< ECDSA verification */
+#define PKA_MODE_DOUBLE_BASE_LADDER               ((uint32_t)0x00000027U)          /*!< ECC double base ladder  */
+#define PKA_MODE_POINT_CHECK                      ((uint32_t)0x00000028U)          /*!< Point on elliptic curve check */
+#define PKA_MODE_ECC_PROJECTIVE_AFF               ((uint32_t)0x0000002FU)          /*!< ECC projective to affine */
 
 /******************************************************************************/
 /*                                                                            */
@@ -48198,6 +48655,402 @@ typedef struct
 
 /******************************************************************************/
 /*                                                                            */
+/*                                       USBH_EHCI                              */
+/*                                                                            */
+/******************************************************************************/
+/********************  Bit definition for USBH_EHCI_HCCAPBASE register  ********************/
+#define USBH_EHCI_HCCAPBASE_CAPLENGTH_Pos        (0U)
+#define USBH_EHCI_HCCAPBASE_CAPLENGTH_Msk        (0x7FU << USBH_EHCI_HCCAPBASE_CAPLENGTH_Pos)      /*!< 0x0000007F */
+#define USBH_EHCI_HCCAPBASE_CAPLENGTH            USBH_EHCI_HCCAPBASE_CAPLENGTH_Msk                 /*!< Capability Register Length */
+
+#define USBH_EHCI_HCCAPBASE_HCIVERSION_Pos       (16U)
+#define USBH_EHCI_HCCAPBASE_HCIVERSION_Msk       (0xFFFF0000U << USBH_EHCI_HCCAPBASE_HCIVERSION_Pos) /*!< 0xFFFF0000U */
+#define USBH_EHCI_HCCAPBASE_HCIVERSION           USBH_EHCI_HCCAPBASE_HCIVERSION_Msk                  /*!< Capability Register Length */
+
+/********************  Bit definition for USBH_EHCI_HCSPARAMS register  ********************/
+#define USBH_EHCI_HCSPARAMS_N_PORTS_Pos    (0U)
+#define USBH_EHCI_HCSPARAMS_N_PORTS_Msk    (0xFU << USBH_EHCI_HCSPARAMS_N_PORTS_Pos)         /*!< 0x0000000F */
+#define USBH_EHCI_HCSPARAMS_N_PORTS        USBH_EHCI_HCSPARAMS_N_PORTS_Msk                   /*!< Number of Ports */
+
+#define USBH_EHCI_HCSPARAMS_PPC_Pos        (4U)
+#define USBH_EHCI_HCSPARAMS_PPC_Msk        (0x1U << USBH_EHCI_HCSPARAMS_PPC_Pos)             /*!< 0x00000010 */
+#define USBH_EHCI_HCSPARAMS_PPC            USBH_EHCI_HCSPARAMS_PPC_Msk                       /*!< Port Power Control */
+
+#define USBH_EHCI_HCSPARAMS_PRR_Pos        (7U)
+#define USBH_EHCI_HCSPARAMS_PRR_Msk        (0x1U << USBH_EHCI_HCSPARAMS_PRR_Pos)             /*!< 0x00000080 */
+#define USBH_EHCI_HCSPARAMS_PRR            USBH_EHCI_HCSPARAMS_PRR_Msk                       /*!< Port Routing Rules */
+
+#define USBH_EHCI_HCSPARAMS_N_PCC_Pos      (8U)
+#define USBH_EHCI_HCSPARAMS_N_PCC_Msk      (0xFU << USBH_EHCI_HCSPARAMS_N_PCC_Pos)           /*!< 0x00000F00 */
+#define USBH_EHCI_HCSPARAMS_N_PCC          USBH_EHCI_HCSPARAMS_N_PCC_Msk                     /*!< Number of Ports per Companion Controller */
+
+#define USBH_EHCI_HCSPARAMS_N_CC_Pos       (12U)
+#define USBH_EHCI_HCSPARAMS_N_CC_Msk       (0xFU << USBH_EHCI_HCSPARAMS_N_CC_Pos)            /*!< 0x0000F000 */
+#define USBH_EHCI_HCSPARAMS_N_CC           USBH_EHCI_HCSPARAMS_N_CC_Msk                      /*!< Number of Companion Controller */
+
+#define USBH_EHCI_HCSPARAMS_P_INDICATOR_Pos (16U)
+#define USBH_EHCI_HCSPARAMS_P_INDICATOR_Msk (0x1U << USBH_EHCI_HCSPARAMS_P_INDICATOR_Pos)    /*!< 0x00010000 */
+#define USBH_EHCI_HCSPARAMS_P_INDICATOR    USBH_EHCI_HCSPARAMS_P_INDICATOR_Msk               /*!< Port Indicators */
+
+#define USBH_EHCI_HCSPARAMS_DPN_Pos        (20U)
+#define USBH_EHCI_HCSPARAMS_DPN_Msk        (0xFU << USBH_EHCI_HCSPARAMS_DPN_Pos)             /*!< 0x00F00000 */
+#define USBH_EHCI_HCSPARAMS_DPN            USBH_EHCI_HCSPARAMS_DPN_Msk                       /*!< Debug Port Number */
+
+/********************  Bit definition for USBH_EHCI_HCCPARAMS register  ********************/
+#define USBH_EHCI_HCCPARAMS_SFAC_Pos      (0U)
+#define USBH_EHCI_HCCPARAMS_SFAC_Msk      (0x1U << USBH_EHCI_HCCPARAMS_SFAC_Pos)           /*!< 0x00000001 */
+#define USBH_EHCI_HCCPARAMS_SFAC          USBH_EHCI_HCCPARAMS_SFAC_Msk                     /*!< 64-bit Addressing Capability */
+
+#define USBH_EHCI_HCCPARAMS_PFLF_Pos       (1U)
+#define USBH_EHCI_HCCPARAMS_PFLF_Msk       (0x1U << USBH_EHCI_HCCPARAMS_PFLF_Pos)            /*!< 0x00000002 */
+#define USBH_EHCI_HCCPARAMS_PFLF           USBH_EHCI_HCCPARAMS_PFLF_Msk                      /*!< Programmable Frame List Flag */
+
+#define USBH_EHCI_HCCPARAMS_ASPC_Pos       (2U)
+#define USBH_EHCI_HCCPARAMS_ASPC_Msk       (0x1U << USBH_EHCI_HCCPARAMS_ASPC_Pos)            /*!< 0x00000004 */
+#define USBH_EHCI_HCCPARAMS_ASPC           USBH_EHCI_HCCPARAMS_ASPC_Msk                      /*!< Asynchronous Schedule Park Capability */
+
+#define USBH_EHCI_HCCPARAMS_ISO_Pos        (4U)
+#define USBH_EHCI_HCCPARAMS_ISO_Msk        (0xFU << USBH_EHCI_HCCPARAMS_ISO_Pos)             /*!< 0x000000F0 */
+#define USBH_EHCI_HCCPARAMS_ISO            USBH_EHCI_HCCPARAMS_ISO_Msk                       /*!< Isochronous Scheduling Threshold */
+
+#define USBH_EHCI_HCCPARAMS_EECP_Pos       (8U)
+#define USBH_EHCI_HCCPARAMS_EECP_Msk       (0xFFU << USBH_EHCI_HCCPARAMS_EECP_Pos)           /*!< 0x0000FF00 */
+#define USBH_EHCI_HCCPARAMS_EECP           USBH_EHCI_HCCPARAMS_EECP_Msk                      /*!< EHCI Extended Capabilities Pointer */
+
+#define USBH_EHCI_HCCPARAMS_LPM_Pos        (17U)
+#define USBH_EHCI_HCCPARAMS_LPM_Msk        (0x1U << USBH_EHCI_HCCPARAMS_LPM_Pos)             /*!< 0x00020000 */
+#define USBH_EHCI_HCCPARAMS_LPM            USBH_EHCI_HCCPARAMS_LPM_Msk                       /*!< Link Power Management Capability */
+
+#define USBH_EHCI_HCCPARAMS_PPCE_Pos       (18U)
+#define USBH_EHCI_HCCPARAMS_PPCE_Msk       (0x1U << USBH_EHCI_HCCPARAMS_PPCE_Pos)            /*!< 0x00040000 */
+#define USBH_EHCI_HCCPARAMS_PPCE           USBH_EHCI_HCCPARAMS_PPCE_Msk                      /*!< Per-Port Change Event Capability */
+
+#define USBH_EHCI_HCCPARAMS_32FPC_Pos      (19U)
+#define USBH_EHCI_HCCPARAMS_32FPC_Msk      (0x1U << USBH_EHCI_HCCPARAMS_32FPC_Pos)           /*!< 0x00080000 */
+#define USBH_EHCI_HCCPARAMS_32FPC          USBH_EHCI_HCCPARAMS_32FPC_Msk                     /*!< 32-Frame Periodic List Capability */
+
+/********************  Bit definition for USBH_EHCI_USBCMD register  ***********************/
+#define USBH_EHCI_USBCMD_RS_Pos            (0U)
+#define USBH_EHCI_USBCMD_RS_Msk            (0x1U << USBH_EHCI_USBCMD_RS_Pos)                 /*!< 0x00000001 */
+#define USBH_EHCI_USBCMD_RS                USBH_EHCI_USBCMD_RS_Msk                           /*!< Run/Stop */
+
+#define USBH_EHCI_USBCMD_HCRESET_Pos       (1U)
+#define USBH_EHCI_USBCMD_HCRESET_Msk       (0x1U << USBH_EHCI_USBCMD_HCRESET_Pos)            /*!< 0x00000002 */
+#define USBH_EHCI_USBCMD_HCRESET           USBH_EHCI_USBCMD_HCRESET_Msk                      /*!< Host Controller Reset */
+
+#define USBH_EHCI_USBCMD_FLS_Pos           (2U)
+#define USBH_EHCI_USBCMD_FLS_Msk           (0x3U << USBH_EHCI_USBCMD_FLS_Pos)                /*!< 0x0000000C */
+#define USBH_EHCI_USBCMD_FLS               USBH_EHCI_USBCMD_FLS_Msk                          /*!< Frame List Size */
+
+#define USBH_EHCI_USBCMD_PSE_Pos           (4U)
+#define USBH_EHCI_USBCMD_PSE_Msk           (0x1U << USBH_EHCI_USBCMD_PSE_Pos)                /*!< 0x00000010 */
+#define USBH_EHCI_USBCMD_PSE               USBH_EHCI_USBCMD_PSE_Msk                          /*!< Periodic Schedule Enable */
+
+#define USBH_EHCI_USBCMD_ASE_Pos           (5U)
+#define USBH_EHCI_USBCMD_ASE_Msk           (0x1U << USBH_EHCI_USBCMD_ASE_Pos)                /*!< 0x00000020 */
+#define USBH_EHCI_USBCMD_ASE               USBH_EHCI_USBCMD_ASE_Msk                          /*!< Asynchronous Schedule Enable */
+
+#define USBH_EHCI_USBCMD_IAA_Pos           (6U)
+#define USBH_EHCI_USBCMD_IAA_Msk           (0x1U << USBH_EHCI_USBCMD_IAA_Pos)                /*!< 0x00000040 */
+#define USBH_EHCI_USBCMD_IAA               USBH_EHCI_USBCMD_IAA_Msk                          /*!< Interrupt on Async Advance Doorbell */
+
+#define USBH_EHCI_USBCMD_LHCRESET_Pos      (7U)
+#define USBH_EHCI_USBCMD_LHCRESET_Msk      (0x1U << USBH_EHCI_USBCMD_LHCRESET_Pos)           /*!< 0x00000080 */
+#define USBH_EHCI_USBCMD_LHCRESET          USBH_EHCI_USBCMD_LHCRESET_Msk                     /*!< Light Host Controller Reset (OPTIONAL) */
+
+#define USBH_EHCI_USBCMD_ASPMC_Pos         (8U)
+#define USBH_EHCI_USBCMD_ASPMC_Msk         (0x3U << USBH_EHCI_USBCMD_ASPMC_Pos)              /*!< 0x00000300 */
+#define USBH_EHCI_USBCMD_ASPMC             USBH_EHCI_USBCMD_ASPMC_Msk                        /*!< Asynchronous Schedule Park Mode Count (OPTIONAL) */
+
+#define USBH_EHCI_USBCMD_ASPME_Pos         (11U)
+#define USBH_EHCI_USBCMD_ASPME_Msk         (0x1U << USBH_EHCI_USBCMD_ASPME_Pos)              /*!< 0x00000800 */
+#define USBH_EHCI_USBCMD_ASPME             USBH_EHCI_USBCMD_ASPME_Msk                        /*!< Asynchronous Schedule Park Mode Enable (OPTIONAL) */
+
+#define USBH_EHCI_USBCMD_ITC_Pos           (16U)
+#define USBH_EHCI_USBCMD_ITC_Msk           (0xFFU << USBH_EHCI_USBCMD_ITC_Pos)               /*!< 0x00FF0000 */
+#define USBH_EHCI_USBCMD_ITC               USBH_EHCI_USBCMD_ITC_Msk                          /*!< Interrupt Threshold Control */
+
+#define USBH_EHCI_USBCMD_HIRD_Pos          (24U)
+#define USBH_EHCI_USBCMD_HIRD_Msk          (0xFU << USBH_EHCI_USBCMD_HIRD_Pos)               /*!< 0x0F000000 */
+#define USBH_EHCI_USBCMD_HIRD              USBH_EHCI_USBCMD_HIRD_Msk                         /*!< Host-Initiated Resume Duration */
+
+/********************  Bit definition for USBH_EHCI_USBSTS register  ***********************/
+#define USBH_EHCI_USBSTS_USBINT_Pos        (0U)
+#define USBH_EHCI_USBSTS_USBINT_Msk        (0x1U << USBH_EHCI_USBSTS_USBINT_Pos)             /*!< 0x00000001 */
+#define USBH_EHCI_USBSTS_USBINT            USBH_EHCI_USBSTS_USBINT_Msk                       /*!< USB Interrupt (USBINT) */
+
+#define USBH_EHCI_USBSTS_USBERRINT_Pos     (1U)
+#define USBH_EHCI_USBSTS_USBERRINT_Msk     (0x1U << USBH_EHCI_USBSTS_USBERRINT_Pos)          /*!< 0x00000002 */
+#define USBH_EHCI_USBSTS_USBERRINT         USBH_EHCI_USBSTS_USBERRINT_Msk                    /*!< USB Error Interrupt (USBERRINT) */
+
+#define USBH_EHCI_USBSTS_PCD_Pos           (2U)
+#define USBH_EHCI_USBSTS_PCD_Msk           (0x1U << USBH_EHCI_USBSTS_PCD_Pos)                /*!< 0x00000004 */
+#define USBH_EHCI_USBSTS_PCD               USBH_EHCI_USBSTS_PCD_Msk                          /*!< Port Change Detect */
+
+#define USBH_EHCI_USBSTS_FLR_Pos           (3U)
+#define USBH_EHCI_USBSTS_FLR_Msk           (0x1U << USBH_EHCI_USBSTS_FLR_Pos)                /*!< 0x00000008 */
+#define USBH_EHCI_USBSTS_FLR               USBH_EHCI_USBSTS_FLR_Msk                          /*!< Frame List Rollover */
+
+#define USBH_EHCI_USBSTS_HSE_Pos           (4U)
+#define USBH_EHCI_USBSTS_HSE_Msk           (0x1U << USBH_EHCI_USBSTS_HSE_Pos)                /*!< 0x00000010 */
+#define USBH_EHCI_USBSTS_HSE               USBH_EHCI_USBSTS_HSE_Msk                          /*!< Host System Error */
+
+#define USBH_EHCI_USBSTS_IAA_Pos           (5U)
+#define USBH_EHCI_USBSTS_IAA_Msk           (0x1U << USBH_EHCI_USBSTS_IAA_Pos)                /*!< 0x00000020 */
+#define USBH_EHCI_USBSTS_IAA               USBH_EHCI_USBSTS_IAA_Msk                          /*!< Interrupt on Async Advance */
+
+#define USBH_EHCI_USBSTS_HCH_Pos           (12U)
+#define USBH_EHCI_USBSTS_HCH_Msk           (0x1U << USBH_EHCI_USBSTS_HCH_Pos)                /*!< 0x00001000 */
+#define USBH_EHCI_USBSTS_HCH               USBH_EHCI_USBSTS_HCH_Msk                          /*!< HCHalted */
+
+#define USBH_EHCI_USBSTS_RECL_Pos          (13U)
+#define USBH_EHCI_USBSTS_RECL_Msk          (0x1U << USBH_EHCI_USBSTS_RECL_Pos)               /*!< 0x00002000 */
+#define USBH_EHCI_USBSTS_RECL              USBH_EHCI_USBSTS_RECL_Msk                         /*!< Reclamation */
+
+#define USBH_EHCI_USBSTS_PSS_Pos           (14U)
+#define USBH_EHCI_USBSTS_PSS_Msk           (0x1U << USBH_EHCI_USBSTS_PSS_Pos)                /*!< 0x00004000 */
+#define USBH_EHCI_USBSTS_PSS               USBH_EHCI_USBSTS_PSS_Msk                          /*!< Periodic Schedule Status */
+
+#define USBH_EHCI_USBSTS_ASS_Pos           (15U)
+#define USBH_EHCI_USBSTS_ASS_Msk           (0x1U << USBH_EHCI_USBSTS_ASS_Pos)                /*!< 0x00008000 */
+#define USBH_EHCI_USBSTS_ASS               USBH_EHCI_USBSTS_ASS_Msk                          /*!< Asynchronous Schedule Status */
+
+/********************  Bit definition for USBH_EHCI_USBINTR register  **********************/
+#define USBH_EHCI_USBINTR_USBIE_Pos        (0U)
+#define USBH_EHCI_USBINTR_USBIE_Msk        (0x1U << USBH_EHCI_USBINTR_USBIE_Pos)             /*!< 0x00000001 */
+#define USBH_EHCI_USBINTR_USBIE            USBH_EHCI_USBINTR_USBIE_Msk                       /*!< USB Interrupt Enable */
+
+#define USBH_EHCI_USBINTR_USBEIE_Pos       (1U)
+#define USBH_EHCI_USBINTR_USBEIE_Msk       (0x1U << USBH_EHCI_USBINTR_USBEIE_Pos)            /*!< 0x00000002 */
+#define USBH_EHCI_USBINTR_USBEIE           USBH_EHCI_USBINTR_USBEIE_Msk                      /*!< USB Error Interrupt Enable */
+
+#define USBH_EHCI_USBINTR_PCIE_Pos         (2U)
+#define USBH_EHCI_USBINTR_PCIE_Msk         (0x1U << USBH_EHCI_USBINTR_PCIE_Pos)              /*!< 0x00000004 */
+#define USBH_EHCI_USBINTR_PCIE             USBH_EHCI_USBINTR_PCIE_Msk                        /*!< Port Change Interrupt Enable */
+
+#define USBH_EHCI_USBINTR_FLRE_Pos         (3U)
+#define USBH_EHCI_USBINTR_FLRE_Msk         (0x1U << USBH_EHCI_USBINTR_FLRE_Pos)              /*!< 0x00000008 */
+#define USBH_EHCI_USBINTR_FLRE             USBH_EHCI_USBINTR_FLRE_Msk                        /*!< Frame List Rollover Enable */
+
+#define USBH_EHCI_USBINTR_HSEE_Pos         (4U)
+#define USBH_EHCI_USBINTR_HSEE_Msk         (0x1U << USBH_EHCI_USBINTR_HSEE_Pos)              /*!< 0x00000010 */
+#define USBH_EHCI_USBINTR_HSEE             USBH_EHCI_USBINTR_HSEE_Msk                        /*!< Host System Error Enable */
+
+#define USBH_EHCI_USBINTR_IAAE_Pos         (5U)
+#define USBH_EHCI_USBINTR_IAAE_Msk         (0x1U << USBH_EHCI_USBINTR_IAAE_Pos)              /*!< 0x00000020 */
+#define USBH_EHCI_USBINTR_IAAE             USBH_EHCI_USBINTR_IAAE_Msk                        /*!< Interrupt on Async Advance Enable */
+
+/********************  Bit definition for USBH_EHCI_FRINDEX register  **********************/
+#define USBH_EHCI_FRINDEX_FRAMEINDEX_Pos   (0U)
+#define USBH_EHCI_FRINDEX_FRAMEINDEX_Msk   (0x3FFFU << USBH_EHCI_FRINDEX_FRAMEINDEX_Pos)     /*!< 0x00003FFF */
+#define USBH_EHCI_FRINDEX_FRAMEINDEX       USBH_EHCI_FRINDEX_FRAMEINDEX_Msk                  /*!< Frame Index */
+
+/********************  Bit definition for USBH_EHCI_CTRLDSSEGMENT register  ****************/
+#define USBH_EHCI_CTRLDSSEGMENT_SEGMENT_Pos (0U)
+#define USBH_EHCI_CTRLDSSEGMENT_SEGMENT_Msk (0xFFFFFFFFU << USBH_EHCI_CTRLDSSEGMENT_SEGMENT_Pos) /*!< 0xFFFFFFFF */
+#define USBH_EHCI_CTRLDSSEGMENT_SEGMENT     USBH_EHCI_CTRLDSSEGMENT_SEGMENT_Msk                  /*!< Control Data Structure Segment */
+
+/********************  Bit definition for USBH_EHCI_PERIODICLISTBASE register  *************/
+#define USBH_EHCI_PERIODICLISTBASE_BASEADDR_Pos (12U)
+#define USBH_EHCI_PERIODICLISTBASE_BASEADDR_Msk (0xFFFFFU << USBH_EHCI_PERIODICLISTBASE_BASEADDR_Pos) /*!< 0xFFFFF000 */
+#define USBH_EHCI_PERIODICLISTBASE_BASEADDR     USBH_EHCI_PERIODICLISTBASE_BASEADDR_Msk                /*!< Base Address (Low) */
+
+/********************  Bit definition for USBH_EHCI_ASYNCLISTADDR register  ****************/
+#define USBH_EHCI_ASYNCLISTADDR_LPL_Pos    (5U)
+#define USBH_EHCI_ASYNCLISTADDR_LPL_Msk    (0x7FFFFFFU << USBH_EHCI_ASYNCLISTADDR_LPL_Pos)    /*!< 0xFFFFFFE0 */
+#define USBH_EHCI_ASYNCLISTADDR_LPL        USBH_EHCI_ASYNCLISTADDR_LPL_Msk                   /*!< Link Pointer Low (LPL) */
+
+/********************  Bit definition for USBH_EHCI_CONFIGFLAG register  *******************/
+#define USBH_EHCI_CONFIGFLAG_CF_Pos        (0U)
+#define USBH_EHCI_CONFIGFLAG_CF_Msk        (0x1U << USBH_EHCI_CONFIGFLAG_CF_Pos)             /*!< 0x00000001 */
+#define USBH_EHCI_CONFIGFLAG_CF            USBH_EHCI_CONFIGFLAG_CF_Msk                       /*!< Configure Flag (CF) */
+
+/********************  Bit definition for USBH_EHCI_PORTSC register  ***********************/
+#define USBH_EHCI_PORTSC_CCS_Pos           (0U)
+#define USBH_EHCI_PORTSC_CCS_Msk           (0x1U << USBH_EHCI_PORTSC_CCS_Pos)                /*!< 0x00000001 */
+#define USBH_EHCI_PORTSC_CCS               USBH_EHCI_PORTSC_CCS_Msk                          /*!< Current Connect Status */
+
+#define USBH_EHCI_PORTSC_CSC_Pos           (1U)
+#define USBH_EHCI_PORTSC_CSC_Msk           (0x1U << USBH_EHCI_PORTSC_CSC_Pos)                /*!< 0x00000002 */
+#define USBH_EHCI_PORTSC_CSC               USBH_EHCI_PORTSC_CSC_Msk                          /*!< Connect Status Change */
+
+#define USBH_EHCI_PORTSC_PED_Pos           (2U)
+#define USBH_EHCI_PORTSC_PED_Msk           (0x1U << USBH_EHCI_PORTSC_PED_Pos)                /*!< 0x00000004 */
+#define USBH_EHCI_PORTSC_PED               USBH_EHCI_PORTSC_PED_Msk                          /*!< Port Enabled/Disabled */
+
+#define USBH_EHCI_PORTSC_PEC_Pos           (3U)
+#define USBH_EHCI_PORTSC_PEC_Msk           (0x1U << USBH_EHCI_PORTSC_PEC_Pos)                /*!< 0x00000008 */
+#define USBH_EHCI_PORTSC_PEC               USBH_EHCI_PORTSC_PEC_Msk                          /*!< Port Enable/Disable Change */
+
+#define USBH_EHCI_PORTSC_OCA_Pos           (4U)
+#define USBH_EHCI_PORTSC_OCA_Msk           (0x1U << USBH_EHCI_PORTSC_OCA_Pos)                /*!< 0x00000010 */
+#define USBH_EHCI_PORTSC_OCA               USBH_EHCI_PORTSC_OCA_Msk                          /*!< Over-current Active */
+
+#define USBH_EHCI_PORTSC_OCC_Pos           (5U)
+#define USBH_EHCI_PORTSC_OCC_Msk           (0x1U << USBH_EHCI_PORTSC_OCC_Pos)                /*!< 0x00000020 */
+#define USBH_EHCI_PORTSC_OCC               USBH_EHCI_PORTSC_OCC_Msk                          /*!< Over-current Change */
+
+#define USBH_EHCI_PORTSC_FPR_Pos           (6U)
+#define USBH_EHCI_PORTSC_FPR_Msk           (0x1U << USBH_EHCI_PORTSC_FPR_Pos)                /*!< 0x00000040 */
+#define USBH_EHCI_PORTSC_FPR               USBH_EHCI_PORTSC_FPR_Msk                          /*!< Force Port Resume */
+
+#define USBH_EHCI_PORTSC_SUSP_Pos          (7U)
+#define USBH_EHCI_PORTSC_SUSP_Msk          (0x1U << USBH_EHCI_PORTSC_SUSP_Pos)               /*!< 0x00000080 */
+#define USBH_EHCI_PORTSC_SUSP              USBH_EHCI_PORTSC_SUSP_Msk                         /*!< Suspend */
+
+#define USBH_EHCI_PORTSC_PR_Pos            (8U)
+#define USBH_EHCI_PORTSC_PR_Msk            (0x1U << USBH_EHCI_PORTSC_PR_Pos)                 /*!< 0x00000100 */
+#define USBH_EHCI_PORTSC_PR                USBH_EHCI_PORTSC_PR_Msk                           /*!< Port Reset */
+
+#define USBH_EHCI_PORTSC_SUSPEND_L1_Pos    (9U)
+#define USBH_EHCI_PORTSC_SUSPEND_L1_Msk    (0x1U << USBH_EHCI_PORTSC_SUSPEND_L1_Pos)         /*!< 0x00000200 */
+#define USBH_EHCI_PORTSC_SUSPEND_L1        USBH_EHCI_PORTSC_SUSPEND_L1_Msk                   /*!< Suspend using L1 */
+
+#define USBH_EHCI_PORTSC_LS_Pos            (10U)
+#define USBH_EHCI_PORTSC_LS_Msk            (0x3U << USBH_EHCI_PORTSC_LS_Pos)                 /*!< 0x00000C00 */
+#define USBH_EHCI_PORTSC_LS                USBH_EHCI_PORTSC_LS_Msk                           /*!< Line Status */
+
+#define USBH_EHCI_PORTSC_PP_Pos            (12U)
+#define USBH_EHCI_PORTSC_PP_Msk            (0x1U << USBH_EHCI_PORTSC_PP_Pos)                 /*!< 0x00001000 */
+#define USBH_EHCI_PORTSC_PP                USBH_EHCI_PORTSC_PP_Msk                           /*!< Port Power */
+
+#define USBH_EHCI_PORTSC_PO_Pos            (13U)
+#define USBH_EHCI_PORTSC_PO_Msk            (0x1U << USBH_EHCI_PORTSC_PO_Pos)                 /*!< 0x00002000 */
+#define USBH_EHCI_PORTSC_PO                USBH_EHCI_PORTSC_PO_Msk                           /*!< Port Owner */
+
+#define USBH_EHCI_PORTSC_PIC_Pos           (14U)
+#define USBH_EHCI_PORTSC_PIC_Msk           (0x3U << USBH_EHCI_PORTSC_PIC_Pos)                /*!< 0x0000C000 */
+#define USBH_EHCI_PORTSC_PIC               USBH_EHCI_PORTSC_PIC_Msk                          /*!< Port Indicator Control */
+
+#define USBH_EHCI_PORTSC_PTC_Pos           (16U)
+#define USBH_EHCI_PORTSC_PTC_Msk           (0xFU << USBH_EHCI_PORTSC_PTC_Pos)                /*!< 0x000F0000 */
+#define USBH_EHCI_PORTSC_PTC               USBH_EHCI_PORTSC_PTC_Msk                          /*!< Port Test Control */
+
+#define USBH_EHCI_PORTSC_WKCNNT_E_Pos      (20U)
+#define USBH_EHCI_PORTSC_WKCNNT_E_Msk      (0x1U << USBH_EHCI_PORTSC_WKCNNT_E_Pos)           /*!< 0x00100000 */
+#define USBH_EHCI_PORTSC_WKCNNT_E          USBH_EHCI_PORTSC_WKCNNT_E_Msk                     /*!< Wake on Connect Enable */
+
+#define USBH_EHCI_PORTSC_WKDSCNNT_E_Pos    (21U)
+#define USBH_EHCI_PORTSC_WKDSCNNT_E_Msk    (0x1U << USBH_EHCI_PORTSC_WKDSCNNT_E_Pos)         /*!< 0x00200000 */
+#define USBH_EHCI_PORTSC_WKDSCNNT_E        USBH_EHCI_PORTSC_WKDSCNNT_E_Msk                   /*!< Wake on Disconnect Enable */
+
+#define USBH_EHCI_PORTSC_WKOC_E_Pos        (22U)
+#define USBH_EHCI_PORTSC_WKOC_E_Msk        (0x1U << USBH_EHCI_PORTSC_WKOC_E_Pos)             /*!< 0x00400000 */
+#define USBH_EHCI_PORTSC_WKOC_E            USBH_EHCI_PORTSC_WKOC_E_Msk                       /*!< Wake on Over-current Enable */
+
+#define USBH_EHCI_PORTSC_SUSPEND_STATUS_Pos (23U)
+#define USBH_EHCI_PORTSC_SUSPEND_STATUS_Msk (0x3U << USBH_EHCI_PORTSC_SUSPEND_STATUS_Pos)    /*!< 0x01800000 */
+#define USBH_EHCI_PORTSC_SUSPEND_STATUS    USBH_EHCI_PORTSC_SUSPEND_STATUS_Msk               /*!< Suspend Status */
+
+#define USBH_EHCI_PORTSC_DEVICE_ADDR_Pos   (25U)
+#define USBH_EHCI_PORTSC_DEVICE_ADDR_Msk   (0x7FU << USBH_EHCI_PORTSC_DEVICE_ADDR_Pos)       /*!< 0xFE000000 */
+#define USBH_EHCI_PORTSC_DEVICE_ADDR       USBH_EHCI_PORTSC_DEVICE_ADDR_Msk                  /*!< Device Address */
+
+/********************  Bit definition for USBH_EHCI_INSNREG01 register  **********************/
+#define USBH_EHCI_INSNREG01_IN_THRESHOLD_Pos        (0U)
+#define USBH_EHCI_INSNREG01_IN_THRESHOLD_Msk        (0xFFU << USBH_EHCI_INSNREG01_IN_THRESHOLD_Pos)            /*!< 0x000000FF */
+#define USBH_EHCI_INSNREG01_IN_THRESHOLD            USBH_EHCI_INSNREG01_IN_THRESHOLD_Msk                       /*!< The value specified here is the number of 32-bit words */
+
+#define USBH_EHCI_INSNREG01_OUT_THRESHOLD_Pos       (16U)
+#define USBH_EHCI_INSNREG01_OUT_THRESHOLD_Msk       (0xFFU << USBH_EHCI_INSNREG01_OUT_THRESHOLD_Pos)           /*!< 0x00FF0000 */
+#define USBH_EHCI_INSNREG01_OUT_THRESHOLD           USBH_EHCI_INSNREG01_OUT_THRESHOLD_Msk                      /*!< The value specified here is the number of 32-bit words */
+
+/********************  Bit definition for USBH_EHCI_INSNREG02 register  **********************/
+#define USBH_EHCI_INSNREG02_PKT_BUF_Pos             (0U)
+#define USBH_EHCI_INSNREG02_PKT_BUF_Msk             (0xFFU << USBH_EHCI_INSNREG02_PKT_BUF_Pos)                 /*!< 0x000000FF */
+#define USBH_EHCI_INSNREG02_PKT_BUF                 USBH_EHCI_INSNREG02_PKT_BUF_Msk                            /*!< Programmable packet buffer depth */
+
+/********************  Bit definition for USBH_EHCI_INSNREG03 register  **********************/
+#define USBH_EHCI_INSNREG03_BRK_MEM_TRANS_Pos       (0U)
+#define USBH_EHCI_INSNREG03_BRK_MEM_TRANS_Msk       (0x1U << USBH_EHCI_INSNREG03_BRK_MEM_TRANS_Pos)            /*!< 0x00000001 */
+#define USBH_EHCI_INSNREG03_BRK_MEM_TRANS           USBH_EHCI_INSNREG03_BRK_MEM_TRANS_Msk                      /*!< Break memory transfer */
+
+#define USBH_EHCI_INSNREG03_TIME_AVAIL_OFF_Pos      (1U)
+#define USBH_EHCI_INSNREG03_TIME_AVAIL_OFF_Msk      (0xFFU << USBH_EHCI_INSNREG03_TIME_AVAIL_OFF_Pos)          /*!< 0x000001FE */
+#define USBH_EHCI_INSNREG03_TIME_AVAIL_OFF          USBH_EHCI_INSNREG03_TIME_AVAIL_OFF_Msk                     /*!< Time available offset */
+
+#define USBH_EHCI_INSNREG03_FRM_LST_FETCH_Pos       (9U)
+#define USBH_EHCI_INSNREG03_FRM_LST_FETCH_Msk       (0x1U << USBH_EHCI_INSNREG03_FRM_LST_FETCH_Pos)            /*!< 0x00000200 */
+#define USBH_EHCI_INSNREG03_FRM_LST_FETCH           USBH_EHCI_INSNREG03_FRM_LST_FETCH_Msk                      /*!< Setting this bit will force the host controller to fetch the periodic frame list in every microfram */
+
+#define USBH_EHCI_INSNREG03_TX_TRA_DELAY_Pos        (10U)
+#define USBH_EHCI_INSNREG03_TX_TRA_DELAY_Msk        (0x7U << USBH_EHCI_INSNREG03_TX_TRA_DELAY_Pos)             /*!< 0x00001C00 */
+#define USBH_EHCI_INSNREG03_TX_TRA_DELAY            USBH_EHCI_INSNREG03_TX_TRA_DELAY_Msk                       /*!< Tx-Tx turnaround delay add on */
+
+#define USBH_EHCI_INSNREG03_TESTSE_NAK_Pos          (13U)
+#define USBH_EHCI_INSNREG03_TESTSE_NAK_Msk          (0x1U << USBH_EHCI_INSNREG03_TESTSE_NAK_Pos)               /*!< 0x00002000 */
+#define USBH_EHCI_INSNREG03_TESTSE_NAK              USBH_EHCI_INSNREG03_TESTSE_NAK_Msk                         /*!< TestSE NAK */
+
+#define USBH_EHCI_INSNREG03_EN_CLK256_CHECK_Pos     (14U)
+#define USBH_EHCI_INSNREG03_EN_CLK256_CHECK_Msk     (0x1U << USBH_EHCI_INSNREG03_EN_CLK256_CHECK_Pos)          /*!< 0x00004000 */
+#define USBH_EHCI_INSNREG03_EN_CLK256_CHECK         USBH_EHCI_INSNREG03_EN_CLK256_CHECK_Msk                    /*!< Enable 256 clock checking */
+
+#define USBH_EHCI_INSNREG03_ENABLE_LS_GLITCH_Pos    (16U)
+#define USBH_EHCI_INSNREG03_ENABLE_LS_GLITCH_Msk    (0x1U << USBH_EHCI_INSNREG03_ENABLE_LS_GLITCH_Pos)         /*!< 0x00010000 */
+#define USBH_EHCI_INSNREG03_ENABLE_LS_GLITCH        USBH_EHCI_INSNREG03_ENABLE_LS_GLITCH_Msk                   /*!< Enable/disable enhancement for line state glitch */
+
+/********************  Bit definition for USBH_EHCI_INSNREG04 register  **********************/
+#define USBH_EHCI_INSNREG04_HCSPARAMS_WRT_Pos       (0U)
+#define USBH_EHCI_INSNREG04_HCSPARAMS_WRT_Msk       (0x1U << USBH_EHCI_INSNREG04_HCSPARAMS_WRT_Pos)            /*!< 0x00000001 */
+#define USBH_EHCI_INSNREG04_HCSPARAMS_WRT           USBH_EHCI_INSNREG04_HCSPARAMS_WRT_Msk                      /*!< Bit 0 */
+
+#define USBH_EHCI_INSNREG04_HCCPARAMS_WRT_Pos       (1U)
+#define USBH_EHCI_INSNREG04_HCCPARAMS_WRT_Msk       (0x1U << USBH_EHCI_INSNREG04_HCCPARAMS_WRT_Pos)            /*!< 0x00000002 */
+#define USBH_EHCI_INSNREG04_HCCPARAMS_WRT           USBH_EHCI_INSNREG04_HCCPARAMS_WRT_Msk                      /*!< When this bit is 1, the USBH_EHCI_HCSPARAMS register becomes writable */
+
+#define USBH_EHCI_INSNREG04_ASYNC_PIPELINE_DIS_Pos  (3U)
+#define USBH_EHCI_INSNREG04_ASYNC_PIPELINE_DIS_Msk  (0x1U << USBH_EHCI_INSNREG04_ASYNC_PIPELINE_DIS_Pos)       /*!< 0x00000008 */
+#define USBH_EHCI_INSNREG04_ASYNC_PIPELINE_DIS      USBH_EHCI_INSNREG04_ASYNC_PIPELINE_DIS_Msk                 /*!< When this bit is 1, the USBH_EHCI_HCCPARAMS register bits 17, 15:4, and 2:0 become writable */
+
+#define USBH_EHCI_INSNREG04_SUSPEND_SIGNAL_Pos      (5U)
+#define USBH_EHCI_INSNREG04_SUSPEND_SIGNAL_Msk      (0x1U << USBH_EHCI_INSNREG04_SUSPEND_SIGNAL_Pos)           /*!< 0x00000020 */
+#define USBH_EHCI_INSNREG04_SUSPEND_SIGNAL          USBH_EHCI_INSNREG04_SUSPEND_SIGNAL_Msk                     /*!< Suspend signal */
+
+/********************  Bit definition for USBH_EHCI_INSNREG05 register  **********************/
+#define USBH_EHCI_INSNREG05_VSTATUS_Pos             (0U)
+#define USBH_EHCI_INSNREG05_VSTATUS_Msk             (0xFFU << USBH_EHCI_INSNREG05_VSTATUS_Pos)                 /*!< 0x000000FF */
+#define USBH_EHCI_INSNREG05_VSTATUS                 USBH_EHCI_INSNREG05_VSTATUS_Msk                            /*!< UTMI VStatus (vendor status) */
+
+#define USBH_EHCI_INSNREG05_VCONTROL_Pos            (8U)
+#define USBH_EHCI_INSNREG05_VCONTROL_Msk            (0xFU << USBH_EHCI_INSNREG05_VCONTROL_Pos)                 /*!< 0x00000F00 */
+#define USBH_EHCI_INSNREG05_VCONTROL                USBH_EHCI_INSNREG05_VCONTROL_Msk                           /*!< UTMI VCONTROL (vendor control) */
+
+#define USBH_EHCI_INSNREG05_VCONTROL_LDM_Pos        (12U)
+#define USBH_EHCI_INSNREG05_VCONTROL_LDM_Msk        (0x1U << USBH_EHCI_INSNREG05_VCONTROL_LDM_Pos)             /*!< 0x00001000 */
+#define USBH_EHCI_INSNREG05_VCONTROL_LDM            USBH_EHCI_INSNREG05_VCONTROL_LDM_Msk                       /*!< UTMI VCONTROLLoad (vendor control load) */
+
+#define USBH_EHCI_INSNREG05_VPORT_Pos               (13U)
+#define USBH_EHCI_INSNREG05_VPORT_Msk               (0xFU << USBH_EHCI_INSNREG05_VPORT_Pos)                    /*!< 0x0001E000 */
+#define USBH_EHCI_INSNREG05_VPORT                   USBH_EHCI_INSNREG05_VPORT_Msk                              /*!< UTMI VPORT */
+
+#define USBH_EHCI_INSNREG05_VBUSY_Pos               (17U)
+#define USBH_EHCI_INSNREG05_VBUSY_Msk               (0x1U << USBH_EHCI_INSNREG05_VBUSY_Pos)                    /*!< 0x00020000 */
+#define USBH_EHCI_INSNREG05_VBUSY                   USBH_EHCI_INSNREG05_VBUSY_Msk                              /*!< UTMI VBUSY */
+
+/********************  Bit definition for USBH_EHCI_INSNREG06 register  **********************/
+#define USBH_EHCI_INSNREG06_SUC_BEATS_Pos           (0U)
+#define USBH_EHCI_INSNREG06_SUC_BEATS_Msk           (0xFU << USBH_EHCI_INSNREG06_SUC_BEATS_Pos)                /*!< 0x0000000F */
+#define USBH_EHCI_INSNREG06_SUC_BEATS               USBH_EHCI_INSNREG06_SUC_BEATS_Msk                          /*!< Number of successful beats */
+
+#define USBH_EHCI_INSNREG06_EXP_BEATS_Pos           (4U)
+#define USBH_EHCI_INSNREG06_EXP_BEATS_Msk           (0x1FU << USBH_EHCI_INSNREG06_EXP_BEATS_Pos)               /*!< 0x000001F0 */
+#define USBH_EHCI_INSNREG06_EXP_BEATS               USBH_EHCI_INSNREG06_EXP_BEATS_Msk                          /*!< Number of expected beats */
+
+#define USBH_EHCI_INSNREG06_HBURST_Pos              (9U)
+#define USBH_EHCI_INSNREG06_HBURST_Msk              (0x7U << USBH_EHCI_INSNREG06_HBURST_Pos)                   /*!< 0x00000E00 */
+#define USBH_EHCI_INSNREG06_HBURST                  USBH_EHCI_INSNREG06_HBURST_Msk                             /*!< HBURST value of the control phase at which the AHB error occurred */
+
+#define USBH_EHCI_INSNREG06_AHB_ECAP_Pos            (31U)
+#define USBH_EHCI_INSNREG06_AHB_ECAP_Msk            (0x1U << USBH_EHCI_INSNREG06_AHB_ECAP_Pos)                 /*!< 0x80000000 */
+#define USBH_EHCI_INSNREG06_AHB_ECAP                USBH_EHCI_INSNREG06_AHB_ECAP_Msk                           /*!< AHB error captured */
+
+/********************  Bit definition for USBH_EHCI_INSNREG07 register  **********************/
+#define USBH_EHCI_INSNREG07_AHB_MST_ERR_Pos          (0U)
+#define USBH_EHCI_INSNREG07_AHB_MST_ERR_Msk          (0xFFFFFFFFU << USBH_EHCI_INSNREG07_AHB_MST_ERR_Pos)      /*!< 0xFFFFFFFF */
+#define USBH_EHCI_INSNREG07_AHB_MST_ERR              USBH_EHCI_INSNREG07_AHB_MST_ERR_Msk                       /*!< AHB master error address */
+
+/******************************************************************************/
+/*                                                                            */
 /*                                USB_DWC3 (USB3)                                 */
 /*                                                                            */
 /******************************************************************************/
@@ -50071,6 +50924,9 @@ typedef struct
                                        ((INSTANCE) == MDF1_Filter6_NS)  || ((INSTANCE) == MDF1_Filter6_S) || \
                                        ((INSTANCE) == MDF1_Filter7_NS)  || ((INSTANCE) == MDF1_Filter7_S))
 
+/******************************** PKA Instances *******************************/
+#define IS_PKA_ALL_INSTANCE(INSTANCE) (((INSTANCE) == PKA_S) || ((INSTANCE) == PKA_NS))
+
 /******************************* PSSI Instances ********************************/
 #define IS_PSSI_ALL_INSTANCE(INSTANCE) (((INSTANCE) == PSSI_S) || ((INSTANCE) == PSSI_NS))
 
@@ -50969,6 +51825,9 @@ typedef struct
                                        ((INSTANCE) == MDF1_Filter6)  ||  \
                                        ((INSTANCE) == MDF1_Filter7))
 
+/******************************** PKA Instances *******************************/
+#define IS_PKA_ALL_INSTANCE(INSTANCE) ((INSTANCE) == PKA)
+
 /******************************* PSSI Instances ********************************/
 #define IS_PSSI_ALL_INSTANCE(INSTANCE) ((INSTANCE) == PSSI)
 
@@ -51604,6 +52463,8 @@ typedef struct
 /******************************* PSSI VERSION ********************************/
 #define PSSI_VERSION(__INSTANCE__) ((__INSTANCE__)->VERR)
 
+/******************************* PKA VERSION ********************************/
+#define PKA_VERSION(__INSTANCE__) ((__INSTANCE__)->VERR)
 
 /******************************* PWR VERSION ********************************/
 #define PWR_VERSION(__INSTANCE__) ((__INSTANCE__)->VERR)

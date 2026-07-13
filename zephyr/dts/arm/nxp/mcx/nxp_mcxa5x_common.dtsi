@@ -484,7 +484,7 @@
 	};
 
 	flexcan0: can@cc000 {
-		compatible = "nxp,flexcan";
+		compatible = "nxp,flexcan-fd", "nxp,flexcan";
 		reg = <0xcc000 0x4000>;
 		interrupts = <19 0>;
 		interrupt-names = "common";
@@ -494,7 +494,7 @@
 	};
 
 	flexcan1: can@d0000 {
-		compatible = "nxp,flexcan";
+		compatible = "nxp,flexcan-fd", "nxp,flexcan";
 		reg = <0xd0000 0x4000>;
 		interrupts = <20 0>;
 		interrupt-names = "common";
@@ -511,6 +511,13 @@
 		prescale-glitch-filter-bypass;
 		clk-source = <1>;
 		resolution = <32>;
+	};
+
+	waketimer0: wake-timer@ae000 {
+		compatible = "nxp,wake-timer";
+		reg = <0xae000 0x1000>;
+		interrupts = <58 0>;
+		status = "disabled";
 	};
 
 	i3c0: i3c@2000 {
@@ -777,6 +784,8 @@
 	crc: crc@c5000 {
 		compatible = "nxp,crc";
 		reg = <0xc5000 0x1000>;
+		clocks = <&syscon MCUX_CRC_CLK>;
+		resets = <&reset NXP_SYSCON_RESET(0, 14)>;
 		status = "disabled";
 	};
 };

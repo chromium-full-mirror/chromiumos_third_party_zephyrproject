@@ -453,7 +453,8 @@ int bt_hci_cmd_send_sync(uint16_t opcode, struct net_buf *buf,
 	 * syswq, then we cannot suspend and wait. We have to send the
 	 * command from the current context.
 	 */
-	if (!IS_ENABLED(CONFIG_BT_TX_PROCESSOR_THREAD) && k_current_get() == &k_sys_work_q.thread) {
+	if (!IS_ENABLED(CONFIG_BT_TX_PROCESSOR_THREAD) &&
+	    k_current_get() == k_sys_work_q.thread_id) {
 		/* drain the command queue until we get to send the command of interest. */
 		struct net_buf *cmd = NULL;
 
@@ -1533,7 +1534,6 @@ void bt_hci_le_enh_conn_complete(struct bt_hci_evt_le_enh_conn_complete *evt)
 	}
 
 	bt_conn_connected(conn);
-	bt_conn_unref(conn);
 
 	if (IS_ENABLED(CONFIG_BT_CENTRAL) && conn->role == BT_HCI_ROLE_CENTRAL) {
 		int err;
@@ -1544,6 +1544,8 @@ void bt_hci_le_enh_conn_complete(struct bt_hci_evt_le_enh_conn_complete *evt)
 			LOG_WRN("Error while updating the scanner (%d)", err);
 		}
 	}
+
+	bt_conn_unref(conn);
 }
 
 #if defined(CONFIG_BT_PER_ADV_SYNC_RSP)
@@ -2473,6 +2475,8 @@ static void le_ltk_request(struct net_buf *buf)
 	struct bt_conn *conn;
 	uint16_t handle;
 	uint8_t ltk[16];
+	uint64_t rand_value;
+	uint16_t ediv;
 
 	handle = sys_le16_to_cpu(evt->handle);
 
@@ -2484,7 +2488,10 @@ static void le_ltk_request(struct net_buf *buf)
 		return;
 	}
 
-	if (bt_smp_request_ltk(conn, evt->rand, evt->ediv, ltk)) {
+	(void)memcpy(&rand_value, evt->rand, sizeof(rand_value));
+	(void)memcpy(&ediv, evt->ediv, sizeof(ediv));
+
+	if (bt_smp_request_ltk(conn, rand_value, ediv, ltk)) {
 		le_ltk_reply(handle, ltk);
 	} else {
 		le_ltk_neg_reply(handle);
@@ -2526,7 +2533,7 @@ static void hci_cmd_done(uint16_t opcode, uint8_t status, struct net_buf *evt_bu
 	}
 
 	/* Take the original command buffer reference. */
-	buf = atomic_ptr_clear((atomic_ptr_t *)&bt_dev.sent_cmd);
+	buf = net_buf_take(&bt_dev.sent_cmd);
 
 	if (!buf) {
 		LOG_ERR("No command sent for cmd complete 0x%04x", opcode);
@@ -3244,8 +3251,7 @@ static void hci_core_send_cmd(void)
 	/* Clear out any existing sent command */
 	if (bt_dev.sent_cmd) {
 		LOG_ERR("Uncleared pending sent_cmd");
-		net_buf_unref(bt_dev.sent_cmd);
-		bt_dev.sent_cmd = NULL;
+		net_buf_drop(&bt_dev.sent_cmd);
 	}
 
 	bt_dev.sent_cmd = net_buf_ref(buf);
@@ -4540,12 +4546,11 @@ static int bt_recv_unsafe(struct net_buf *buf)
 #endif /* CONFIG_BT_ISO */
 	default:
 		LOG_ERR("Invalid buf type %u", type);
-		net_buf_unref(buf);
 		return -EINVAL;
 	}
 }
 
-int bt_hci_recv(const struct device *dev, struct net_buf *buf)
+static int bt_recv(const struct device *dev, struct net_buf *buf)
 {
 	ARG_UNUSED(dev);
 	int err;
@@ -4673,7 +4678,7 @@ static void rx_work_handler(struct k_work *work)
 k_tid_t bt_testing_tx_tid_get(void)
 {
 	/* We now TX everything from the syswq */
-	return &k_sys_work_q.thread;
+	return k_sys_work_q.thread_id;
 }
 
 #if defined(CONFIG_BT_ISO)
@@ -4737,10 +4742,10 @@ int bt_enable(bt_ready_cb_t cb)
 	k_work_queue_start(&bt_workq, rx_thread_stack,
 			   CONFIG_BT_RX_STACK_SIZE,
 			   K_PRIO_COOP(CONFIG_BT_RX_PRIO), NULL);
-	k_thread_name_set(&bt_workq.thread, "BT RX WQ");
+	k_thread_name_set(bt_workq.thread_id, "BT RX WQ");
 #endif
 
-	err = bt_hci_open(bt_dev.hci, bt_hci_recv);
+	err = bt_hci_open(bt_dev.hci, bt_recv);
 	if (err) {
 		LOG_ERR("HCI driver open failed (%d)", err);
 		return err;
@@ -4821,7 +4826,7 @@ int bt_disable(void)
 
 #if defined(CONFIG_BT_RECV_WORKQ_BT)
 	/* Abort RX thread */
-	k_thread_abort(&bt_workq.thread);
+	k_thread_abort(bt_workq.thread_id);
 #endif
 
 	/* Some functions rely on checking this bitfield */

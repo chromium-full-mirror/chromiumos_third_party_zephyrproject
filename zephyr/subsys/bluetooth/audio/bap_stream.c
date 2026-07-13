@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include <zephyr/autoconf.h>
+#include <zephyr/bluetooth/audio/ascs.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gap.h>
@@ -91,6 +92,7 @@ void bt_bap_stream_attach(struct bt_conn *conn, struct bt_bap_stream *stream, st
 	}
 
 	stream->ep = ep;
+	stream->codec_cfg = &ep->codec_cfg;
 	ep->stream = stream;
 }
 
@@ -171,6 +173,32 @@ int bt_bap_ep_get_info(const struct bt_bap_ep *ep, struct bt_bap_ep_info *info)
 	}
 
 	return 0;
+}
+
+bool bt_bap_qos_cfg_eq(const struct bt_bap_qos_cfg *a, const struct bt_bap_qos_cfg *b)
+{
+	if (a == b) {
+		return true;
+	}
+
+	if (a == NULL || b == NULL) {
+		return false;
+	}
+
+	return a->pd == b->pd &&
+	       a->framing == b->framing &&
+	       a->phy == b->phy &&
+	       a->rtn == b->rtn &&
+	       a->sdu == b->sdu &&
+#if defined(CONFIG_BT_BAP_BROADCAST_SOURCE) || defined(CONFIG_BT_BAP_UNICAST)
+	       a->latency == b->latency &&
+#endif /*  CONFIG_BT_BAP_BROADCAST_SOURCE || CONFIG_BT_BAP_UNICAST */
+#if defined(CONFIG_BT_ISO_TEST_PARAMS)
+	       a->max_pdu == b->max_pdu &&
+	       a->burst_number == b->burst_number &&
+	       a->num_subevents == b->num_subevents &&
+#endif /* CONFIG_BT_ISO_TEST_PARAMS */
+	       a->interval == b->interval;
 }
 
 struct bt_conn *bt_bap_ep_get_conn(const struct bt_bap_ep *ep)
@@ -258,7 +286,6 @@ bool bt_audio_valid_codec_cfg(const struct bt_audio_codec_cfg *codec_cfg)
 		}
 	}
 
-#if CONFIG_BT_AUDIO_CODEC_CFG_MAX_DATA_SIZE > 0
 	/* Verify that codec configuration length is 0 when using
 	 * BT_HCI_CODING_FORMAT_TRANSPARENT as per the core spec, 5.4, Vol 4, Part E, 7.8.109
 	 */
@@ -277,7 +304,6 @@ bool bt_audio_valid_codec_cfg(const struct bt_audio_codec_cfg *codec_cfg)
 		LOG_DBG("codec_cfg->data not valid LTV");
 		return false;
 	}
-#endif /* CONFIG_BT_AUDIO_CODEC_CFG_MAX_DATA_SIZE > 0 */
 
 #if CONFIG_BT_AUDIO_CODEC_CFG_MAX_METADATA_SIZE > 0
 	if (codec_cfg->meta_len > CONFIG_BT_AUDIO_CODEC_CFG_MAX_METADATA_SIZE) {
@@ -856,8 +882,8 @@ static bool bap_stream_valid_ase_op(const struct bt_conn *conn, const struct bt_
 		valid_op = false;
 	}
 
-	LOG_DBG("ASE operation (dir %d) %u in state %s is%s valid", ep_dir, ase_op,
-		bt_bap_ep_state_str(ep_state), valid_op ? "" : " not");
+	LOG_DBG("ASE operation (dir %s) %u in state %s is%s valid", bt_audio_dir_str(ep_dir),
+		ase_op, bt_bap_ep_state_str(ep_state), valid_op ? "" : " not");
 
 	return valid_op;
 }
@@ -931,7 +957,7 @@ static bool valid_snk_state_transition(enum bt_bap_ep_state old_state,
 	case BT_BAP_EP_STATE_RELEASING:
 		switch (new_state) {
 		case BT_BAP_EP_STATE_IDLE:
-		case BT_BAP_EP_STATE_QOS_CONFIGURED:
+		case BT_BAP_EP_STATE_CODEC_CONFIGURED:
 			valid_transition = true;
 			break;
 		default:
@@ -1029,7 +1055,7 @@ static bool valid_src_state_transition(enum bt_bap_ep_state old_state,
 	case BT_BAP_EP_STATE_RELEASING:
 		switch (new_state) {
 		case BT_BAP_EP_STATE_IDLE:
-		case BT_BAP_EP_STATE_QOS_CONFIGURED:
+		case BT_BAP_EP_STATE_CODEC_CONFIGURED:
 			valid_transition = true;
 			break;
 		default:
@@ -1076,7 +1102,7 @@ bool bt_bap_stream_valid_state_transition(const struct bt_bap_ep *ep, enum bt_ba
 		valid_transition = false;
 	}
 
-	LOG_DBG("state transition (dir %d): %s -> %s is%s valid", ep_dir,
+	LOG_DBG("state transition (dir %s): %s -> %s is%s valid", bt_audio_dir_str(ep_dir),
 		bt_bap_ep_state_str(ep_state), bt_bap_ep_state_str(state),
 		valid_transition ? "" : " not");
 
@@ -1145,10 +1171,7 @@ void bt_bap_stream_detach(struct bt_bap_stream *stream)
 {
 	LOG_DBG("stream %p conn %p ep %p", stream, (void *)stream->conn, (void *)stream->ep);
 
-	if (stream->conn != NULL) {
-		bt_conn_unref(stream->conn);
-		stream->conn = NULL;
-	}
+	bt_conn_drop(&stream->conn);
 	stream->codec_cfg = NULL;
 
 	if (stream->ep != NULL) {
@@ -1372,11 +1395,9 @@ int bt_bap_stream_reconfig(struct bt_bap_stream *stream, const struct bt_audio_c
 
 	if (err != 0) {
 		LOG_DBG("reconfiguring stream failed: %d", err);
-	} else {
-		stream->codec_cfg = codec_cfg;
 	}
 
-	return 0;
+	return err;
 }
 
 #if defined(CONFIG_BT_BAP_UNICAST_CLIENT)
