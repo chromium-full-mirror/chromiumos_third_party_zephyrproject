@@ -1,9 +1,9 @@
 # Copyright (c) 2025 Focaltech Systems CO.,Ltd
 # SPDX-License-Identifier: Apache-2.0
 
-description: ft ftcfg
+description: ft ccm
 
-compatible: "ft,ft90-ftcfg"
+compatible: "focaltech,ft9001-ccm"
 
 include: base.yaml
 

@@ -3,7 +3,7 @@
 
 description: Focaltech timer
 
-compatible: "ft,ft90-timer"
+compatible: "focaltech,ft9001-timer"
 
 include: [reset-device.yaml, base.yaml]
 

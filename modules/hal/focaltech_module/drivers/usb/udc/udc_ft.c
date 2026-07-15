@@ -158,7 +158,7 @@ static int udc_ft_clock_request(const struct device *dev, bool on)
     __ASSERT_NO_MSG(dev != NULL);
 
     /* enable clock for subsystem */
-    const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcc));
+    const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(cpm));
 
     if (on)
     {

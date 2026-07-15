@@ -4,7 +4,7 @@
 description: |
     The ft90 pin controller.
 
-compatible: "ft,ft90-pinctrl"
+compatible: "focaltech,ft9001-pinctrl"
 include: base.yaml
 
 properties:

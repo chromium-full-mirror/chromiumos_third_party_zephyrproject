@@ -3,7 +3,7 @@
 
 description: FT90 GPIO node
 
-compatible: "ft,ft90-gpio"
+compatible: "focaltech,ft9001-gpio"
 
 include: [gpio-controller.yaml, base.yaml, pinctrl-device.yaml, reset-device.yaml]
 
