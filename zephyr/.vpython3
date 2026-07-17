@@ -20,6 +20,10 @@ wheel: <
   version: "version:0.4.1"
 >
 wheel: <
+  name: "infra/python/wheels/colorlog-py2_py3"
+  version: "version:6.10.1"
+>
+wheel: <
   name: "infra/python/wheels/docopt-py2_py3"
   version: "version:0.6.2"
 >
