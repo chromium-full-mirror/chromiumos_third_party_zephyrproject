@@ -6,11 +6,8 @@
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
-#include <zephyr/init.h>
-#include <string.h>
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/pm/device.h>
-#include <zephyr/pm/device_runtime.h>
 #include <zephyr/pm/pm.h>
 #include <zephyr/pm/state.h>
 #include <zephyr/pm/policy.h>
@@ -215,7 +212,7 @@ bool pm_system_suspend(int32_t kernel_ticks)
 		 */
 		k_spinlock_key_t key = sys_clock_lock();
 
-		sys_clock_set_timeout(MAX(0, (int64_t)ticks - (int64_t)exit_latency_ticks), true);
+		sys_clock_idle_enter(MAX(0, (int64_t)ticks - (int64_t)exit_latency_ticks));
 		sys_clock_unlock(key);
 	}
 

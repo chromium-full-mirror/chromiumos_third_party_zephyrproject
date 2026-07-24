@@ -79,6 +79,35 @@ extern "C" {
 #define I2C_TRANSFER_TIMEOUT K_FOREVER
 #endif
 
+/**
+ * @brief Resolve per-instance transfer timeout in milliseconds.
+ *
+ * Returns the raw millisecond value for the given DT instance @p inst:
+ *   1. DT property ``zephyr,transfer-timeout-ms`` on the controller node (per-bus)
+ *   2. ``CONFIG_I2C_TRANSFER_TIMEOUT_MS`` (application-wide Kconfig default)
+ *
+ * A value of 0 means no timeout (infinite wait).
+ */
+#define I2C_DT_INST_TRANSFER_TIMEOUT_MS(inst)                                                      \
+	DT_INST_PROP_OR(inst, zephyr_transfer_timeout_ms, CONFIG_I2C_TRANSFER_TIMEOUT_MS)
+
+/**
+ * @brief Per-instance transfer timeout as a k_timeout_t struct initializer.
+ *
+ * Produces a k_timeout_t brace-initializer for the given DT instance @p inst
+ * using a two-level priority (via @ref I2C_DT_INST_TRANSFER_TIMEOUT_MS):
+ *   1. DT property ``zephyr,transfer-timeout-ms`` on the controller node (per-bus)
+ *   2. ``CONFIG_I2C_TRANSFER_TIMEOUT_MS`` (application-wide Kconfig default)
+ *   3. @ref SYS_FOREVER_MS when the resolved value is 0 (infinite wait)
+ *
+ * Drivers that store the per-bus timeout in a static config struct can use
+ * this macro to initialize the target k_timeout_t value at build time.
+ */
+#define I2C_DT_INST_TRANSFER_TIMEOUT(inst)                                                         \
+	SYS_TIMEOUT_MS_INIT(((I2C_DT_INST_TRANSFER_TIMEOUT_MS(inst) != 0)                          \
+				     ? I2C_DT_INST_TRANSFER_TIMEOUT_MS(inst)                       \
+				     : SYS_FOREVER_MS))
+
 /** Helper macro drivers that do not support infinite timeout */
 #define BUILD_ASSERT_INVALID_I2C_TRANSFER_TIMEOUT() \
 	BUILD_ASSERT(CONFIG_I2C_TRANSFER_TIMEOUT_MS != 0, \
@@ -771,10 +800,10 @@ static inline void i2c_xfer_stats(const struct device *dev, struct i2c_msg *msgs
 				    __VA_ARGS__)
 
 /**
- * @brief Like I2C_DEVICE_DT_DEINIT_DEFINE() for an instance of a DT_DRV_COMPAT compatible
+ * @brief Like I2C_DEVICE_DT_DEINIT_DEFINE() for an instance of a @c DT_DRV_COMPAT compatible
  *
  * @param inst instance number. This is replaced by
- * <tt>DT_DRV_COMPAT(inst)</tt> in the call to I2C_DEVICE_DT_DEINIT_DEFINE().
+ * <tt>DT_DRV_INST(inst)</tt> in the call to I2C_DEVICE_DT_DEINIT_DEFINE().
  *
  * @param ... other parameters as expected by I2C_DEVICE_DT_DEINIT_DEFINE().
  */
@@ -782,10 +811,10 @@ static inline void i2c_xfer_stats(const struct device *dev, struct i2c_msg *msgs
 	I2C_DEVICE_DT_DEINIT_DEFINE(DT_DRV_INST(inst), __VA_ARGS__)
 
 /**
- * @brief Like I2C_DEVICE_DT_DEFINE() for an instance of a DT_DRV_COMPAT compatible
+ * @brief Like I2C_DEVICE_DT_DEFINE() for an instance of a @c DT_DRV_COMPAT compatible
  *
  * @param inst instance number. This is replaced by
- * <tt>DT_DRV_COMPAT(inst)</tt> in the call to I2C_DEVICE_DT_DEFINE().
+ * <tt>DT_DRV_INST(inst)</tt> in the call to I2C_DEVICE_DT_DEFINE().
  *
  * @param ... other parameters as expected by I2C_DEVICE_DT_DEFINE().
  */

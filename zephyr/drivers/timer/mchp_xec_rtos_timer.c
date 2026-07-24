@@ -182,28 +182,23 @@ static uint32_t last_announcement; /* last time we called sys_clock_announce() *
  * Writing a new value to preload only takes effect once the count
  * register reaches 0.
  */
-void sys_clock_set_timeout(int32_t n, bool idle)
+void sys_clock_unused(void)
 {
-	ARG_UNUSED(idle);
+	sys_write32(0, TIMER_BASE + TIMER_CR_OFS); /* stop timer */
+	cached_icr = TIMER_STOPPED;
+}
+
+void sys_clock_set_timeout(uint32_t n)
+{
 
 	uint32_t ccr, temp;
 	int full_ticks;          /* number of complete ticks we'll wait */
 	uint32_t full_cycles;    /* full_ticks represented as cycles */
 	uint32_t partial_cycles; /* number of cycles to first tick boundary */
 
-	if (idle && (n == K_TICKS_FOREVER)) {
-		/*
-		 * We are not in a locked section. Are writes to two
-		 * global objects safe from pre-emption?
-		 */
-		sys_write32(0, TIMER_BASE + TIMER_CR_OFS); /* stop timer */
-		cached_icr = TIMER_STOPPED;
-		return;
-	}
-
 	if (n < 1) {
 		full_ticks = 0;
-	} else if ((n == K_TICKS_FOREVER) || (n > MAX_TICKS)) {
+	} else if (n > MAX_TICKS) {
 		full_ticks = MAX_TICKS - 1;
 	} else {
 		full_ticks = n - 1;

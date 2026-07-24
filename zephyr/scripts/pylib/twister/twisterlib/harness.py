@@ -28,6 +28,7 @@ from twisterlib.environment import PYTEST_PLUGIN_INSTALLED, ZEPHYR_BASE
 from twisterlib.error import ConfigurationError, StatusAttributeError
 from twisterlib.handlers import DeviceHandler, Handler, terminate_process
 from twisterlib.harnessconfig import TWISTER_PYTEST_CONFIG_FILE, HarnessPytestConfig
+from twisterlib.modulevars import expand_zephyr_vars
 from twisterlib.reports import ReportStatus
 from twisterlib.statuses import TwisterStatus
 from twisterlib.testinstance import TestInstance
@@ -590,7 +591,10 @@ class Pytest(Script):
         command.extend(
             [
                 os.path.normpath(
-                    os.path.join(self.source_dir, os.path.expanduser(os.path.expandvars(src)))
+                    os.path.join(
+                        self.source_dir,
+                        expand_zephyr_vars(os.path.expanduser(os.path.expandvars(src))),
+                    )
                 )
                 for src in config.pytest_root
             ]
@@ -871,6 +875,15 @@ class Gtest(Harness):
             tc = self.instance.get_case_or_create(self.id)
             if self.has_failures or self.tc is not None:
                 self.status = TwisterStatus.FAIL
+                if self.tc is not None and not self.has_failures:
+                    self.reason = f"Gtest failure - test {self.tc} did not finish"
+                else:
+                    failed = sum(
+                        1 for t in self.instance.testcases if t.status == TwisterStatus.FAIL
+                    )
+                    self.reason = "Gtest failure"
+                    if failed > 1:
+                        self.reason += f" - {failed} tests failed"
                 tc.status = TwisterStatus.FAIL
             else:
                 self.status = TwisterStatus.PASS
@@ -896,6 +909,7 @@ class Gtest(Harness):
         tc.status = state
         if tc.status == TwisterStatus.FAIL:
             self.has_failures = True
+            self.reason = f"Gtest failure - failed test {tc}"
             tc.output = self.testcase_output
         self.testcase_output = ""
         self._match = False

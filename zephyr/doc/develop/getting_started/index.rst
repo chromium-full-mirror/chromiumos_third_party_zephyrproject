@@ -33,7 +33,7 @@ Click the operating system you are using.
    .. group-tab:: macOS
 
       Select :menuselection:`System Settings --> General --> Software Update`
-      andd install any available updates. See `this Apple support topic
+      and install any available updates. See `this Apple support topic
       <https://support.apple.com/en-us/HT201541>`_ for more details.
 
       .. note::
@@ -325,7 +325,7 @@ installation.
 
             .. parsed-literal::
 
-               west init ~ -m https://github.com/zephyrproject-rtos/zephyr/zephyrproject --mr v |zephyr-version-ltrim|
+               west init -m https://github.com/zephyrproject-rtos/zephyr ~/zephyrproject --mr v |zephyr-version-ltrim|
                cd ~/zephyrproject
                west update
 
@@ -335,7 +335,7 @@ installation.
 
             .. code-block:: bash
 
-               west init ~ -m https://github.com/zephyrproject-rtos/zephyr/zephyrproject
+               west init -m https://github.com/zephyrproject-rtos/zephyr ~/zephyrproject
                cd ~/zephyrproject
                west update
 
@@ -343,7 +343,7 @@ installation.
 
             .. parsed-literal::
 
-               west init ~ -m https://github.com/zephyrproject-rtos/zephyr/zephyrproject --mr v |zephyr-version-ltrim|
+               west init -m https://github.com/zephyrproject-rtos/zephyr ~/zephyrproject --mr v |zephyr-version-ltrim|
                cd ~/zephyrproject
                west update
 
@@ -369,14 +369,6 @@ installation.
 
       To reduce disk space usage and avoid downloading unnecessary modules or vendor HALs during
       setup, you may configure :ref:`west-manifest-groups` before running ``west update``.
-
-#. Export a :ref:`Zephyr CMake package <cmake_pkg>`. This registers your current
-   Zephyr checkout in CMake's user package registry so ``find_package(Zephyr)``
-   can locate it automatically when building applications.
-
-   .. code-block:: shell
-
-      west zephyr-export
 
 #. Install Zephyr's Python dependencies:
 
@@ -413,6 +405,14 @@ installation.
    .. note::
 
       Installing these dependencies can downgrade or upgrade west itself.
+
+#. Export a :ref:`Zephyr CMake package <cmake_pkg>`. This registers your current
+   Zephyr checkout in CMake's user package registry so ``find_package(Zephyr)``
+   can locate it automatically when building applications.
+
+   .. code-block:: shell
+
+      west zephyr-export
 
 Install the Zephyr SDK
 **********************

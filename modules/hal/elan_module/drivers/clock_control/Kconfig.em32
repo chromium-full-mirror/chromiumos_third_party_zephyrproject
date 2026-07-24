@@ -1,4 +1,4 @@
-# Copyright (c) 2026 Elan Microelectronics Corp.
+# SPDX-FileCopyrightText: 2026 ELAN Microelectronics Corp.
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,7 @@ config CLOCK_CONTROL_EM32_AHB
 	default y
 	depends on SOC_EM32F967
 	depends on DT_HAS_ELAN_EM32_AHB_ENABLED
+	select SYSCON
 	help
 	  This option enables the clock controller ahb driver for EM32FXXX.
 
@@ -15,6 +16,7 @@ config CLOCK_CONTROL_EM32_APB
 	default y
 	depends on SOC_EM32F967
 	depends on DT_HAS_ELAN_EM32_APB_ENABLED
+	depends on CLOCK_CONTROL_EM32_AHB
 	help
 	  This option enables the clock controller apb driver for EM32FXXX.
 
@@ -33,3 +35,30 @@ config EM32_DELAY_SWITCH_PRIORITY
 	  clock init priority changes.
 
 endif # CLOCK_CONTROL_EM32_AHB || CLOCK_CONTROL_EM32_APB
+
+if CLOCK_CONTROL_EM32_APB
+
+config CLOCK_CONTROL_EM32_APB_INIT_PRIORITY
+	int "EM32 APB clock control initialization priority"
+	default 53
+	depends on CLOCK_CONTROL_EM32_APB
+	help
+	  Initialization priority for the EM32 APB clock control driver.
+	  This must be greater than CLOCK_CONTROL_EM32_AHB_INIT_PRIORITY
+	  since the APB clock depends on the AHB clock.
+
+endif # CLOCK_CONTROL_EM32_APB
+
+if CLOCK_CONTROL_EM32_AHB
+
+config CLOCK_CONTROL_EM32_AHB_INIT_PRIORITY
+	int "EM32 AHB clock control initialization priority"
+	default 52
+	depends on CLOCK_CONTROL_EM32_AHB
+	help
+	  Initialization priority for the EM32 AHB clock control driver.
+	  This driver must initialize after syscon.
+	  Other EM32 drivers that depend on the AHB clock controller
+	  (such as APB clock control and GPIO) must initialize after this driver.
+
+endif # CLOCK_CONTROL_EM32_AHB

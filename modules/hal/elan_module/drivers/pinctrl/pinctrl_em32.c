@@ -1,11 +1,14 @@
 /*
- * Copyright (c) 2026 Elan Microelectronics Corp.
+ * SPDX-FileCopyrightText: 2026 ELAN Microelectronics Corp.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <zephyr/init.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
 #include <zephyr/drivers/pinctrl.h>
+#include <zephyr/drivers/syscon.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/sys/util.h>
@@ -14,6 +17,8 @@
 #include <soc.h>
 
 LOG_MODULE_REGISTER(pinctrl_em32);
+
+static const struct device *const em32_syscon = DEVICE_DT_GET(DT_NODELABEL(sysctrl));
 
 #define PINMUX_IO1_VALID_BIT 8U
 #define PINMUX_IO1_SHIFT_POS 9U
@@ -24,9 +29,9 @@ LOG_MODULE_REGISTER(pinctrl_em32);
 #define PINMUX_IO2_WIDTH_POS 26U
 #define PINMUX_IO2_VAL_POS   28U
 
-/* Sysctrl base address obtained from device tree */
-static const uintptr_t em32_sysctrl_base = DT_REG_ADDR(DT_NODELABEL(sysctrl));
-/* Sysctrl-relative offsets (sysctrl base comes from DTS: syscon@40030000) */
+/* Sysctrl-relative offsets (passed as the `reg` argument to syscon_update_bits,
+ * which adds the syscon base from DTS: syscon@40030000)
+ */
 #define EM32_IOSHARE_OFFSET       0x23CU
 #define EM32_IOMUXPACTRL_OFFSET   0x200U /* PA[7:0]  control */
 #define EM32_IOMUXPACTRL2_OFFSET  0x204U /* PA[15:8] control */
@@ -108,21 +113,25 @@ static const struct em32_ioshare_config em32_ioshare_table[] = {
 
 };
 
-static bool em32_apply_ioshare_from_pinmux(uint32_t pinmux)
+static int em32_apply_ioshare_from_pinmux(uint32_t pinmux, bool *applied)
 {
-	bool applied = false;
+	int ret;
+
+	*applied = false;
 
 	if (pinmux & BIT(PINMUX_IO1_VALID_BIT)) {
 		uint32_t shift = (pinmux >> PINMUX_IO1_SHIFT_POS) & 0x1FU;
 		uint32_t width = ((pinmux >> PINMUX_IO1_WIDTH_POS) & 0x3U) + 1U;
 		uint32_t val = (pinmux >> PINMUX_IO1_VAL_POS) & 0xFU;
 		uint32_t mask = ((1U << width) - 1U) << shift;
-		uint32_t reg = sys_read32((uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
 
-		reg = (reg & ~mask) | ((val << shift) & mask);
-		sys_write32(reg, (uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
-		LOG_DBG("IOShare op1: shift=%d width=%d val=%d reg=0x%08X", shift, width, val, reg);
-		applied = true;
+		ret = syscon_update_bits(em32_syscon, EM32_IOSHARE_OFFSET, mask,
+					 (val << shift) & mask);
+		if (ret < 0) {
+			return ret;
+		}
+		LOG_DBG("IOShare op1: shift=%d width=%d val=%d", shift, width, val);
+		*applied = true;
 	}
 
 	if (pinmux & BIT(PINMUX_IO2_VALID_BIT)) {
@@ -130,21 +139,23 @@ static bool em32_apply_ioshare_from_pinmux(uint32_t pinmux)
 		uint32_t width = ((pinmux >> PINMUX_IO2_WIDTH_POS) & 0x3U) + 1U;
 		uint32_t val = (pinmux >> PINMUX_IO2_VAL_POS) & 0xFU;
 		uint32_t mask = ((1U << width) - 1U) << shift;
-		uint32_t reg = sys_read32((uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
 
-		reg = (reg & ~mask) | ((val << shift) & mask);
-		sys_write32(reg, (uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
-		LOG_DBG("IOShare op2: shift=%d width=%d val=%d reg=0x%08X", shift, width, val, reg);
-		applied = true;
+		ret = syscon_update_bits(em32_syscon, EM32_IOSHARE_OFFSET, mask,
+					 (val << shift) & mask);
+		if (ret < 0) {
+			return ret;
+		}
+		LOG_DBG("IOShare op2: shift=%d width=%d val=%d", shift, width, val);
+		*applied = true;
 	}
 
-	return applied;
+	return 0;
 }
 
 static int em32_configure_ioshare(uint8_t port, uint8_t pin_num, uint32_t alt_func)
 {
-	uint32_t ioshare_val;
 	bool config_found = false;
+	int ret;
 
 	if (port >= EM32_MAX_PORTS) {
 		LOG_ERR("Invalid port: %d", port);
@@ -157,15 +168,13 @@ static int em32_configure_ioshare(uint8_t port, uint8_t pin_num, uint32_t alt_fu
 		if (cfg->port == port && pin_num >= cfg->pin_start && pin_num <= cfg->pin_end &&
 		    cfg->alt_func == alt_func) {
 
-			ioshare_val =
-				sys_read32((uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
-			ioshare_val &= ~cfg->bit_mask;
-			ioshare_val |= cfg->bit_value;
-			sys_write32(ioshare_val,
-				    (uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
+			ret = syscon_update_bits(em32_syscon, EM32_IOSHARE_OFFSET, cfg->bit_mask,
+						 cfg->bit_value);
+			if (ret < 0) {
+				return ret;
+			}
 
-			LOG_DBG("Configured %s on P%c%d (IOShare: 0x%08X)", cfg->peripheral,
-				'A' + port, pin_num, ioshare_val);
+			LOG_DBG("Configured %s on P%c%d", cfg->peripheral, 'A' + port, pin_num);
 			config_found = true;
 			break;
 		}
@@ -184,7 +193,7 @@ static int em32_configure_ioshare(uint8_t port, uint8_t pin_num, uint32_t alt_fu
 	return 0;
 }
 
-static void em32_pinctrl_set_mux(uint8_t port, uint8_t pin, uint8_t mux)
+static int em32_pinctrl_set_mux(uint8_t port, uint8_t pin, uint8_t mux)
 {
 	uint32_t offset;
 	uint32_t shift = (uint32_t)(pin % 8U) * 4U;
@@ -196,11 +205,7 @@ static void em32_pinctrl_set_mux(uint8_t port, uint8_t pin, uint8_t mux)
 		offset = (pin < 8U) ? EM32_IOMUXPBCTRL_OFFSET : EM32_IOMUXPBCTRL2_OFFSET;
 	}
 
-	uint32_t addr = (uint32_t)(em32_sysctrl_base + offset);
-	uint32_t val = sys_read32(addr);
-
-	val = (val & ~mask) | (((uint32_t)mux & 0xFU) << shift);
-	sys_write32(val, addr);
+	return syscon_update_bits(em32_syscon, offset, mask, ((uint32_t)mux & 0xFU) << shift);
 }
 
 static void em32_pinctrl_set_altfunc(uint8_t port, uint8_t pin, uint8_t mux)
@@ -219,39 +224,28 @@ static void em32_pinctrl_set_altfunc(uint8_t port, uint8_t pin, uint8_t mux)
 	}
 }
 
-static void em32_pinctrl_set_pull(uint8_t port, uint8_t pin, uint32_t pupd)
+static int em32_pinctrl_set_pull(uint8_t port, uint8_t pin, uint32_t pupd)
 {
 	uint32_t offset = (port == EM32_PORT_A) ? EM32_IOPUPACTRL_OFFSET : EM32_IOPUPBCTRL_OFFSET;
-	uint32_t addr = (uint32_t)(em32_sysctrl_base + offset);
 	uint32_t shift = (uint32_t)pin * 2U;
 	uint32_t mask = 0x3U << shift;
-	uint32_t val = sys_read32(addr);
 
-	val = (val & ~mask) | ((pupd & 0x3U) << shift);
-	sys_write32(val, addr);
+	return syscon_update_bits(em32_syscon, offset, mask, (pupd & 0x3U) << shift);
 }
 
-static void em32_pinctrl_set_open_drain(uint8_t port, uint8_t pin, bool od)
+static int em32_pinctrl_set_open_drain(uint8_t port, uint8_t pin, bool od)
 {
 	uint32_t offset = (port == EM32_PORT_A) ? EM32_IOODEPACTRL_OFFSET : EM32_IOODEPBCTRL_OFFSET;
-	uint32_t addr = (uint32_t)(em32_sysctrl_base + offset);
-	uint32_t val = sys_read32(addr);
 
-	/* WRITE_BIT() takes a bit position, not a mask */
-	WRITE_BIT(val, pin, od);
-	sys_write32(val, addr);
+	return syscon_update_bits(em32_syscon, offset, BIT(pin), od ? BIT(pin) : 0U);
 }
 
-static void em32_pinctrl_set_drive(uint8_t port, uint8_t pin, bool high_drive)
+static int em32_pinctrl_set_drive(uint8_t port, uint8_t pin, bool high_drive)
 {
 	uint32_t offset =
 		(port == EM32_PORT_A) ? EM32_IO_HD_PA_CTRL_OFFSET : EM32_IO_HD_PB_CTRL_OFFSET;
-	uint32_t addr = (uint32_t)(em32_sysctrl_base + offset);
-	uint32_t val = sys_read32(addr);
 
-	/* WRITE_BIT() takes a bit position, not a mask */
-	WRITE_BIT(val, pin, high_drive);
-	sys_write32(val, addr);
+	return syscon_update_bits(em32_syscon, offset, BIT(pin), high_drive ? BIT(pin) : 0U);
 }
 
 int pinctrl_configure_pins(const pinctrl_soc_pin_t *pins, uint8_t pin_cnt, uintptr_t reg)
@@ -266,6 +260,11 @@ int pinctrl_configure_pins(const pinctrl_soc_pin_t *pins, uint8_t pin_cnt, uintp
 
 	if (pin_cnt == 0) {
 		return 0;
+	}
+
+	if (!device_is_ready(em32_syscon)) {
+		LOG_ERR("sysctrl syscon device not ready");
+		return -ENODEV;
 	}
 
 	LOG_DBG("Configuring %d pins", pin_cnt);
@@ -294,13 +293,41 @@ int pinctrl_configure_pins(const pinctrl_soc_pin_t *pins, uint8_t pin_cnt, uintp
 		bool od = ((pin_cfg >> PINCFG_OTYPER_SHIFT) & 0x1U) != 0U;
 		bool hd = ((pin_cfg >> PINCFG_DRIVE_SHIFT) & 0x1U) != 0U;
 
-		em32_pinctrl_set_mux(port, pin_num, (uint8_t)alt_func);
-		em32_pinctrl_set_altfunc(port, pin_num, (uint8_t)alt_func);
-		em32_pinctrl_set_pull(port, pin_num, pupd);
-		em32_pinctrl_set_open_drain(port, pin_num, od);
-		em32_pinctrl_set_drive(port, pin_num, hd);
+		ret = em32_pinctrl_set_mux(port, pin_num, (uint8_t)alt_func);
+		if (ret < 0) {
+			LOG_ERR("Mux failed on P%c%d: %d", 'A' + port, pin_num, ret);
+			return ret;
+		}
 
-		if (!em32_apply_ioshare_from_pinmux(pinmux)) {
+		/* Alternate-function select writes a GPIO register directly (no syscon). */
+		em32_pinctrl_set_altfunc(port, pin_num, (uint8_t)alt_func);
+
+		ret = em32_pinctrl_set_pull(port, pin_num, pupd);
+		if (ret < 0) {
+			LOG_ERR("Pull failed on P%c%d: %d", 'A' + port, pin_num, ret);
+			return ret;
+		}
+
+		ret = em32_pinctrl_set_open_drain(port, pin_num, od);
+		if (ret < 0) {
+			LOG_ERR("Open-drain failed on P%c%d: %d", 'A' + port, pin_num, ret);
+			return ret;
+		}
+
+		ret = em32_pinctrl_set_drive(port, pin_num, hd);
+		if (ret < 0) {
+			LOG_ERR("Drive failed on P%c%d: %d", 'A' + port, pin_num, ret);
+			return ret;
+		}
+
+		bool applied;
+
+		ret = em32_apply_ioshare_from_pinmux(pinmux, &applied);
+		if (ret < 0) {
+			LOG_ERR("IOShare failed on P%c%d: %d", 'A' + port, pin_num, ret);
+			return ret;
+		}
+		if (!applied) {
 			ret = em32_configure_ioshare(port, pin_num, alt_func);
 			if (ret < 0) {
 				LOG_ERR("IOShare failed on P%c%d: %d", 'A' + port, pin_num, ret);
@@ -312,23 +339,3 @@ int pinctrl_configure_pins(const pinctrl_soc_pin_t *pins, uint8_t pin_cnt, uintp
 	LOG_DBG("Configured %d pins OK", pin_cnt);
 	return 0;
 }
-
-static int em32_pinctrl_driver_init(void)
-{
-	uint32_t ioshare_val;
-
-	ioshare_val = sys_read32((uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
-	LOG_DBG("Initial IOShare register: 0x%08X", ioshare_val);
-
-	/* SSP2 on PB4-PB7 for SPI functionality */
-	ioshare_val &= ~(0x3U << EM32_IP_SHARE_SSP2_SHIFT);
-	ioshare_val |= (0x0U << EM32_IP_SHARE_SSP2_SHIFT);
-
-	sys_write32(ioshare_val, (uint32_t)(em32_sysctrl_base + EM32_IOSHARE_OFFSET));
-
-	LOG_DBG("EM32F967 pinctrl driver initialized (IOShare: 0x%08X)", ioshare_val);
-
-	return 0;
-}
-
-SYS_INIT(em32_pinctrl_driver_init, PRE_KERNEL_1, CONFIG_PINCTRL_EM32_INIT_PRIORITY);

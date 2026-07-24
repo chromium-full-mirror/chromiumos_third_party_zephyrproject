@@ -128,11 +128,15 @@ K_KERNEL_STACK_DEFINE(udc_et171_work_q_stack, CONFIG_UDC_ET171_WORKQUEUE_STACK_S
 static struct k_work_q udc_et171_work_q;
 static int udc_et171_work_q_init(void)
 {
+	const struct k_work_queue_config cfg = {
+		.name = "udc_work_q",
+	};
+
+	k_work_queue_init(&udc_et171_work_q);
 	k_work_queue_start(&udc_et171_work_q,
 			   udc_et171_work_q_stack,
 			   K_KERNEL_STACK_SIZEOF(udc_et171_work_q_stack),
-			   CONFIG_UDC_ET171_WORKQUEUE_PRIORITY, NULL);
-	k_thread_name_set(&udc_et171_work_q.thread, "udc_work_q");
+			   CONFIG_UDC_ET171_WORKQUEUE_PRIORITY, &cfg);
 
 	return 0;
 }

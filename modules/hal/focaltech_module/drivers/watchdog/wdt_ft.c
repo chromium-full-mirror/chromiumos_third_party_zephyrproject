@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT ft_ft90_wdt
+#define DT_DRV_COMPAT focaltech_ft9001_wdt
 
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/reset.h>
@@ -14,7 +14,7 @@
 
 #include <wdt_drv.h>
 
-LOG_MODULE_REGISTER(ft_ft90_wdt, CONFIG_WDT_LOG_LEVEL);
+LOG_MODULE_REGISTER(focaltech_ft9001_wdt, CONFIG_WDT_LOG_LEVEL);
 
 struct wdt_ft_config
 {
@@ -42,7 +42,7 @@ struct wdt_ft_data
 static int wdt_ft_clk_on(const struct device *dev)
 {
     const struct wdt_ft_config *cfg = dev->config;
-    const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcc));
+    const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(cpm));
     int ret = 0;
     ret = clock_control_on(clk, (clock_control_subsys_t *)&cfg->clkid);
     if (ret < 0)
@@ -186,7 +186,7 @@ static int wdt_ft_init(const struct device *dev)
 }
 
 static const struct wdt_ft_config wdt_cfg = {
-    .base = (WDT_TypeDef *)DT_REG_ADDR(DT_INST(0, ft_ft90_wdt)),
+    .base = (WDT_TypeDef *)DT_REG_ADDR(DT_INST(0, focaltech_ft9001_wdt)),
     .clkid = DT_INST_CLOCKS_CELL(0, id),
     .reset = RESET_DT_SPEC_INST_GET(0),
 };

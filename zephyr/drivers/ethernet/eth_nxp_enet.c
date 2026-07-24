@@ -254,9 +254,6 @@ static enum ethernet_hw_caps eth_nxp_enet_get_capabilities(const struct device *
 #if defined(CONFIG_NET_VLAN)
 		ETHERNET_HW_VLAN |
 #endif
-#if defined(CONFIG_PTP_CLOCK_NXP_ENET)
-		ETHERNET_PTP |
-#endif
 #if defined(CONFIG_ETH_NXP_ENET_HW_ACCELERATION)
 		ETHERNET_HW_TX_CHKSUM_OFFLOAD |
 		ETHERNET_HW_RX_CHKSUM_OFFLOAD |
@@ -409,6 +406,7 @@ static int eth_nxp_enet_rx(const struct device *dev)
 
 	pkt->timestamp.nanosecond = ts;
 	pkt->timestamp.second = ptp_time.second;
+	net_pkt_set_rx_timestamping(pkt, true);
 	k_mutex_unlock(data->ptp.ptp_mutex);
 #endif /* CONFIG_PTP_CLOCK_NXP_ENET */
 

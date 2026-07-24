@@ -3,7 +3,6 @@
 
 add_subdirectory(usb)
 
-add_subdirectory_ifdef(CONFIG_CLOCK_CONTROL clock_control)
 add_subdirectory_ifdef(CONFIG_RESET reset)
 add_subdirectory_ifdef(CONFIG_GPIO gpio)
 add_subdirectory_ifdef(CONFIG_PINCTRL pinctrl)

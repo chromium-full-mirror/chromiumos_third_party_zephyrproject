@@ -23,8 +23,18 @@
 extern "C" {
 #endif
 
-#define SYS_CLOCK_MAX_WAIT (IS_ENABLED(CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE) \
-			    ? K_TICKS_FOREVER : INT_MAX)
+/*
+ * Maximum number of ticks the kernel will ever ask a timer driver to wait
+ * before the next sys_clock_announce(). It is half of the unsigned tick
+ * range so that the elapsed-tick count the driver eventually announces is
+ * guaranteed to fit in the (unsigned) sys_clock_announce() argument. The
+ * other half is left as slack to absorb a late announce (e.g. interrupt
+ * latency, or a timeout that fires slightly past its deadline) without
+ * overflowing that argument. The kernel caps the value passed to
+ * sys_clock_set_timeout() to this, so a driver need not clamp against the
+ * announce range and only has to honour its own cycle-count limits.
+ */
+#define SYS_CLOCK_MAX_WAIT (UINT32_MAX / 2)
 
 /**
  * @brief System Clock APIs
@@ -134,9 +144,8 @@ bool sys_clock_is_locked(void);
  * is that one tick announcement should occur within one tick BEFORE
  * the specified expiration (that is, passing ticks==1 means "announce
  * the next tick", this convention was chosen to match legacy usage).
- * Similarly a ticks value of zero (or even negative) is legal and
- * treated identically: it simply indicates the kernel would like the
- * next tick announcement as soon as possible.
+ * Similarly a ticks value of zero is legal: it simply indicates the
+ * kernel would like the next tick announcement as soon as possible.
  *
  * Note that ticks can also be passed the special value K_TICKS_FOREVER,
  * indicating that no future timer interrupts are expected or required
@@ -164,11 +173,12 @@ bool sys_clock_is_locked(void);
  * @note This function is called by the kernel with the system clock
  * lock held.
  *
+ * A driver entering low-power idle is notified separately through
+ * sys_clock_idle_enter(); this call carries no idle hint.
+ *
  * @param ticks Timeout in tick units
- * @param idle Hint to the driver that the system is about to enter
- *        the idle state immediately after setting the timeout
  */
-void sys_clock_set_timeout(int32_t ticks, bool idle);
+void sys_clock_set_timeout(uint32_t ticks);
 
 /**
  * @brief Timer idle exit notification
@@ -204,7 +214,7 @@ void sys_clock_idle_exit(void);
  * @param ticks Elapsed time, in ticks
  * @param key Lock key obtained from sys_clock_lock().
  */
-void sys_clock_announce_locked(int32_t ticks, k_spinlock_key_t key);
+void sys_clock_announce_locked(uint32_t ticks, k_spinlock_key_t key);
 
 /**
  * @brief Announce time progress to the kernel (legacy wrapper)
@@ -216,7 +226,7 @@ void sys_clock_announce_locked(int32_t ticks, k_spinlock_key_t key);
  *
  * @param ticks Elapsed time, in ticks
  */
-static inline void sys_clock_announce(int32_t ticks)
+static inline void sys_clock_announce(uint32_t ticks)
 {
 	sys_clock_announce_locked(ticks, sys_clock_lock());
 }
@@ -242,6 +252,35 @@ uint32_t sys_clock_elapsed(void);
  * check if the system timer has the capability of being disabled.
  */
 void sys_clock_disable(void);
+
+/**
+ * @brief Notify the timer driver that the system clock is currently unused.
+ *
+ * Called by the kernel when no timeout is pending and
+ * @kconfig{CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE} allows the system uptime to drift.
+ * A driver may use this to halt the counter and stop generating interrupts
+ * until the next sys_clock_set_timeout(), which resumes normal operation.
+ *
+ * Unlike sys_clock_disable(), this is a resumable pause, not a teardown. The
+ * default implementation is a no-op: a driver that does nothing here simply
+ * stops being reprogrammed and quiesces on its own, so sloppy idle is available
+ * to every driver without extra code.
+ */
+void sys_clock_unused(void);
+
+/**
+ * @brief Notify the timer driver that the CPU is entering low-power idle.
+ *
+ * Called by the power-management / idle path when the CPU is about to be put
+ * to sleep, with @p ticks until the next expected wakeup. A driver that can
+ * hand off to a low-power wakeup timer (or otherwise reconfigure for sleep)
+ * does so here. The default implementation just programs the wakeup through
+ * sys_clock_set_timeout(), so a driver with no low-power handling needs no
+ * implementation. Recovery happens in sys_clock_idle_exit().
+ *
+ * @param ticks Ticks until the next expected wakeup.
+ */
+void sys_clock_idle_enter(uint32_t ticks);
 
 /**
  * @brief Hardware cycle counter

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026 ELAN Microelectronics Corp.
+ * SPDX-FileCopyrightText: 2026 ELAN Microelectronics Corp.
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -245,7 +245,10 @@
 };
 
 &sysctrl {
-	status = "disabled";
+	/* Enabled so the pinctrl and gpio drivers can serialize their shared
+	 * register writes through the syscon API (syscon_update_bits).
+	 */
+	status = "okay";
 };
 
 &pwrctrl {
@@ -253,7 +256,13 @@
 };
 
 &clkctrl {
-	status = "disabled";
+	/* Enable CLKCTRL syscon for serialized shared register access. */
+	status = "okay";
+};
+
+&infoctrl {
+	/* Enable INFOCTRL syscon for factory trim value reads. */
+	status = "okay";
 };
 
 &spi1_cs_pb0 {

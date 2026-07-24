@@ -277,12 +277,7 @@ Test Scenario, Test Suite, and Test Case names must follow to these basic rules:
    subsection names delimited with a dot (``.``). For example, a test scenario
    that covers semaphores in the kernel shall start with ``kernel.semaphore``.
 
-#. All Test Scenario identifiers within a Test Configuration (``testcase.yaml`` file)
-   need to be unique.
-   For example a ``testcase.yaml`` file covering semaphores in the kernel can have:
-
-   * ``kernel.semaphore``: For general semaphore tests
-   * ``kernel.semaphore.stress``: Stress testing semaphores in the kernel.
+#. All Test Scenario names must be unique for the Twister execution scope.
 
 #. The full canonical name of a Test Suite is:
    ``<Test Application Project path>/<Test Scenario identifier>``
@@ -299,15 +294,6 @@ Test Scenario, Test Suite, and Test Case names must follow to these basic rules:
      a Test Scenario identifier from the corresponding ``tests.yaml`` file where
      the last section signifies the standalone
      Test Case name, for example: ``debug.coredump.logging_backend``.
-
-
-The ``--no-detailed-test-id`` command line option modifies the above rules in this way:
-
-#. A Test Suite name has only ``<Test Scenario identifier>`` component.
-   Its Application Project path can be found in ``twister.json`` report as ``path:`` property.
-
-#. With short Test Suite names in this mode, all corresponding Test Scenario names
-   must be unique for the Twister execution scope.
 
 
 The following is an example test configuration with a few options that are
@@ -815,7 +801,8 @@ required_applications: <list of required applications> (default empty)
     - ``platform``: Target platform (optional, defaults to current test's platform)
     - ``path``: Directory path where Twister should search for the application
       (optional). Can be an absolute path or a path relative to the directory
-      containing the test's YAML file. Environment variables are expanded.
+      containing the test's YAML file. Environment variables and Zephyr module
+      directory variables are expanded (see :ref:`twister_module_dir_vars`).
       If not specified, Twister searches in the same directory as the referring
       test's YAML file.
 
@@ -922,6 +909,23 @@ To load arguments from a file, add ``+`` before the file name, e.g.,
 line break instead of white spaces.
 
 Most everyday users will run with no arguments.
+
+.. _twister_module_dir_vars:
+
+Expanding paths with module directory variables
+===============================================
+
+Path options in the test scenario file (e.g. ``required_applications``,
+``harness_config: pytest_root``) are expanded before use. In addition to
+environment variables, Twister expands Zephyr module directory
+variables, which mirror the CMake variables defined for every module:
+
+* ``ZEPHYR_<MODULE>_MODULE_DIR`` - absolute path to the module's root.
+* ``ZEPHYR_<MODULE>_MODULE_NAME`` - the module's name.
+
+``<MODULE>`` is upper-cased with non-alphanumeric characters replaced by ``_``,
+exactly as CMake does (for example ``$ZEPHYR_HAL_NORDIC_MODULE_DIR`` for the
+``hal_nordic`` module). Unknown references are left unchanged.
 
 Managing tests timeouts
 =======================
@@ -1127,6 +1131,62 @@ The following is an example yaml file with a few harness_config options.
    harness/script
    harness/bsim
    harness/shell
+
+
+.. _twister_sidecars:
+
+Sidecars
+********
+
+Some tests need a host-side resource to exist for the duration of a run: a
+daemon the emulated guest talks to, a shared memory region the host reads back
+afterwards, or a network interface the guest attaches to. A *sidecar* models
+this. It is selected with the ``sidecar:`` entry in a test scenario's
+:file:`tests.yaml` and is orthogonal to the harness: the
+harness interprets the guest's output while the sidecar provisions the host side
+around the run. Any harness (``console`` for a sample, ``ztest`` for a test,
+...) can therefore be paired with any sidecar.
+
+.. code-block:: yaml
+
+   tests:
+     some.test:
+       harness: ztest
+       sidecar: <name>
+
+A sidecar has a small lifecycle, driven by Twister for each test instance:
+
+#. **configure** -- the sidecar reads what it needs from the instance and its
+   ``sidecar_config`` block before anything is provisioned.
+#. **setup** -- called just before the handler runs the test image; it brings
+   the host resource up (starts a daemon, creates an interface, ...). If the
+   host side is unavailable -- a required tool is not installed, or bringing the
+   resource up needs privileges that are not present -- setup reports this and
+   Twister *skips* execution instead of failing the test.
+#. **teardown** -- called after the handler returns, in a ``finally`` block, so
+   it always runs even if the test failed or timed out. It releases the resource
+   and may also collect data the guest left behind (for example reading a shared
+   memory region back into the build directory).
+
+Because provisioning is decoupled from output processing, Twister can also
+attach a sidecar to an instance itself, without the test opting in -- for
+example to route coverage data off a guest that has no other host transport.
+
+Each sidecar defines its own configuration keys under a block of
+``sidecar_config`` named after the sidecar. Namespacing by sidecar name keeps
+each sidecar's keys separate, so only the block matching the scenario's
+``sidecar:`` value is consumed. For example, the ``virtiofs`` sidecar shares a
+host directory seeded from a template with:
+
+.. code-block:: yaml
+
+   tests:
+     some.test:
+       harness: console
+       sidecar: virtiofs
+       sidecar_config:
+         virtiofs:
+           shared: shared
 
 
 Selecting platform scope

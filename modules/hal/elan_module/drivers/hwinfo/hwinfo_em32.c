@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Elan Microelectronics Corp.
+ * SPDX-FileCopyrightText: 2026 ELAN Microelectronics Corp.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -64,12 +64,12 @@ int z_impl_hwinfo_get_reset_cause(uint32_t *cause)
 	if (SYSSTATUSCTRL->SWRESETS) // SW Reset
 	{
 		*cause = RESET_SOFTWARE;
-	} else if (SYSSTATUSCTRL->BORRESETS) // Brownout Reset
-	{
-		*cause = RESET_BROWNOUT;
 	} else if (SYSSTATUSCTRL->WDTRESETS) // Watchdog Reset
 	{
 		*cause = RESET_WATCHDOG;
+	} else if (SYSSTATUSCTRL->BORRESETS) // Brownout Reset
+	{
+		*cause = RESET_BROWNOUT;
 	} else // Low Power Wake Reset or Reset Pin
 	{
 		SYSREGCTRL->POWEN = 1; // Enable power domain

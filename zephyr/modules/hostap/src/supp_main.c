@@ -64,7 +64,6 @@ static const struct wifi_mgmt_ops mgmt_ops = {
 	.send_11k_neighbor_request = supplicant_11k_neighbor_request,
 #ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_ROAMING
 	.candidate_scan = supplicant_candidate_scan,
-	.start_11r_roaming = supplicant_11r_roaming,
 #endif
 	.set_power_save = supplicant_set_power_save,
 	.set_twt = supplicant_set_twt,
@@ -399,6 +398,20 @@ static int add_interface(struct supplicant_context *ctx, struct net_if *iface)
 		LOG_ERR("Failed to register mgd iface with native stack %s (%d)",
 			ifname, ret);
 		goto out;
+	}
+
+	if (IS_ENABLED(CONFIG_WIFI_NM_WPA_SUPPLICANT_AP)) {
+		/* In SoftAP-via-supplicant mode the same interface can also act
+		 * as an AP, so register it as SAP capable too.
+		 */
+		ret = wifi_nm_register_mgd_type_iface(wifi_nm_get_instance("wifi_supplicant"),
+						      WIFI_TYPE_SAP,
+						      iface);
+		if (ret) {
+			LOG_ERR("Failed to register mgd SAP iface with native stack %s (%d)",
+				ifname, ret);
+			goto out;
+		}
 	}
 
 	supplicant_generate_state_event(ifname, NET_EVENT_SUPPLICANT_CMD_IFACE_ADDED, 0);

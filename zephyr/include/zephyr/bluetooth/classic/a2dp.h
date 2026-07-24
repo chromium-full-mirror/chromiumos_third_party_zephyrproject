@@ -8,8 +8,8 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_A2DP_H_
-#define ZEPHYR_INCLUDE_BLUETOOTH_A2DP_H_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_H_
 
 /**
  * @file
@@ -780,7 +780,7 @@ struct bt_a2dp_stream_ops {
 	 * @param stream Stream object that has been suspended.
 	 */
 	void (*suspended)(struct bt_a2dp_stream *stream);
-#if defined(CONFIG_BT_A2DP_SINK)
+#if defined(CONFIG_BT_A2DP_SINK) || defined(__DOXYGEN__)
 	/** @brief the media streaming data, only for sink
 	 *
 	 *  @param buf the data buf
@@ -789,8 +789,8 @@ struct bt_a2dp_stream_ops {
 	 */
 	void (*recv)(struct bt_a2dp_stream *stream, struct net_buf *buf, uint16_t seq_num,
 		     uint32_t ts);
-#endif
-#if defined(CONFIG_BT_A2DP_SOURCE)
+#endif /* CONFIG_BT_A2DP_SINK */
+#if defined(CONFIG_BT_A2DP_SOURCE) || defined(__DOXYGEN__)
 	/**
 	 * @brief Stream audio HCI sent callback
 	 *
@@ -814,7 +814,7 @@ struct bt_a2dp_stream_ops {
 	 * @param value The delay report value in 1/10 milliseconds.
 	 */
 	void (*delay_report)(struct bt_a2dp_stream *stream, uint16_t value);
-#endif
+#endif /* CONFIG_BT_A2DP_SOURCE */
 };
 
 /**
@@ -975,4 +975,4 @@ int bt_a2dp_stream_delay_report(struct bt_a2dp_stream *stream, uint16_t delay);
  * @}
  */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_A2DP_H_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_CLASSIC_A2DP_H_ */

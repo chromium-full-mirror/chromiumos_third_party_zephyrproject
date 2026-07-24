@@ -192,6 +192,7 @@ static int netc_eth_rx(const struct device *dev)
 		}
 #endif
 		netc_eth_pkt_get_timestamp(pkt, ptp_dev, attr.timestamp);
+		net_pkt_set_rx_timestamping(pkt, true);
 	}
 #endif
 	/* Send to upper layer */
@@ -576,11 +577,6 @@ enum ethernet_hw_caps netc_eth_get_capabilities(const struct device *dev __maybe
 #endif
 	);
 
-#if defined(CONFIG_PTP_CLOCK_NXP_NETC)
-	if (netc_eth_get_ptp_clock(dev, iface) != NULL) {
-		caps |= ETHERNET_PTP;
-	}
-#endif
 	return caps;
 }
 

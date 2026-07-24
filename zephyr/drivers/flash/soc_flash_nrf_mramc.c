@@ -20,8 +20,8 @@ LOG_MODULE_REGISTER(flash_nrf_mramc, CONFIG_FLASH_LOG_LEVEL);
 
 #define DT_DRV_COMPAT nordic_nrf_mramc
 
-#define MRAM_NODE		  DT_NODELABEL(cpuapp_mram)
-#define MRAM_BASE		 DT_REG_ADDR(MRAM_NODE)
+#define MRAM_NODE		  DT_INST(0, soc_nv_flash)
+#define MRAM_BASE		  DT_REG_ADDR(MRAM_NODE)
 #define MRAM_SIZE		  DT_REG_SIZE(MRAM_NODE)
 
 BUILD_ASSERT(MRAM_BASE <= UINT32_MAX, "MRAM_BASE is not in size of uint32_t");
@@ -42,7 +42,16 @@ BUILD_ASSERT((WRITE_BLOCK_SIZE % MRAM_WORD_SIZE) == 0,
 BUILD_ASSERT((ERASE_BLOCK_SIZE % WRITE_BLOCK_SIZE) == 0,
 		 "erase-block-size expected to be a multiple of write-block-size");
 
-struct k_mutex nrf_mramc_mutex;
+#ifdef CONFIG_MULTITHREADING
+static struct k_mutex nrf_mramc_mutex;
+#define SYNC_INIT()   k_mutex_init(&nrf_mramc_mutex)
+#define SYNC_LOCK()   k_mutex_lock(&nrf_mramc_mutex, K_FOREVER)
+#define SYNC_UNLOCK() k_mutex_unlock(&nrf_mramc_mutex)
+#else
+#define SYNC_INIT()
+#define SYNC_LOCK()
+#define SYNC_UNLOCK()
+#endif /* CONFIG_MULTITHREADING */
 
 /**
  * @param[in] addr		 Address of mram memory.
@@ -53,25 +62,12 @@ struct k_mutex nrf_mramc_mutex;
  */
 static bool validate_action(uint32_t addr, size_t len, bool must_align)
 {
-	bool valid = true;
-
-#if defined(CONFIG_TRUSTED_EXECUTION_NONSECURE)
-	valid = (addr >= MRAM_BASE && addr < (MRAM_BASE + MRAM_SIZE));
-#else
-	valid = nrfx_mramc_valid_address_check(addr, true);
-#endif
-	if (!valid) {
+	if (addr < MRAM_BASE || addr >= (MRAM_BASE + MRAM_SIZE)) {
 		LOG_ERR("Invalid address: %x", addr);
 		return false;
 	}
 
-#if defined(CONFIG_TRUSTED_EXECUTION_NONSECURE)
-	valid = (((addr - (uint32_t)MRAM_BASE) < MRAM_SIZE) &&
-		(len <= ((uint32_t)MRAM_BASE + MRAM_SIZE - addr)));
-#else
-	valid = nrfx_mramc_fits_memory_check(addr, true, len);
-#endif
-	if (!valid) {
+	if (len > ((uint32_t)MRAM_BASE + MRAM_SIZE - addr)) {
 		LOG_ERR("Address %x with length %zu exceeds MRAM size", addr, len);
 		return false;
 	}
@@ -273,7 +269,7 @@ static int nrf_mramc_write(const struct device *dev, off_t offset,
 
 	LOG_DBG("write: %x:%zu", addr, size);
 
-	k_mutex_lock(&nrf_mramc_mutex, K_FOREVER);
+	SYNC_LOCK();
 
 	for (uint32_t i = 0; i < size; i += MRAM_WORD_SIZE) {
 		/* Write full 16 bytes word for N iterations */
@@ -282,12 +278,12 @@ static int nrf_mramc_write(const struct device *dev, off_t offset,
 		nrf_mramc_set_wen(MRAMC_CONFIG_WEN_DISABLE);
 
 		if (ret) {
-			k_mutex_unlock(&nrf_mramc_mutex);
+			SYNC_UNLOCK();
 			return ret;
 		}
 	}
 
-	k_mutex_unlock(&nrf_mramc_mutex);
+	SYNC_UNLOCK();
 	return 0;
 }
 
@@ -309,7 +305,7 @@ static int nrf_mramc_erase(const struct device *dev, off_t offset, size_t size)
 
 	LOG_DBG("erase: %p:%zu", (void *)addr, size);
 
-	k_mutex_lock(&nrf_mramc_mutex, K_FOREVER);
+	SYNC_LOCK();
 
 	for (uint32_t i = 0; i < size; i += MRAM_WORD_SIZE) {
 		/* Erase full 16 bytes word for N iterations */
@@ -318,12 +314,12 @@ static int nrf_mramc_erase(const struct device *dev, off_t offset, size_t size)
 		nrf_mramc_set_wen(MRAMC_CONFIG_WEN_DISABLE);
 
 		if (ret) {
-			k_mutex_unlock(&nrf_mramc_mutex);
+			SYNC_UNLOCK();
 			return ret;
 		}
 	}
 
-	k_mutex_unlock(&nrf_mramc_mutex);
+	SYNC_UNLOCK();
 	return 0;
 }
 
@@ -375,7 +371,7 @@ static int mramc_sys_init(const struct device *dev)
 
 	int ret = 0;
 
-	k_mutex_init(&nrf_mramc_mutex);
+	SYNC_INIT();
 
 #if defined(CONFIG_TRUSTED_EXECUTION_NONSECURE)
 	/* Initialization of MRAMC driver via secure processing environment */

@@ -193,9 +193,20 @@ static void free_run_timer_overflow_isr(const void *unused)
 	/* TODO: to increment 32-bit "top half" here for software 64-bit timer emulation. */
 }
 
-void sys_clock_set_timeout(int32_t ticks, bool idle)
+void sys_clock_unused(void)
 {
-	ARG_UNUSED(idle);
+	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
+		return;
+	}
+
+	k_spinlock_key_t key = k_spin_lock(&lock);
+
+	ext_timer_disable(EVENT_TIMER);
+	k_spin_unlock(&lock, key);
+}
+
+void sys_clock_set_timeout(uint32_t ticks)
+{
 
 	uint32_t hw_cnt, next_cycs, now, dcycles;
 
@@ -210,24 +221,12 @@ void sys_clock_set_timeout(int32_t ticks, bool idle)
 	/* Disable event timer */
 	ext_timer_disable(EVENT_TIMER);
 
-	if (ticks == K_TICKS_FOREVER) {
-		/*
-		 * If kernel doesn't have a timeout:
-		 * 1.CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE = y (no future timer interrupts are expected),
-		 *   kernel pass K_TICKS_FOREVER (0xFFFF FFFF FFFF FFFF), we handle this case in
-		 *   here.
-		 * 2.CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE = n (schedule timeout as far into the future
-		 *   as possible), kernel pass INT_MAX (0x7FFF FFFF), we handle it in later else {}.
-		 */
-		k_spin_unlock(&lock, key);
-		return;
-	}
 	/*
 	 * If ticks <= 1 means the kernel wants the tick announced as soon as possible,
 	 * ideally no more than one system tick in the future. So set event timer count
 	 * to 1 HW tick.
 	 */
-	ticks = CLAMP(ticks, 1, (int32_t)EVEN_TIMER_MAX_CNT_SYS_TICK);
+	ticks = CLAMP(ticks, 1, EVEN_TIMER_MAX_CNT_SYS_TICK);
 	next_cycs = (last_ticks + last_elapsed + ticks) * HW_CNT_PER_SYS_TICK;
 	now = ~read_timer_obser(FREE_RUN_TIMER);
 	if (unlikely(next_cycs <= now)) {

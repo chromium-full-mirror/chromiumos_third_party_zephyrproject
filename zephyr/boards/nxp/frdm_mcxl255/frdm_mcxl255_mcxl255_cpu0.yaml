@@ -14,4 +14,6 @@ supported:
   - uart
   - gpio
   - rtc
+  - crc
+  - watchdog
 vendor: nxp

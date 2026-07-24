@@ -57,6 +57,15 @@ Patch List:
      If the CTXT bit is set in the context descriptor then extract the timestamps
      ST internal bug : 161504
 
+   *Fix Ethernet RX timestamp context handling
+     Prevents stale or incomplete RX timestamps by clearing the cached timestamp,
+     reading only CPU-owned timestamp context descriptors, and advancing the RX
+     descriptor index after consuming a valid context descriptor. Packets with
+     timestamp context descriptors still owned by DMA are retried later.
+     Impacted file:
+      stm32cube/stm32h5xx/drivers/src/stm32h5xx_hal_eth.c
+     ST Internal Reference: 683183939fd90b986d0d8626d624ab85
+
    *Fix to remove PAGESIZE definition which conflicts with POSIX
     Impacted files:
      drivers/include/Legacy/stm32_hal_legacy.h
@@ -79,5 +88,13 @@ Patch List:
      Impacted file:
       stm32cube/stm32h5xx/drivers/include/stm32h5xx_hal_mdf.h
      ST internal bug : HAL1-27445
+
+   *Fix HAL_MDF_IRQHandler
+      HAL_MDF_IRQHandler handles IRQ flags in an if {} else if {} condition.
+      This causes interrupts to be handled once and only the first flag
+      encountered in the condition, while there can be several flags raised.
+     Impacted files:
+       drivers/src/stm32h5xx_hal_mdf.c
+     ST Internal Reference: HAL1-27843
 
    See release_note.html from STM32Cube

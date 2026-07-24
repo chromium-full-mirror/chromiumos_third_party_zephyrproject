@@ -14,6 +14,8 @@
 
 #if defined(CONFIG_TEST_FORCE_STORAGE_PARTITION)
 #define TEST_AREA	storage_partition
+#elif defined(CONFIG_FLASH_INFINEON_RRAM)
+#define TEST_AREA storage_partition_rram
 #elif defined(CONFIG_NORDIC_QSPI_NOR)
 #define TEST_AREA_DEV_NODE	DT_INST(0, nordic_qspi_nor)
 #elif defined(SOC_SERIES_STM32N6X)
@@ -23,7 +25,7 @@
 #elif defined(CONFIG_SPI_NOR)
 #define TEST_AREA_DEV_NODE	DT_INST(0, jedec_spi_nor)
 #elif defined(CONFIG_FLASH_MSPI_NOR)
-#define TEST_AREA_DEV_NODE	DT_INST(0, jedec_mspi_nor)
+#define TEST_AREA_DEV_NODE	DT_INST(0, jedec_nor)
 #define TEST_IS_DTR		DT_ENUM_HAS_VALUE(TEST_AREA_DEV_NODE, mspi_data_rate,              \
 						  mspi_data_rate_dual)
 #elif defined(CONFIG_FLASH_RENESAS_RA_QSPI)
