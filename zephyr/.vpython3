@@ -135,3 +135,7 @@ wheel: <
   name: "infra/python/wheels/protobuf-py3"
   version: "version:4.21.9"
 >
+wheel: <
+  name: "infra/python/wheels/pyusb-py3"
+  version: "version:1.2.1"
+>
