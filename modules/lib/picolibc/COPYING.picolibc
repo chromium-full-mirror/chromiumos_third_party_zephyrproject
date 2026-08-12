@@ -1213,6 +1213,15 @@ Files: empty-libs/meson.build
  libc/machine/loongarch/CMakeLists.txt
  libc/machine/loongarch/machine/CMakeLists.txt
  libc/machine/msp430/CMakeLists.txt
+ libc/native/fstat.c
+ libc/native/fstat_host.c
+ libc/native/if_native.h
+ libc/native/lstat.c
+ libc/native/lstat_host.c
+ libc/native/meson.build
+ libc/native/native_if.h
+ libc/native/stat.c
+ libc/native/stat_host.c
  libc/posix/endpwent.c
  libc/posix/execl.c
  libc/posix/execv.c
@@ -1265,7 +1274,6 @@ Files: empty-libs/meson.build
  libos/linux/_signal_from_linux.c
  libos/linux/_signal_to_linux.c
  libos/linux/_statbuf.c
- libos/linux/_statbuf64.c
  libos/linux/_syscall_error.c
  libos/linux/access.c
  libos/linux/alarm.c
@@ -1286,7 +1294,6 @@ Files: empty-libs/meson.build
  libos/linux/fork.c
  libos/linux/fpathconf.c
  libos/linux/fstat.c
- libos/linux/fstat64.c
  libos/linux/getcwd.c
  libos/linux/getegid.c
  libos/linux/getentropy.c
@@ -1315,7 +1322,6 @@ Files: empty-libs/meson.build
  libos/linux/local-times.h
  libos/linux/lseek.c
  libos/linux/lstat.c
- libos/linux/lstat64.c
  libos/linux/machine/aarch64/linux/linux-dirent.h
  libos/linux/machine/aarch64/linux/linux-dirent64-struct.h
  libos/linux/machine/aarch64/linux/linux-errno.h
@@ -1478,7 +1484,6 @@ Files: empty-libs/meson.build
  libos/linux/sigsuspend.c
  libos/linux/sleep.c
  libos/linux/stat.c
- libos/linux/stat64.c
  libos/linux/tcflow.c
  libos/linux/tcflush.c
  libos/linux/tcgetattr.c
@@ -1605,7 +1610,6 @@ Files: hello-world/Makefile
  libos/semihost/common/iob.c
  libos/semihost/common/kill.c
  libos/semihost/common/lseek.c
- libos/semihost/common/lseek64.c
  libos/semihost/common/meson.build
  libos/semihost/common/open.c
  libos/semihost/common/read.c
@@ -3569,6 +3573,7 @@ Files: .clang-format
  scripts/cross-xtensa-sample_controller_zephyr-elf.txt
  scripts/do-arm-tk
  scripts/do-clang-hexagon-configure
+ scripts/do-x86_64-linux-full
  scripts/duplicate-names
  scripts/monitor-e9
  scripts/run-hexagon
