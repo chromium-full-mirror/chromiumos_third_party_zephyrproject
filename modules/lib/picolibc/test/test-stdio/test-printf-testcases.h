@@ -799,9 +799,10 @@ result |= test(__LINE__, "0.123000", "%.*f", -1, printf_float(0.123));
     result |= testw(__LINE__, L"foo", L"%.3s", "foobar");
 
     wint_t  wc = 0x1234;
+    wchar_t wb[4] = {};
 
     /* test %lc for wchar_t */
-    wchar_t wb[2] = { 0x1234, 0 };
+    wb[0] = 0x1234;
     result |= testw(__LINE__, wb, L"%lc", wc);
 
     /* make sure %c truncates to char */
@@ -823,11 +824,30 @@ result |= test(__LINE__, "0.123000", "%.*f", -1, printf_float(0.123));
     result |= test(__LINE__, "$㌰$", "$%lc$", (wint_t)L'㌰');
     result |= test(__LINE__, "$㌰$", "$%.1lc$", (wint_t)L'㌰');
 
-    /* Make sure nothing is output for invalid wide chars (surrogates) */
-    wb[0] = 0xd804;
+    /* Make sure an error is returned for invalid wide chars (surrogates) */
+    wb[0] = 0xd804; /* high surrogate */
     wb[1] = 0;
     result |= testl(__LINE__, "$", FAIL_LEN, "$%ls$", wb);
     result |= testl(__LINE__, "$", FAIL_LEN, "$%lc$", (wint_t)wb[0]);
+
+    wb[0] = 0xdc05; /* low surrogate */
+    wb[1] = 0;
+    result |= testl(__LINE__, "$", FAIL_LEN, "$%ls$", wb);
+    result |= testl(__LINE__, "$", FAIL_LEN, "$%lc$", (wint_t)wb[0]);
+
+    /* Check a character beyond the BMP */
+    result |= test(__LINE__, "$🚀$", "$%ls$", L"🚀");
+    result |= test(__LINE__, "$$", "$%.3ls$", L"🚀");
+
+    result |= testw(__LINE__, L"$🚀$", L"$%ls$", L"🚀");
+#if __SIZEOF_WCHAR_T__ == 2
+    /* Make sure we don't write a lone surrogate */
+    result |= testw(__LINE__, L"$$", L"$%.1s$", "🚀");
+    result |= testw(__LINE__, L"$$", L"$%.1ls$", L"🚀");
+#else
+    /* this only takes one codepoint with UTF-32 */
+    result |= testw(__LINE__, L"$🚀$", L"$%.1s$", "🚀");
+#endif
 
 #endif
 #ifndef NO_WCHAR
