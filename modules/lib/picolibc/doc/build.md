@@ -83,6 +83,7 @@ testing the library using the host compiler and host C library.
 | picolib                     | true    | Include 'picolib' bits. Disable when doing native testing.                           |
 | semihost                    | true    | Build semihost libary. Disable when doing native testing.                            |
 | fake-semihost               | false   | Create a fake semihost library to allow tests to link                                |
+| use-hlt-semihosting         | false   | Selects the HLT trap instruction for semihosting on AArch32 targets with Armv8 or later |
 
 ### Stdio options
 
