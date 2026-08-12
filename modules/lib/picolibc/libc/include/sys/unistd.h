@@ -58,11 +58,6 @@ typedef __off_t off_t;
 #define _OFF_T_DECLARED
 #endif
 
-#ifndef _OFF64_T_DECLARED
-typedef __off64_t off64_t; /* 64-bit file offset */
-#define _OFF64_T_DECLARED
-#endif
-
 #ifndef _UID_T_DECLARED
 typedef __uid_t uid_t; /* user id */
 #define _UID_T_DECLARED
@@ -319,10 +314,6 @@ int     link(const char *__path1, const char *__path2);
 __off_t lseek(int __fildes, __off_t __offset, int __whence);
 void   *sbrk(ptrdiff_t __incr);
 int     unlink(const char *__path);
-#endif
-
-#if __LARGEFILE64_VISIBLE
-__off64_t lseek64(int __filedes, __off64_t __offset, int __whence);
 #endif
 
 #if !defined(__INSIDE_CYGWIN__)
