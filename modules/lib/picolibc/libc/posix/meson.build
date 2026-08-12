@@ -39,6 +39,7 @@ srcs_posix = [
   'dirname.c',
   'endpwent.c',
   'execl.c',
+  'execlp.c',
   'execv.c',
   'execvp.c',
   'execvpe.c',
