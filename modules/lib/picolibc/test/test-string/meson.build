@@ -45,6 +45,7 @@ tests_mem = [
   'test-strcat_s',
   'test-strchr',
   'test-strcpy_s',
+  'test-strerror',
   'test-strerrorlen_s',
   'test-strerror_s',
   'test-strncat_s',
