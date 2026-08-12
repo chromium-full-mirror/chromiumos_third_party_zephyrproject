@@ -149,6 +149,11 @@ tests_enable_stack_protector = get_option('tests-enable-stack-protector')
 tests_enable_full_malloc_stress = get_option('tests-enable-full-malloc-stress')
 tests_enable_posix_io = get_option('tests-enable-posix-io')
 
+use_hlt_semihosting = false
+if get_option('use-hlt-semihosting')
+  use_hlt_semihosting = true
+endif
+
 # C++ is only used in tests, so only check for it when tests are enabled
 if enable_tests
   have_cplusplus = add_languages('cpp', required: false, native: false)
@@ -1688,6 +1693,7 @@ endif
 
 conf_data.set('__SEMIHOST', has_semihost, description: 'Semihost APIs supported')
 conf_data.set('__ARM_SEMIHOST', has_arm_semihost, description: 'ARM Semihost APIs supported')
+conf_data.set('__ARM_SEMIHOST_USE_HLT', use_hlt_semihosting, description: 'ARM semihost uses hlt on ARMv8 targets')
 
 # By default, tests don't require any special arguments
 

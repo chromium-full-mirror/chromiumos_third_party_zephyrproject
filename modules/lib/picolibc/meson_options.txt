@@ -61,6 +61,8 @@ option('fast-strcmp', type: 'boolean', value: true,
        description: 'Always optimize strcmp for performance')
 option('sanitize', type: 'string', value: 'none',
        description: 'Code sanitizer to use')
+option('use-hlt-semihosting', type: 'boolean', value: 'false',
+        description: 'Enable HLT Semihosting (only valid for Armv8)')
 
 #
 # Installation options
