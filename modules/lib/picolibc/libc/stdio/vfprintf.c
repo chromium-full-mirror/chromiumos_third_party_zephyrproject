@@ -474,8 +474,13 @@ _mbslen(const wchar_t *s, size_t maxlen)
     while (len < maxlen && (c = *s++) != L'\0') {
         int clen;
         clen = __WCTOMB(tmp, c, &ps);
-        if (clen == -1)
+        if (clen < 0)
             return (size_t)clen;
+#if __SIZEOF_WCHAR_T__ == 2
+        /* Check for trailing surrogate */
+        if (clen == 0 && *s == L'\0')
+            return (size_t)-1;
+#endif
 
         /* Don't output partial chars */
         if (len + clen > maxlen)
@@ -495,7 +500,13 @@ _mbclen(wchar_t c)
 {
     mbstate_t ps = { 0 };
     char      tmp[MB_LEN_MAX];
-    return (size_t)__WCTOMB(tmp, c, &ps);
+    int       clen = __WCTOMB(tmp, c, &ps);
+#if __SIZEOF_WCHAR_T__ == 2
+    /* lone UTF-16 surrogate is an error */
+    if (clen == 0)
+        clen = -1;
+#endif
+    return (size_t)clen;
 }
 
 #endif
@@ -520,6 +531,14 @@ _wcslen(const char *s, size_t maxlen)
         s += clen;
         len++;
     }
+#if __SIZEOF_WCHAR_T__ == 2
+    /*
+     * For UTF-16, we'll get this count if a high surrogate would
+     * fit but we dont't have space for the low surrogate.
+     */
+    if (ps.__count == 4)
+        len--;
+#endif
     return len;
 }
 #endif

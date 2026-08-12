@@ -48,6 +48,18 @@
 #else
         /* count wchar_t */
         size = wcsnlen(wstr, size);
+#if __SIZEOF_WCHAR_T__ == 2
+        /*
+         * Check for a trailing high surrogate and
+         * skip it
+         */
+        if (size > 0) {
+            uint16_t wc = (uint16_t)wstr[size - 1];
+            if (0xd800 <= wc && wc <= 0xdbff)
+                size--;
+        }
+#endif
+
 #endif
 
     } else
