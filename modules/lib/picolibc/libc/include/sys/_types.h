@@ -113,12 +113,12 @@ typedef __uint32_t __mode_t;
 typedef __int32_t __key_t;
 #endif
 
-/*
- * We need fpos_t for the following, but it doesn't have a leading "_",
- * so we use _fpos_t instead.
- */
 #ifndef __machine_fpos_t_defined
 typedef __off_t __fpos_t;
+#endif
+
+#ifndef __machine_rlim_t_defined
+typedef __uint64_t __rlim_t;
 #endif
 
 /* Defined by GCC provided <stddef.h> */
