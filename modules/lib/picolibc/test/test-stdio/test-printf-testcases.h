@@ -798,7 +798,7 @@ result |= test(__LINE__, "0.123000", "%.*f", -1, printf_float(0.123));
     /* test %s for mbchar string */
     result |= testw(__LINE__, L"foo", L"%.3s", "foobar");
 
-    wchar_t wc = 0x1234;
+    wint_t  wc = 0x1234;
 
     /* test %lc for wchar_t */
     wchar_t wb[2] = { 0x1234, 0 };
@@ -808,6 +808,13 @@ result |= test(__LINE__, "0.123000", "%.*f", -1, printf_float(0.123));
     wb[0] = 0x34;
     result |= testw(__LINE__, wb, L"%c", wc);
 
+    result |= testwl(__LINE__, L"ab", 2, L"%.47lc%.0lc", (wint_t)L'a', (wint_t)L'b');
+#ifndef __GLIBC__
+    /* glibc gets this one wrong, it produces L"a\0b" */
+    result
+        |= testwl(__LINE__, L"ab", 2, L"%.47lc%lc%.0lc", (wint_t)L'a', (wint_t)L'\0', (wint_t)L'b');
+#endif
+
 #ifndef NO_MBCHAR
     wb[0] = 0x3330;
     result |= testw(__LINE__, wb, L"%s", "㌰");
@@ -815,7 +822,14 @@ result |= test(__LINE__, "0.123000", "%.*f", -1, printf_float(0.123));
 #endif
 #ifndef NO_WCHAR
     result |= test(__LINE__, "foobar", "%ls", L"foobar");
-    result |= test(__LINE__, "$c$", "$%lc$", L'c');
+    result |= test(__LINE__, "$c$", "$%lc$", (wint_t)L'c');
+    result |= testl(__LINE__, "ab", 2, "%.47lc%.0lc", (wint_t)L'a', (wint_t)L'b');
+#ifndef __GLIBC__
+    /* glibc gets this one wrong, it produces "a\0b" */
+    result |= testl(__LINE__, "ab", 2, "%.47lc%lc%.0lc", (wint_t)L'a', (wint_t)L'\0', (wint_t)L'b');
 #endif
+#endif
+    (void)testl;
+    (void)testwl;
 }
 #endif

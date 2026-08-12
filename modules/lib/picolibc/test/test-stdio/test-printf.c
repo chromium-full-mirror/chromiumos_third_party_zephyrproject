@@ -48,14 +48,12 @@ failmsg(int serial, char *fmt, ...)
 #endif
 
 static int
-test(int serial, char *expect, char *fmt, ...)
+vtestl(int serial, char *expect, size_t expect_len, char *fmt, va_list ap)
 {
-    va_list ap;
-    char   *abuf = NULL;
-    char   *as = NULL;
-    va_start(ap, fmt);
-    int n;
-    int ret = 0;
+    char *abuf = NULL;
+    char *as = NULL;
+    int   n;
+    int   ret = 0;
 #ifdef TEST_ASPRINTF
     int     an;
     va_list aap;
@@ -187,19 +185,19 @@ test(int serial, char *expect, char *fmt, ...)
 #endif
         break;
     }
-    va_end(ap);
-    //    printf("serial %d expect \"%s\" got \"%s\"\n", serial, expect, buf);
+    //    printf("serial %d expect \"%*.*s\" got \"%s\"\n", serial, expect_len, expect_len, expect,
+    //    buf);
     if (n >= PRINTF_BUF_SIZE) {
         failmsg(serial, "buffer overflow");
         ret = 1;
     }
-    if (n != (int)strlen(expect)) {
-        failmsg(serial, "expected \"%s\" (%d), got \"%s\" (%d)", expect, (int)strlen(expect), buf,
-                n);
+    if (n != (int)expect_len) {
+        failmsg(serial, "expected \"%s\" (%d), got \"%s\" (%d)", expect, (int)expect_len, buf, n);
         ret = 1;
     }
-    if (strcmp(buf, expect)) {
-        failmsg(serial, "expected \"%s\", got \"%s\"", expect, buf);
+    if (memcmp(buf, expect, expect_len)) {
+        failmsg(serial, "expected \"%*.*s\", got \"%*.*s\"", expect_len, expect_len, expect,
+                expect_len, expect_len, buf);
         ret = 1;
     }
 #ifdef TEST_ASPRINTF
@@ -238,6 +236,26 @@ test(int serial, char *expect, char *fmt, ...)
     return ret;
 }
 
+static int
+testl(int serial, char *expect, size_t expect_len, char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vtestl(serial, expect, expect_len, fmt, ap);
+    va_end(ap);
+    return ret;
+}
+
+static int
+test(int serial, char *expect, char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vtestl(serial, expect, strlen(expect), fmt, ap);
+    va_end(ap);
+    return ret;
+}
+
 static void
 failmsgw(int serial, wchar_t *fmt, ...)
 {
@@ -253,12 +271,10 @@ failmsgw(int serial, wchar_t *fmt, ...)
 }
 
 static int
-testw(int serial, wchar_t *expect, wchar_t *fmt, ...)
+vtestwl(int serial, wchar_t *expect, size_t expect_len, wchar_t *fmt, va_list ap)
 {
-    va_list  ap;
     wchar_t *abuf = NULL;
-    va_start(ap, fmt);
-    int n;
+    int      n;
 #ifndef __IO_NO_FLOATING_POINT
 #ifdef _HAS_IO_FLOAT
     uint32_t dv;
@@ -301,24 +317,47 @@ testw(int serial, wchar_t *expect, wchar_t *fmt, ...)
         n = vswprintf(wbuf, PRINTF_BUF_SIZE, fmt, ap);
         break;
     }
-    va_end(ap);
     //    printf("serial %d expect \"%s\" got \"%s\"\n", serial, expect, wbuf);
     if (n >= PRINTF_BUF_SIZE) {
         failmsgw(serial, L"buffer overflow");
         free(abuf);
         return 1;
     }
-    if (n != (int)wcslen(expect)) {
-        failmsgw(serial, L"expected \"%s\" (%d), got \"%s\" (%d)", expect, wcslen(expect), wbuf, n);
+    if (n != (int)expect_len) {
+        failmsgw(serial, L"expected \"%*.*ls\" (%d), got \"%*.*ls\" (%d)", expect_len, expect_len,
+                 expect, expect_len, n, n, wbuf, n);
         free(abuf);
         return 1;
     }
     if (wcscmp(wbuf, expect)) {
-        failmsgw(serial, L"expected \"%ls\", got \"%ls\"", expect, wbuf);
+        failmsgw(serial, L"expected \"%*.*ls\", got \"%*.*ls\"", expect_len, expect_len, expect, n,
+                 n, wbuf);
         free(abuf);
         return 1;
     }
     return 0;
+}
+
+int testwl(int serial, wchar_t *expect, size_t expect_len, wchar_t *fmt, ...);
+
+int
+testwl(int serial, wchar_t *expect, size_t expect_len, wchar_t *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vtestwl(serial, expect, expect_len, fmt, ap);
+    va_end(ap);
+    return ret;
+}
+
+static int
+testw(int serial, wchar_t *expect, wchar_t *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vtestwl(serial, expect, wcslen(expect), fmt, ap);
+    va_end(ap);
+    return ret;
 }
 
 int
