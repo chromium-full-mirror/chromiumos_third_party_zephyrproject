@@ -45,6 +45,7 @@ int ioctl(int fd, unsigned long op, void *param);
 
 #define TIOCGWINSZ (('T' << 8) | 1)
 #define TIOCSWINSZ (('T' << 8) | 2)
+#define TIOCLINUX  (('T' << 8) | 3)
 
 _END_STD_C
 
