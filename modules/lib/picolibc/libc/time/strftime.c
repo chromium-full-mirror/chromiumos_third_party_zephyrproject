@@ -278,7 +278,7 @@ BUGS
 locale, hard-coding the "C" locale settings.
 */
 
-#define _GNU_SOURCE
+#include "local.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <time.h>
@@ -289,7 +289,6 @@ locale, hard-coding the "C" locale settings.
 #include <wctype.h>
 #include <wchar.h>
 #include <stdio.h>
-#include "local.h"
 #include "locale_private.h"
 #undef TOLOWER
 

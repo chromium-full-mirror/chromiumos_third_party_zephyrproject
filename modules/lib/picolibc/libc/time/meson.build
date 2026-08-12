@@ -53,6 +53,8 @@ srcs_time = [
     'strptime.c',
     'strptime_l.c',
     'time.c',
+    'timespec_get.c',
+    'timespec_getres.c',
     'tzcalc_limits.c',
     'tzset.c',
     'tzvars.c',

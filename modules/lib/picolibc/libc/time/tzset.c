@@ -98,14 +98,12 @@ PORTABILITY
 Supporting OS subroutine required: None
 */
 
-#define _DEFAULT_SOURCE
+#include "local.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <time.h>
 #include <limits.h>
-#include "local.h"
 
 #define TZNAME_MIN 3 /* POSIX min TZ abbr size local def */
 

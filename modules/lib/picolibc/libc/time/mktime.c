@@ -75,12 +75,11 @@ ANSI C requires <<mktime>>.
 <<mktime>> and <<timegm>> require no supporting OS subroutines.
 */
 
-#define _DEFAULT_SOURCE
+#include "local.h"
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
 #include <stdbool.h>
-#include "local.h"
 
 #define _DAYS_IN_MONTH(x) ((x == 1) ? days_in_feb : __month_lengths[0][x])
 

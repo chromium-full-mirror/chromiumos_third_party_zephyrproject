@@ -1,8 +1,6 @@
 /* Copyright (c) 2002 Jeff Johnston <jjohnstn@redhat.com> */
 /* local header used by libc/time routines */
-#ifndef _DEFAULT_SOURCE
-#define _DEFAULT_SOURCE
-#endif
+#define _GNU_SOURCE
 #include <time.h>
 #include <sys/_tz_structs.h>
 #include <sys/lock.h>
@@ -38,6 +36,23 @@ isleap2(int y, int y_off)
     if (y_off)
         y = y % 400 + y_off;
     return isleap(y);
+}
+
+static inline clockid_t
+timebase_to_clockid(int base)
+{
+    switch (base) {
+    case TIME_UTC:
+        return CLOCK_REALTIME;
+    case TIME_MONOTONIC:
+        return CLOCK_MONOTONIC;
+    case TIME_ACTIVE:
+        return CLOCK_PROCESS_CPUTIME_ID;
+    case TIME_THREAD_ACTIVE:
+        return CLOCK_THREAD_CPUTIME_ID;
+    default:
+        return (clockid_t)-1;
+    }
 }
 
 int                  __tzcalc_limits(int __year);
