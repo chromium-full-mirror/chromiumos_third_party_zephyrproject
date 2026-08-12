@@ -61,6 +61,7 @@ _start:
          */
         movslq  0(%rsp), %r12                   /* argc = *sp */
         leaq    8(%rsp), %r13                   /* argv = sp + 8 */
+        movq    %r13, __argv
         leaq    16(%rsp,%r12,8), %r14           /* environ = sp + argc * 8 + 16 */
         movq    %r14, environ
 
@@ -129,6 +130,13 @@ __tcb_space:
         .type           environ, @object
         .size           environ, 8
 environ:
+        .zero           8
+
+        .section        .bss.__argv
+        .globl          __argv
+        .type           __argv, @object
+        .size           __argv, 8
+__argv:
         .zero           8
 
 #if defined(__linux__) && defined(__ELF__)

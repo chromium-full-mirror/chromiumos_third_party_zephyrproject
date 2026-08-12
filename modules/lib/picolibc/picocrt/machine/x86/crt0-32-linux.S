@@ -61,6 +61,7 @@ _start:
          */
         movl    0(%esp), %edi                   /* argc = *sp */
         leal    4(%esp), %esi                   /* argv = sp + 4 */
+        movl    %esi, __argv
         leal    8(%esp,%edi,4), %eax            /* environ = sp + argc * 4 + 8 */
         movl    %eax, environ
 
@@ -174,6 +175,13 @@ __tcb_space:
         .type           environ, @object
         .size           environ, 4
 environ:
+        .zero           4
+
+        .section        .bss.__argv
+        .globl          __argv
+        .type           __argv, @object
+        .size           __argv, 4
+__argv:
         .zero           4
 
 #if defined(__linux__) && defined(__ELF__)

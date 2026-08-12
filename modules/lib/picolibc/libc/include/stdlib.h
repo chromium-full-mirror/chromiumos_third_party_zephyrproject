@@ -141,7 +141,8 @@ __noreturn void exit(int __status);
 void            free(void *) __nothrow;
 char           *getenv(const char *__string);
 #if __GNU_VISIBLE
-char *secure_getenv(const char *__string);
+extern char **__argv;
+char         *secure_getenv(const char *__string);
 #endif
 #if __MISC_VISIBLE
 char *_findenv(const char *, int *);

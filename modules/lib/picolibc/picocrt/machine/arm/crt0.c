@@ -41,6 +41,7 @@
 #include <stdint.h>
 #include <picotls.h>
 char      **environ;
+char      **__argv;
 extern char __tls_base[];
 void        _set_tls(void *tls);
 
@@ -53,6 +54,7 @@ _start(void)
     __asm__("mov %0, sp" : "=r"(sp));
     int    argc = (*(int *)sp);
     char **argv = ((char **)sp) + 1;
+    __argv = argv;
     environ = argv + argc + 1;
 
 #ifdef __THREAD_LOCAL_STORAGE

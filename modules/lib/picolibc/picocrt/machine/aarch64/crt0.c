@@ -112,6 +112,7 @@ extern const void *__vector_table[];
 
 #ifdef CRT0_LINUX
 char **environ;
+char **__argv;
 #endif
 
 void
@@ -127,6 +128,7 @@ _cstart(void)
 
     argc = *(int *)orig_sp;
     argv = ((char **)orig_sp) + 1;
+    __argv = argv;
     environ = argv + argc + 1;
     __start(argc, argv);
 #else
