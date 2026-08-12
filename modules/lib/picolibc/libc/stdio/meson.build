@@ -90,6 +90,7 @@ srcs_stdio = [
   'fscanf.c',
   'fseek.c',
   'fseeko.c',
+  'fseterr.c',
   'fsetpos.c',
   'ftell.c',
   'ftello.c',

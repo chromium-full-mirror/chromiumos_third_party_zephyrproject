@@ -313,17 +313,24 @@ size_t fread(void *__ptr, size_t __size, size_t __nmemb, FILE *__stream) __nonnu
 void   clearerr(FILE *__stream) __nonnull((1));
 int    ferror(FILE *__stream) __nonnull((1));
 int    feof(FILE *__stream) __nonnull((1));
+#ifdef __MISC_VISIBLE
+void __fseterr(FILE *__stream) __nonnull((1));
+#endif
 
 /* fast inlined versions */
-#define __clearerr_unlocked(s) ((s)->flags &= (__uint8_t) ~(__SERR | __SEOF))
-#define __ferror_unlocked(s)   ((s)->flags & __SERR)
-#define __feof_unlocked(s)     ((s)->flags & __SEOF)
+#define __clearerr_unlocked(s)  ((s)->flags &= (__uint8_t) ~(__SERR | __SEOF))
+#define __ferror_unlocked(s)    ((s)->flags & __SERR)
+#define __feof_unlocked(s)      ((s)->flags & __SEOF)
+#define ____fseterr_unlocked(s) ((s)->flags |= __SERR)
 
 /* When locking is disabled, use the unlocked macros */
 #ifndef __STDIO_LOCKING
 #define clearerr(s) __clearerr_unlocked(s)
 #define ferror(s)   __ferror_unlocked(s)
 #define feof(s)     __feof_unlocked(s)
+#ifdef __MISC_VISIBLE
+#define __fseterr(s) ____fseterr_unlocked(s)
+#endif
 #endif
 
 /* Expose the unlocked symbols when requested */
@@ -331,9 +338,11 @@ int    feof(FILE *__stream) __nonnull((1));
 void clearerr_unlocked(FILE *__stream) __nonnull((1));
 int  ferror_unlocked(FILE *__stream) __nonnull((1));
 int  feof_unlocked(FILE *__stream) __nonnull((1));
-#define clearerr_unlocked(s) __clearerr_unlocked(s)
-#define ferror_unlocked(s)   __ferror_unlocked(s)
-#define feof_unlocked(s)     __feof_unlocked(s)
+void __fseterr_unlocked(FILE *__stream) __nonnull((1));
+#define clearerr_unlocked(s)  __clearerr_unlocked(s)
+#define ferror_unlocked(s)    __ferror_unlocked(s)
+#define feof_unlocked(s)      __feof_unlocked(s)
+#define __fseterr_unlocked(s) ____fseterr_unlocked(s)
 #endif
 
 /* Expose printf variants */
