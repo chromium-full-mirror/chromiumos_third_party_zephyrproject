@@ -41,7 +41,7 @@ __ssize_t
 getdelim(char ** restrict lineptr, size_t * restrict nptr, int delim, FILE * restrict stream)
 {
     char   *line = *lineptr;
-    size_t  n = *nptr;
+    size_t  n = line ? *nptr : 0;
     ssize_t count = 0;
 
     __flockfile(stream);
