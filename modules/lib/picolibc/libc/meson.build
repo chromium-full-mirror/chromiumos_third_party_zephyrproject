@@ -38,6 +38,10 @@ libdirs = ['argz', 'ctype', 'errno', 'iconv', 'locale',
            'stdio', 'stdlib', 'string', 'time', 'xdr',
            'uchar', 'ubsan']
 
+if use_stdlib
+  libdirs += ['native']
+endif
+
 libnames = libdirs
 
 inc_sys_headers_machine = []
