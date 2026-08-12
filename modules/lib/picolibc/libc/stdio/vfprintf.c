@@ -476,9 +476,26 @@ _mbslen(const wchar_t *s, size_t maxlen)
         clen = __WCTOMB(tmp, c, &ps);
         if (clen == -1)
             return (size_t)clen;
+
+        /* Don't output partial chars */
+        if (len + clen > maxlen)
+            break;
+
         len += clen;
     }
     return len;
+}
+
+/*
+ * Compute the number of bytes to encode a wide char
+ * in the current locale
+ */
+static size_t
+_mbclen(wchar_t c)
+{
+    mbstate_t ps = { 0 };
+    char      tmp[MB_LEN_MAX];
+    return (size_t)__WCTOMB(tmp, c, &ps);
 }
 
 #endif
