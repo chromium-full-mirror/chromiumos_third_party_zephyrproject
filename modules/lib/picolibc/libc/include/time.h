@@ -49,6 +49,8 @@ SUCH DAMAGE.
 
 _BEGIN_STD_C
 
+#define __STDC_VERSION_TIME_H__ 202311L
+
 #ifndef _CLOCKS_PER_SEC_
 #define _CLOCKS_PER_SEC_ 1000000
 #endif
@@ -57,14 +59,15 @@ _BEGIN_STD_C
 #define CLOCKS_PER_SEC _CLOCKS_PER_SEC_
 #endif
 
-#ifndef TIME_UTC
-#define TIME_UTC 1
-#endif
-
 #ifndef _CLOCK_T_DECLARED
 typedef __clock_t clock_t;
 #define _CLOCK_T_DECLARED
 #endif
+
+#define TIME_UTC 1
+#define TIME_MONOTONIC 2
+#define TIME_ACTIVE 3
+#define TIME_THREAD_ACTIVE 4
 
 struct tm {
     int tm_sec;
@@ -248,6 +251,10 @@ size_t strftime(char * __restrict _s, size_t _maxsize, const char * __restrict _
                 const struct tm * __restrict _t);
 
 int    timespec_get(struct timespec *_ts, int _base);
+
+#if __ISO_C_VISIBLE >= 2023
+int    timespec_getres(struct timespec *_ts, int base);
+#endif
 
 #if __POSIX_VISIBLE
 size_t strftime_l(char * __restrict _s, size_t              _maxsize, const char              *__restrict _fmt,
