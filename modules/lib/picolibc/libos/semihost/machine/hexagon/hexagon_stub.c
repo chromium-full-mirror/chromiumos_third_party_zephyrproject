@@ -38,12 +38,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unistd.h>
 #include <errno.h>
 
-off64_t
-lseek64(int fd, off64_t offset, int whence)
-{
-    return (off64_t)lseek(fd, (off_t)offset, whence);
-}
-
 int
 fstat(int fd, struct stat *sbuf)
 {

@@ -42,8 +42,8 @@
 #include <string.h>
 #include <errno.h>
 
-off64_t
-lseek64(int fd, off64_t offset, int whence)
+off_t
+lseek(int fd, off_t offset, int whence)
 {
     uint32_t a = offset >> 32;
     uint32_t b = offset;

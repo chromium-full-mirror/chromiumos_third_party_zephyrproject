@@ -43,7 +43,6 @@ src_semihost += files([
                        'isatty.c',
                        'kill.c',
                        'lseek.c',
-                       'lseek64.c',
                        'mapstdio.c',
                        'open.c',
                        'read.c',
