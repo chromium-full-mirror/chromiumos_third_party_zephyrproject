@@ -809,25 +809,33 @@ result |= test(__LINE__, "0.123000", "%.*f", -1, printf_float(0.123));
     result |= testw(__LINE__, wb, L"%c", wc);
 
     result |= testwl(__LINE__, L"ab", 2, L"%.47lc%.0lc", (wint_t)L'a', (wint_t)L'b');
-#ifndef __GLIBC__
-    /* glibc gets this one wrong, it produces L"a\0b" */
-    result
-        |= testwl(__LINE__, L"ab", 2, L"%.47lc%lc%.0lc", (wint_t)L'a', (wint_t)L'\0', (wint_t)L'b');
-#endif
+    result |= testwl(__LINE__, L"a\0b", 3, L"%.47lc%lc%.0lc", (wint_t)L'a', (wint_t)L'\0',
+                     (wint_t)L'b');
 
 #ifndef NO_MBCHAR
-    wb[0] = 0x3330;
-    result |= testw(__LINE__, wb, L"%s", "㌰");
-    result |= test(__LINE__, "$㌰$", "$%lc$", 0x3330);
+    result |= testw(__LINE__, L"$㌰$", L"$%s$", "㌰");
+
+    /* test to make sure we don't output partial chars */
+    result |= test(__LINE__, "$$", "$%.1ls$", L"㌰");
+    result |= test(__LINE__, "$✊$", "$%.3ls$", L"✊㌰");
+
+    /* Make sure precision is ignored for %lc */
+    result |= test(__LINE__, "$㌰$", "$%lc$", (wint_t)L'㌰');
+    result |= test(__LINE__, "$㌰$", "$%.1lc$", (wint_t)L'㌰');
+
+    /* Make sure nothing is output for invalid wide chars (surrogates) */
+    wb[0] = 0xd804;
+    wb[1] = 0;
+    result |= testl(__LINE__, "$", FAIL_LEN, "$%ls$", wb);
+    result |= testl(__LINE__, "$", FAIL_LEN, "$%lc$", (wint_t)wb[0]);
+
 #endif
 #ifndef NO_WCHAR
     result |= test(__LINE__, "foobar", "%ls", L"foobar");
     result |= test(__LINE__, "$c$", "$%lc$", (wint_t)L'c');
     result |= testl(__LINE__, "ab", 2, "%.47lc%.0lc", (wint_t)L'a', (wint_t)L'b');
-#ifndef __GLIBC__
-    /* glibc gets this one wrong, it produces "a\0b" */
-    result |= testl(__LINE__, "ab", 2, "%.47lc%lc%.0lc", (wint_t)L'a', (wint_t)L'\0', (wint_t)L'b');
-#endif
+    result
+        |= testl(__LINE__, "a\0b", 3, "%.47lc%lc%.0lc", (wint_t)L'a', (wint_t)L'\0', (wint_t)L'b');
 #endif
     (void)testl;
     (void)testwl;

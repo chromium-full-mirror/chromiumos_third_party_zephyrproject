@@ -47,6 +47,8 @@ failmsg(int serial, char *fmt, ...)
 #pragma GCC diagnostic ignored "-Wanalyzer-va-list-exhausted"
 #endif
 
+#define FAIL_LEN ((size_t)-1)
+
 static int
 vtestl(int serial, char *expect, size_t expect_len, char *fmt, va_list ap)
 {
@@ -54,6 +56,12 @@ vtestl(int serial, char *expect, size_t expect_len, char *fmt, va_list ap)
     char *as = NULL;
     int   n;
     int   ret = 0;
+    int   expect_ret = (int)expect_len;
+    int   expect_fail = expect_len == FAIL_LEN;
+    if (expect_fail) {
+        expect_ret = -1;
+        expect_len = strlen(expect);
+    }
 #ifdef TEST_ASPRINTF
     int     an;
     va_list aap;
@@ -191,8 +199,8 @@ vtestl(int serial, char *expect, size_t expect_len, char *fmt, va_list ap)
         failmsg(serial, "buffer overflow");
         ret = 1;
     }
-    if (n != (int)expect_len) {
-        failmsg(serial, "expected \"%s\" (%d), got \"%s\" (%d)", expect, (int)expect_len, buf, n);
+    if (n != expect_ret) {
+        failmsg(serial, "expected \"%s\" (%d), got \"%s\" (%d)", expect, expect_ret, buf, n);
         ret = 1;
     }
     if (memcmp(buf, expect, expect_len)) {
@@ -206,18 +214,22 @@ vtestl(int serial, char *expect, size_t expect_len, char *fmt, va_list ap)
         failmsg(serial, "asprintf return %d sprintf return %d", an, n);
         ret = 1;
     }
-    if (strcmp(abuf, buf)) {
+    if (abuf && strcmp(abuf, buf)) {
         failmsg(serial, "sprintf return %s asprintf return %s", buf, abuf);
         ret = 1;
     }
 #endif
 #ifdef TEST_ASNPRINTF
     va_end(aanp);
-    if (as_len != (size_t)n) {
+    if (expect_fail && as != NULL) {
+        failmsg(serial, "asnprintf return %s expected failure", as);
+        ret = 1;
+    }
+    if (as && as_len != (size_t)n) {
         failmsg(serial, "asnprintf return %d sprintf return %d", as_len, n);
         ret = 1;
     }
-    if (strcmp(as, buf)) {
+    if (as && strcmp(as, buf)) {
         failmsg(serial, "sprintf return %s asnprintf return %s", buf, as);
         ret = 1;
     }
@@ -231,6 +243,8 @@ vtestl(int serial, char *expect, size_t expect_len, char *fmt, va_list ap)
     if (as == as_buf)
         as = NULL;
 #endif
+    if (as == abuf)
+        as = NULL;
     free(as);
     free(abuf);
     return ret;
