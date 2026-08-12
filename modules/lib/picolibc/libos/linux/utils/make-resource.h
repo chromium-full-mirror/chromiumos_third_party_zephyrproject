@@ -32,12 +32,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _LINUX_IOCTL_H_
-#define _LINUX_IOCTL_H_
-#define LINUX_TCXONC     0x540a
-#define LINUX_TIOCGPGRP  0x540f
-#define LINUX_TIOCGWINSZ 0x5413
-#define LINUX_TIOCLINUX  0x541c
-#define LINUX_TIOCSPGRP  0x5410
-#define LINUX_TIOCSWINSZ 0x5414
-#endif /* _LINUX_IOCTL_H_ */
+
+#define _GNU_SOURCE
+#include <sys/resource.h>
+
+int
+main(void)
+{
+    printf("LINUX_RLIMIT_CPU %d\n", RLIMIT_CPU);
+    printf("LINUX_RLIMIT_FSIZE %d\n", RLIMIT_FSIZE);
+    printf("LINUX_RLIMIT_DATA %d\n", RLIMIT_DATA);
+    printf("LINUX_RLIMIT_STACK %d\n", RLIMIT_STACK);
+    printf("LINUX_RLIMIT_CORE %d\n", RLIMIT_CORE);
+    printf("LINUX_RLIMIT_NOFILE %d\n", RLIMIT_NOFILE);
+    printf("LINUX_RLIMIT_AS %d\n", RLIMIT_AS);
+    return 0;
+}

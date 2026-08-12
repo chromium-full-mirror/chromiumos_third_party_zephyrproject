@@ -32,12 +32,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _LINUX_IOCTL_H_
-#define _LINUX_IOCTL_H_
-#define LINUX_TCXONC     0x540a
-#define LINUX_TIOCGPGRP  0x540f
-#define LINUX_TIOCGWINSZ 0x5413
-#define LINUX_TIOCLINUX  0x541c
-#define LINUX_TIOCSPGRP  0x5410
-#define LINUX_TIOCSWINSZ 0x5414
-#endif /* _LINUX_IOCTL_H_ */
+
+#ifndef _LINUX_RLIMIT_STRUCT_H_
+#define _LINUX_RLIMIT_STRUCT_H_
+
+struct __kernel_rlimit {
+    __uint32_t rlim_cur;
+    __uint32_t rlim_max;
+};
+
+#define SIMPLE_MAP_RLIMIT(_t, _f)        \
+    do {                                 \
+        (_t)->rlim_cur = (_f)->rlim_cur; \
+        (_t)->rlim_max = (_f)->rlim_max; \
+    } while (0)
+
+#endif /* _LINUX_RLIMIT_STRUCT_H_ */

@@ -45,5 +45,6 @@ main(void)
     printf("#define LINUX_TCXONC 0x%x\n", TCXONC);
     printf("#define LINUX_TIOCGWINSZ 0x%x\n", TIOCGWINSZ);
     printf("#define LINUX_TIOCSWINSZ 0x%x\n", TIOCSWINSZ);
+    printf("#define LINUX_TIOCLINUX 0x%x\n", TIOCLINUX);
     return 0;
 }

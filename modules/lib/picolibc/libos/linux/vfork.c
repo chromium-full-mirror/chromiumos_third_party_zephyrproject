@@ -33,7 +33,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "local-linux.h"
+#include "local-sigaction.h"
 #include <unistd.h>
 
 pid_t
@@ -41,7 +41,9 @@ vfork(void)
 {
 #ifdef LINUX_SYS_vfork_
     return syscall(LINUX_SYS_vfork);
-#else
+#elif defined(LINUX_SYS_fork)
     return syscall(LINUX_SYS_fork);
+#else
+    return syscall(LINUX_SYS_clone, __LINUX_SIGCHLD, 0, 0, 0, 0);
 #endif
 }

@@ -32,12 +32,38 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _LINUX_IOCTL_H_
-#define _LINUX_IOCTL_H_
-#define LINUX_TCXONC     0x540a
-#define LINUX_TIOCGPGRP  0x540f
-#define LINUX_TIOCGWINSZ 0x5413
-#define LINUX_TIOCLINUX  0x541c
-#define LINUX_TIOCSPGRP  0x5410
-#define LINUX_TIOCSWINSZ 0x5414
-#endif /* _LINUX_IOCTL_H_ */
+
+#define _GNU_SOURCE
+#include <sys/resource.h>
+#include <stdio.h>
+
+int
+main(void)
+{
+    printf("#define LINUX_RLIMIT_CPU %d\n", RLIMIT_CPU);
+    printf("#define LINUX_RLIMIT_FSIZE %d\n", RLIMIT_FSIZE);
+    printf("#define LINUX_RLIMIT_DATA %d\n", RLIMIT_DATA);
+    printf("#define LINUX_RLIMIT_STACK %d\n", RLIMIT_STACK);
+    printf("#define LINUX_RLIMIT_CORE %d\n", RLIMIT_CORE);
+    printf("#define LINUX_RLIMIT_NOFILE %d\n", RLIMIT_NOFILE);
+    printf("#define LINUX_RLIMIT_AS %d\n", RLIMIT_AS);
+    printf("#define LINUX_RLIM_INFINITY %lluU\n", (rlim_t)RLIM_INFINITY);
+    printf("#define LINUX_RLIM_SAVED_MAX %lluU\n", (rlim_t)RLIM_SAVED_MAX);
+    printf("#define LINUX_RLIM_SAVED_CUR %lluU\n", (rlim_t)RLIM_SAVED_CUR);
+    printf("\n");
+    printf("static inline int\n"
+           "_rlimit_to_linux(int resource)\n"
+           "{\n"
+           "    switch(resource) {\n"
+           "    case RLIMIT_CPU: return LINUX_RLIMIT_CPU;\n"
+           "    case RLIMIT_FSIZE: return LINUX_RLIMIT_FSIZE;\n"
+           "    case RLIMIT_DATA: return LINUX_RLIMIT_DATA;\n"
+           "    case RLIMIT_STACK: return LINUX_RLIMIT_STACK;\n"
+           "    case RLIMIT_CORE: return LINUX_RLIMIT_CORE;\n"
+           "    case RLIMIT_NOFILE: return LINUX_RLIMIT_NOFILE;\n"
+           "    case RLIMIT_AS: return LINUX_RLIMIT_AS;\n"
+           "    default: return -1;\n"
+           "    }\n"
+           "}\n");
+    return 0;
+}

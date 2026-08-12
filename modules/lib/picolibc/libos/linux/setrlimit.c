@@ -32,12 +32,27 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _LINUX_IOCTL_H_
-#define _LINUX_IOCTL_H_
-#define LINUX_TCXONC     0x540a
-#define LINUX_TIOCGPGRP  0x540f
-#define LINUX_TIOCGWINSZ 0x5413
-#define LINUX_TIOCLINUX  0x541c
-#define LINUX_TIOCSPGRP  0x5410
-#define LINUX_TIOCSWINSZ 0x5414
-#endif /* _LINUX_IOCTL_H_ */
+
+#include "local-linux.h"
+#include <sys/resource.h>
+#include <errno.h>
+#include <linux/linux-rlimit-struct.h>
+#include <linux/linux-resource.h>
+
+int
+setrlimit(int resource, const struct rlimit *rlim)
+{
+    struct __kernel_rlimit klim = {};
+    resource = _rlimit_to_linux(resource);
+    if (resource < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    SIMPLE_MAP_RLIMIT(&klim, rlim);
+    if (rlim->rlim_cur == RLIM_INFINITY)
+        klim.rlim_cur = LINUX_RLIM_INFINITY;
+    if (rlim->rlim_max == RLIM_INFINITY)
+        klim.rlim_max = LINUX_RLIM_INFINITY;
+    int ret = syscall(LINUX_SYS_setrlimit, resource, &klim);
+    return ret;
+}
