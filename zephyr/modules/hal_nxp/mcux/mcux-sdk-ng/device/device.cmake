@@ -78,6 +78,15 @@ if(CONFIG_ARM)
   set(CONFIG_MCUX_COMPONENT_driver.dsp ON)
 endif()
 
+# i.MX943 device headers unconditionally include "fsl_elec_spec.h", which lives
+# in the device drivers/ folder. That folder is only added to the include path
+# when a drivers/ component is selected; Cortex-A cores do not pull in
+# driver.reset (see above), so enable elec_spec for the whole device to keep
+# the include path valid on every core.
+if(CONFIG_SOC_MIMX94398)
+  set(CONFIG_MCUX_COMPONENT_driver.elec_spec ON)
+endif()
+
 # load device variables
 include(${mcux_device_folder}/variable.cmake)
 

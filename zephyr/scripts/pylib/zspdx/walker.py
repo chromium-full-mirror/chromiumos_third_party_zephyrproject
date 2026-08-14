@@ -5,17 +5,22 @@
 import logging
 import os
 import re
+import subprocess
 from dataclasses import dataclass
 
 import yaml
 from west.util import WestNotFound, west_topdir
 
 from zspdx.cmakecache import parse_cmake_cache_file
-from zspdx.cmakefileapijson import parse_reply
+from zspdx.cmakefileapi import TargetType
+from zspdx.cmakefileapijson import parse_reply, parse_toolchains_and_info
 from zspdx.getincludes import get_c_includes
 from zspdx.model import (
+    BuildInfo,
     ComponentPurpose,
+    ExternalReferenceType,
     RelationshipType,
+    SBOMBuild,
     SBOMComponent,
     SBOMDocument,
     SBOMFile,
@@ -23,6 +28,80 @@ from zspdx.model import (
 )
 
 _logger = logging.getLogger(__name__)
+
+# Organization credited as the SBOM author and as the supplier of Zephyr and its
+# upstream-mirrored modules (all hosted under github.com/zephyrproject-rtos).
+ZEPHYR_ORGANIZATION = "The Zephyr Project"
+
+# Name of the tool recorded in the SPDX Creator field.
+SPDX_TOOL_NAME = "Zephyr SPDX builder"
+
+# GitHub namespace under which Zephyr mirrors its modules.
+ZEPHYR_GITHUB_NAMESPACE = "zephyrproject-rtos"
+
+# Free-form notes emitted as package comments to clarify each package's role. The
+# "-sources" and "-deps" packages are systematically emitted for every module, so
+# the distinction (and why unused modules still appear) is spelled out here.
+SOURCES_COMMENT = (
+    "Source package: this component's source tree as checked out in the west "
+    "workspace. Files that were compiled into the build are listed here; a "
+    "component contributing no compiled files appears with no files."
+)
+DEPS_COMMENT = (
+    "Reference-only dependency package: identifies an upstream Zephyr module "
+    "(download location, and PURL/CPE where known) for supply-chain and "
+    "vulnerability tracking. One is emitted for every module in the west "
+    "manifest, whether or not its code is built, and it carries no files."
+)
+ZEPHYR_DEPS_COMMENT = (
+    "Reference-only package for the Zephyr RTOS itself, the common dependency "
+    "shared by every module dependency package; it carries no files."
+)
+
+# Matches a git repository URL of the form '<protocol><host>/<namespace>/<package>',
+# capturing the host type (e.g. "github"), the namespace and the package name.
+COMMON_GIT_URL_REGEX = (
+    r'((git@|http(s)?:\/\/)(?P<type>[\w\.@]+)(\.\w+)(\/|:))'
+    r'(?P<namespace>[\w,\-,\_\/]+)\/(?P<package>[\w,\-,\_]+)(.git){0,1}((\/){0,1})$'
+)
+
+
+def get_tool_version(tool_path):
+    """Get a tool's version by running it with ``--version``.
+
+    Used for the linker and archiver, which the CMake toolchains-v1 reply does
+    not describe. Returns "" when the tool is missing or no version can be parsed.
+    """
+    if not tool_path or not os.path.isfile(tool_path):
+        return ""
+
+    try:
+        result = subprocess.run(
+            [tool_path, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=5,  # avoid hanging on a misbehaving tool
+        )
+        output = result.stdout or result.stderr
+        if not output:
+            return ""
+
+        # parse the version from the first line of output, e.g.
+        # "GNU ld (Zephyr SDK 0.17.4) 2.38" -> "2.38",
+        # "cmake version 3.28.1" -> "3.28.1"
+        first_line = output.strip().split('\n')[0]
+        for pattern in (
+            r'version\s+(\d+\.\d+(?:\.\d+)?)',
+            r'\b(\d+\.\d+(?:\.\d+)?)\s*$',
+            r'\b(\d+\.\d+(?:\.\d+)?)\b',
+        ):
+            match = re.search(pattern, first_line, re.IGNORECASE)
+            if match:
+                return match.group(1)
+        return ""
+    except (subprocess.SubprocessError, OSError) as e:
+        _logger.debug(f"Could not get version for {tool_path}: {e}")
+        return ""
 
 
 # WalkerConfig contains configuration data for the Walker.
@@ -81,6 +160,12 @@ class Walker:
         # parsed CMake codemodel
         self.cm = None
 
+        # parsed CMake toolchains-v1 reply (compiler ids and versions)
+        self.toolchains = None
+
+        # parsed CMake info (generator and version) from the file API index
+        self.cmake_info = None
+
         # parsed CMake cache dict
         self.cmake_cache = {}
 
@@ -93,26 +178,114 @@ class Walker:
         # Meta file path
         self.meta_file = ""
 
-    def _build_purl(self, url, version=None):
+    @staticmethod
+    def _parse_git_url(url):
+        """Parse a git repository URL into (host_type, namespace, package).
+
+        Returns ``None`` when the URL does not match the common
+        '<protocol><host>/<namespace>/<package>' pattern.
+        """
         if not url:
             return None
-
-        purl = None
-        # This is designed to match repository with the following url pattern:
-        # '<protocol><type>/<namespace>/<package>
-        COMMON_GIT_URL_REGEX = (
-            r'((git@|http(s)?:\/\/)(?P<type>[\w\.@]+)(\.\w+)(\/|:))'
-            r'(?P<namespace>[\w,\-,\_\/]+)\/(?P<package>[\w,\-,\_]+)(.git){0,1}((\/){0,1})$'
-        )
-
         match = re.fullmatch(COMMON_GIT_URL_REGEX, url)
-        if match:
-            purl = f'pkg:{match.group("type")}/{match.group("namespace")}/{match.group("package")}'
+        if not match:
+            return None
+        return match.group("type"), match.group("namespace"), match.group("package")
 
-        if purl and version:
+    def _build_purl(self, url, version=None):
+        parsed = self._parse_git_url(url)
+        if not parsed:
+            return None
+
+        host_type, namespace, package = parsed
+        purl = f'pkg:{host_type}/{namespace}/{package}'
+        if version:
             purl += f'@{version}'
 
         return purl
+
+    def _supplier_from_url(self, url):
+        """Derive an SPDX supplier organization name from a git repository URL.
+
+        Modules mirrored under github.com/zephyrproject-rtos are supplied by the
+        Zephyr Project; for any other host namespace the namespace itself is used.
+        Returns "" when no supplier can be derived.
+        """
+        parsed = self._parse_git_url(url)
+        if not parsed:
+            return ""
+        _host_type, namespace, _package = parsed
+        if namespace == ZEPHYR_GITHUB_NAMESPACE:
+            return ZEPHYR_ORGANIZATION
+        return namespace
+
+    def _apply_scm_identity(self, component, url, revision):
+        """Attach supplier and a package URL derived from a module's SCM location.
+
+        Sets ``component.supplier`` from the repository namespace when not already
+        set, and adds a revision-pinned purl unless the component already carries
+        one (e.g. a curated purl from the module's security metadata).
+        """
+        if not url:
+            return
+        if not component.supplier:
+            supplier = self._supplier_from_url(url)
+            if supplier:
+                component.supplier = supplier
+        has_purl = any(
+            ref.reference_type == ExternalReferenceType.PURL
+            for ref in component.external_references
+        )
+        if not has_purl:
+            purl = self._build_purl(url, revision)
+            if purl:
+                component.add_external_reference(purl)
+
+    @staticmethod
+    def _read_zephyr_version(zephyr_path):
+        """Read the Zephyr version (e.g. "4.4.99") from the repo VERSION file.
+
+        Returns "" when the path is missing or the file cannot be parsed.
+        """
+        if not zephyr_path:
+            return ""
+        version_file = os.path.join(zephyr_path, "VERSION")
+        values = {}
+        try:
+            with open(version_file) as f:
+                for line in f:
+                    key, sep, val = line.partition("=")
+                    if sep:
+                        values[key.strip()] = val.strip()
+        except OSError:
+            return ""
+
+        try:
+            version = (
+                f"{int(values['VERSION_MAJOR'])}"
+                f".{int(values['VERSION_MINOR'])}"
+                f".{int(values['PATCHLEVEL'])}"
+            )
+        except (KeyError, ValueError):
+            return ""
+
+        extra = values.get("EXTRAVERSION", "")
+        if extra:
+            version += f"-{extra}"
+        return version
+
+    def _set_creation_metadata(self, zephyr):
+        """Record SBOM creator provenance (author organization and tool version).
+
+        Serializers read these from the graph metadata to emit the SPDX Creator
+        fields, so the SBOM advertises a human/organization author alongside the
+        versioned generation tool.
+        """
+        self.sbom_graph.metadata["creator_organization"] = ZEPHYR_ORGANIZATION
+        self.sbom_graph.metadata["tool_name"] = SPDX_TOOL_NAME
+        self.sbom_graph.metadata["tool_version"] = self._read_zephyr_version(
+            (zephyr or {}).get("path", "")
+        )
 
     # primary entry point
     def collect_sbom_graph(self):
@@ -137,6 +310,11 @@ class Walker:
         if not self.cm:
             _logger.error("could not parse codemodel from CMake API reply; bailing")
             return None
+
+        # extract Build profile info; non-fatal, the profile is omitted if absent
+        _logger.info("extracting build information from CMake file-based API")
+        self.get_toolchains_and_info()
+        self.extract_build_info()
 
         # set up components
         _logger.info("setting up SBOM components")
@@ -167,12 +345,8 @@ class Walker:
             self.sdk_path = self.cmake_cache.get("ZEPHYR_SDK_INSTALL_DIR", "")
             self.meta_file = self.cmake_cache.get("KERNEL_META_PATH", "")
 
-    # determine path from build dir to CMake file-based API index file, then
-    # parse it and return the Codemodel
-    def get_codemodel(self):
-        _logger.debug("getting codemodel from CMake API reply files")
-
-        # make sure the reply directory exists
+    # locate the CMake file-based API reply index file within the build dir
+    def get_reply_index_path(self):
         cmake_reply_dir_path = os.path.join(self.cfg.build_dir, ".cmake", "api", "v1", "reply")
         if not os.path.exists(cmake_reply_dir_path):
             _logger.error(f'cmake api reply directory {cmake_reply_dir_path} does not exist')
@@ -185,18 +359,107 @@ class Walker:
             return None
 
         # find file with "index" prefix; there should only be one
-        index_file_path = ""
         for f in os.listdir(cmake_reply_dir_path):
             if f.startswith("index"):
-                index_file_path = os.path.join(cmake_reply_dir_path, f)
-                break
-        if index_file_path == "":
-            # didn't find it
-            _logger.error(f'cmake api reply index file not found in {cmake_reply_dir_path}')
+                return os.path.join(cmake_reply_dir_path, f)
+
+        _logger.error(f'cmake api reply index file not found in {cmake_reply_dir_path}')
+        return None
+
+    # determine path from build dir to CMake file-based API index file, then
+    # parse it and return the Codemodel
+    def get_codemodel(self):
+        _logger.debug("getting codemodel from CMake API reply files")
+
+        index_file_path = self.get_reply_index_path()
+        if not index_file_path:
             return None
 
         # parse it
         return parse_reply(index_file_path)
+
+    # parse the toolchains-v1 reply and CMake info from the file-based API index
+    def get_toolchains_and_info(self):
+        _logger.debug("getting toolchains and CMake info from CMake API reply files")
+
+        index_file_path = self.get_reply_index_path()
+        if not index_file_path:
+            return
+
+        self.cmake_info, self.toolchains = parse_toolchains_and_info(index_file_path)
+
+    def extract_build_info(self):
+        """Collect global build information for the SPDX 3.0 Build profile.
+
+        Stores the details on the graph's ``SBOMBuild`` (its ``id``, ``build_type`` and
+        the detailed ``metadata`` mapping); serializers without a build vocabulary ignore
+        them.
+        """
+        if not self.cmake_cache:
+            _logger.debug("no CMake cache parsed; skipping build info extraction")
+            return
+
+        build_info: BuildInfo = {}
+
+        # compiler paths, ids and versions: prefer toolchains-v1, fall back to cache
+        if self.toolchains and self.toolchains.by_language:
+            for lang, key in (("C", "c"), ("CXX", "cxx"), ("ASM", "asm")):
+                build_info[f"cmake_{key}_compiler"] = self.toolchains.get_compiler_path(lang)
+                build_info[f"{key}_compiler_version"] = self.toolchains.get_compiler_version(lang)
+                build_info[f"{key}_compiler_id"] = self.toolchains.get_compiler_id(lang)
+            # generic compiler-path key, set to the C compiler
+            build_info["cmake_compiler"] = build_info.get("cmake_c_compiler", "")
+        else:
+            build_info["cmake_compiler"] = self.cmake_cache.get("CMAKE_C_COMPILER", "")
+            build_info["cmake_cxx_compiler"] = self.cmake_cache.get("CMAKE_CXX_COMPILER", "")
+            build_info["cmake_asm_compiler"] = self.cmake_cache.get("CMAKE_ASM_COMPILER", "")
+
+        # linker, archiver, build type and target system always come from the cache
+        build_info["cmake_linker"] = self.cmake_cache.get("CMAKE_LINKER", "")
+        build_info["cmake_ar"] = self.cmake_cache.get("CMAKE_AR", "")
+        build_info["cmake_build_type"] = self.cmake_cache.get("CMAKE_BUILD_TYPE", "")
+        build_info["cmake_system_name"] = self.cmake_cache.get("CMAKE_SYSTEM_NAME", "")
+        build_info["cmake_system_processor"] = self.cmake_cache.get("CMAKE_SYSTEM_PROCESSOR", "")
+
+        # CMake generator and version from the file-API index
+        if self.cmake_info:
+            build_info["cmake_generator"] = self.cmake_info.generator_name
+            build_info["cmake_version"] = self.cmake_info.version_string
+
+        # build environment: Zephyr config inputs surfaced as build_environment
+        environment = {}
+        for var in (
+            "BOARD",
+            "ARCH",
+            "ZEPHYR_TOOLCHAIN_VARIANT",
+            "ZEPHYR_SDK_INSTALL_DIR",
+            "CMAKE_BUILD_TYPE",
+        ):
+            value = self.cmake_cache.get(var, "")
+            if value:
+                environment[var] = value
+        build_info["environment"] = environment
+
+        # linker and archiver versions are not in toolchains-v1; query the tools
+        for version_key, path in (
+            ("linker_version", build_info["cmake_linker"]),
+            ("ar_version", build_info["cmake_ar"]),
+        ):
+            version = get_tool_version(path)
+            if version:
+                build_info[version_key] = version
+
+        # drop empty entries to keep the build_parameter output tidy
+        build_info = {k: v for k, v in build_info.items() if v}
+        if not build_info:
+            _logger.debug("no build information available; skipping Build profile inputs")
+            return
+
+        # summarise as an SBOMBuild; build timestamps are omitted to keep builds reproducible
+        self.sbom_graph.build = SBOMBuild(
+            build_type=build_info.get("cmake_build_type", ""),
+            metadata=build_info,
+        )
 
     def _create_document(self, name: str, title: str = "") -> SBOMDocument:
         """Create a document with the given name and register it with SBOM data.
@@ -235,6 +498,7 @@ class Walker:
         try:
             with open(self.meta_file) as file:
                 content = yaml.load(file.read(), yaml.SafeLoader)
+                self._set_creation_metadata(content.get("zephyr"))
                 if not self.setup_zephyr_component(content["zephyr"], content["modules"]):
                     return False
         except (FileNotFoundError, yaml.YAMLError):
@@ -281,7 +545,11 @@ class Walker:
             base_dir=relative_base_dir,
         )
 
-        zephyr_url = zephyr.get("remote", "")
+        # Zephyr itself is always supplied by the Zephyr Project.
+        component.supplier = ZEPHYR_ORGANIZATION
+        component.comment = SOURCES_COMMENT
+
+        zephyr_url = zephyr.get("remote") or zephyr.get("url", "")
         if zephyr_url:
             component.url = zephyr_url
 
@@ -303,6 +571,13 @@ class Walker:
                 if component.version == "" and version:
                     component.version = version.group('version')
 
+        # Fall back to a revision-pinned package URL when no release tag is known,
+        # so the component still carries a purl for vulnerability matching.
+        if purl is None and zephyr_url:
+            purl = self._build_purl(zephyr_url, component.revision)
+            if purl:
+                component.add_external_reference(purl)
+
         if len(component.version) > 0:
             cpe = f'cpe:2.3:o:zephyrproject:zephyr:{component.version}:-:*:*:*:*:*:*'
             component.add_external_reference(cpe)
@@ -315,7 +590,8 @@ class Walker:
         for module in modules:
             module_name = module.get("name", None)
             module_path = module.get("path", None)
-            module_url = module.get("remote", None)
+            # west may record the module remote as either "remote" or "url"
+            module_url = module.get("remote") or module.get("url")
             module_revision = module.get("revision", None)
 
             if not module_name:
@@ -326,6 +602,7 @@ class Walker:
                 name=module_name + "-sources",
                 purpose=ComponentPurpose.SOURCE,
                 base_dir=module_path,
+                comment=SOURCES_COMMENT,
             )
 
             if module_revision:
@@ -333,6 +610,7 @@ class Walker:
 
             if module_url:
                 module_component.url = module_url
+                self._apply_scm_identity(module_component, module_url, module_revision)
 
             self.sbom_graph.add_component(module_component, "zephyr")
             self.doc_zephyr.add_described_component(module_component)
@@ -362,8 +640,9 @@ class Walker:
             return None
 
         # no PrimaryPackagePurpose: this is a reference-only dependency package with no files
-        component = SBOMComponent(name="zephyr-deps")
-        component.url = zephyr.get("remote", "")
+        component = SBOMComponent(name="zephyr-deps", comment=ZEPHYR_DEPS_COMMENT)
+        component.supplier = ZEPHYR_ORGANIZATION
+        component.url = zephyr.get("remote") or zephyr.get("url", "")
         component.revision = zephyr.get("revision", "")
 
         purl = None
@@ -395,6 +674,12 @@ class Walker:
 
         self.sbom_graph.add_component(component, "modules-deps")
         self.doc_modules_deps.add_described_component(component)
+
+        # link this dependency package to the Zephyr source package (same relation
+        # the module dependency packages have with their -sources counterparts)
+        self.pending_relationships.append(
+            ("component", "zephyr-sources", "component", component.name, "VARIANT_OF")
+        )
         return component
 
     def setup_modules_deps_component(self, modules, zephyr=None):
@@ -405,6 +690,8 @@ class Walker:
         for module in modules:
             module_name = module.get("name", None)
             module_security = module.get("security", None)
+            module_url = module.get("remote") or module.get("url")
+            module_revision = module.get("revision", None)
 
             if not module_name:
                 _logger.error("cannot find module name in meta file; bailing")
@@ -415,13 +702,34 @@ class Walker:
                 module_ext_ref = module_security.get("external-references", [])
 
             # set up module deps component (reference-only, no files; no purpose)
-            component = SBOMComponent(name=module_name + "-deps")
+            component = SBOMComponent(name=module_name + "-deps", comment=DEPS_COMMENT)
 
+            if module_url:
+                component.url = module_url
+            if module_revision:
+                component.revision = module_revision
+
+            # curated security references (CPE/purl) take precedence; the SCM
+            # identity then fills in a supplier and a purl when none was provided.
             for ref in module_ext_ref:
                 component.add_external_reference(ref)
+            if module_url:
+                self._apply_scm_identity(component, module_url, module_revision)
 
             self.sbom_graph.add_component(component, "modules-deps")
             self.component_modules_deps[module_name] = component
+
+            # link this dependency package to the module's source package: the
+            # checked-out sources are Zephyr's variant of the upstream dependency
+            self.pending_relationships.append(
+                (
+                    "component",
+                    module_name + "-sources",
+                    "component",
+                    component.name,
+                    "VARIANT_OF",
+                )
+            )
 
             # each module is a dependency of the zephyr dependency component
             if zephyr_deps is not None:
@@ -438,6 +746,16 @@ class Walker:
         # assuming just one configuration; consider whether this is incorrect
         cfg_targets = self.cm.configurations[0].config_targets
         for cfg_target in cfg_targets:
+            # Skip CMake UTILITY targets (menuconfig, ram_report, run/flash/debug,
+            # code-generation helpers, ...). These are phony build-system convenience
+            # targets, not software components: they produce no build artifacts and
+            # only add noise to the SBOM. Generated sources that end up in the
+            # firmware are still captured via the artifact-producing targets that
+            # compile them, so nothing of value is lost by dropping them.
+            if cfg_target.target.type == TargetType.UTILITY:
+                _logger.debug(f"  - skipping UTILITY target {cfg_target.name}")
+                continue
+
             # build the Component for this target
             component = self.init_config_target_component(cfg_target)
 
@@ -452,6 +770,8 @@ class Walker:
                 else:
                     component.purpose = ComponentPurpose.LIBRARY
 
+                self.capture_build_metadata(cfg_target, component)
+
                 # get its source files if build file is found
                 if bf:
                     self.collect_pending_source_files(cfg_target, component, bf)
@@ -460,6 +780,37 @@ class Walker:
 
             # get its target dependencies
             self.collect_target_dependencies(cfg_targets, cfg_target, component)
+
+    # capture the per-target metadata the SPDX 3.0 Build profile needs to attribute a compiler/
+    # archiver to each artifact: target type, compiled languages and per-language compile flags
+    def capture_build_metadata(self, cfg_target, component):
+        target = cfg_target.target
+        component.metadata["target_type"] = target.type.name
+
+        languages = set()
+        compile_flags = {}
+        compile_defines = {}
+        for cg in target.compile_groups:
+            if not cg.language:
+                continue
+            languages.add(cg.language)
+            flags = [frag for frag in (cg.compile_command_fragments or []) if frag]
+            if flags:
+                compile_flags.setdefault(cg.language, []).extend(flags)
+            defines = [f"-D{d.define}" for d in (cg.defines or []) if d.define]
+            if defines:
+                compile_defines.setdefault(cg.language, []).extend(defines)
+
+        if languages:
+            component.metadata["compile_languages"] = sorted(languages)
+        if compile_flags:
+            component.metadata["compile_flags"] = {
+                lang: " ".join(flags) for lang, flags in compile_flags.items()
+            }
+        if compile_defines:
+            component.metadata["compile_defines"] = {
+                lang: " ".join(defs) for lang, defs in compile_defines.items()
+            }
 
     # build a Component for the given ConfigTarget
     def init_config_target_component(self, cfg_target):

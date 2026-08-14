@@ -609,7 +609,9 @@ def main(data_path, output):
         config_f1 = yaml.load(f, Loader=yaml.Loader)
 
     env = Environment(
-        trim_blocks=True, lstrip_blocks=True, loader=FileSystemLoader(SCRIPT_DIR)
+        trim_blocks=True, lstrip_blocks=True,
+        keep_trailing_newline=True,
+        loader=FileSystemLoader(SCRIPT_DIR)
     )
     env.filters["format_mode"] = format_mode
     env.filters["format_mode_f1"] = format_mode_f1
@@ -711,7 +713,7 @@ def main(data_path, output):
             rendered = ""
             try:
                 rendered = pinctrl_template.render(
-                    family=family, entries=entries
+                    family=family, entries=entries, hal2=False,
                 )
             except Exception:
                 logger.error(f"Skipping '{pinctrl_filename}' (rendering failed)")

@@ -285,6 +285,7 @@
 	crc: crc@120000 {
 		compatible = "nxp,lpc-crc";
 		reg = <0x120000 0x1000>;
+		clocks = <&clkctl1 MCUX_CRC_CLK>;
 		status = "disabled";
 	};
 
@@ -663,6 +664,14 @@
 		interrupts = <34 0>;
 		rx-channels = <4>;
 
+		status = "disabled";
+	};
+
+	/* For RT685, PowerQuad can't access flexspi memory */
+	powerquad: powerquad@150000 {
+		compatible = "nxp,powerquad";
+		reg = <0x150000 0x1000>;
+		clocks = <&clkctl0 MCUX_POWERQUAD_CLK>;
 		status = "disabled";
 	};
 };

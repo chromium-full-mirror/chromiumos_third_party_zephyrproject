@@ -33,54 +33,69 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _GNU_SOURCE
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <errno.h>
 
-#define HANDLER_NOT_CALLED      0
-#define HANDLER_SUCCESS         1
-#define HANDLER_FAILED          2
+#define HANDLER_NOT_CALLED  0
+#define HANDLER_SUCCESS     1
+#define HANDLER_FAILED      2
+#define HANDLER_NOT_BLOCKED 3
 
-static volatile sig_atomic_t     handler_result;
-static volatile sig_atomic_t     handler_sig_expect;
-static volatile sig_atomic_t     handler_sig_received;
+#define HANDLER_RECURSE     4
+
+static volatile sig_atomic_t handler_result;
+static volatile sig_atomic_t handler_sig_expect;
+static volatile sig_atomic_t handler_sig_received;
+static volatile sig_atomic_t handler_sig_count;
 
 static void
 signal_handler(int sig)
 {
+    sig_atomic_t entry_sig_count;
+
+    printf("            ******* caught %d *******\n", sig);
     handler_sig_received = sig;
-    if (sig == (int) handler_sig_expect)
-        handler_result = HANDLER_SUCCESS;
-    else
+    if (sig != (int)handler_sig_expect) {
         handler_result = HANDLER_FAILED;
+        return;
+    }
+    handler_result = HANDLER_SUCCESS;
+
+    ++handler_sig_count;
+    entry_sig_count = handler_sig_count;
+    if (handler_sig_count < HANDLER_RECURSE)
+        raise(sig);
+    printf("                    recurse %d %d *******\n", sig, handler_sig_count);
+    if (handler_sig_count != entry_sig_count)
+        handler_result = HANDLER_NOT_BLOCKED;
 }
 
 static const int test_signals[] = {
-    SIGABRT,
-    SIGFPE,
-    SIGILL,
-    SIGINT,
-    SIGSEGV,
-    SIGTERM,
+    SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM,
 };
 
-#define MODE_IGN        0
-#define MODE_CATCH      1
-#define MODE_MAX        2
+#define MODE_IGN   0
+#define MODE_CATCH 1
+#define MODE_MAX   2
 
-#define NTEST_SIG    (sizeof(test_signals)/sizeof(test_signals[0]))
+#define NTEST_SIG  (sizeof(test_signals) / sizeof(test_signals[0]))
 
-int main(void)
+int
+main(void)
 {
-    void (*old_func)(int);
-    void (*new_func)(int);
-    void (*prev_func)(int);
-    int ret;
+    void     (*old_func)(int);
+    void     (*new_func)(int);
+    void     (*prev_func)(int);
+    int      ret;
     unsigned u;
-    int fail = 0;
-    int mode;
+    int      fail = 0;
+    int      mode;
 
+    setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
     for (u = 0; u < NTEST_SIG; u++) {
         int sig = test_signals[u];
         prev_func = SIG_DFL;
@@ -95,19 +110,27 @@ int main(void)
             }
 
             /* Set up the signal handler */
+            printf("call signal(%d, %p)\n", sig, new_func);
             old_func = signal(sig, new_func);
+            printf("    got %p\n", old_func);
             if (old_func != SIG_DFL) {
-                printf("signal %d: old_func was %p, not SIG_DFL\n",
-                       sig, old_func);
+                printf("signal %d: old_func was %p, not SIG_DFL\n", sig, old_func);
+                if (old_func == (void (*)(int))-1 && errno == EPERM) {
+                    printf("Assuming github seccomp filter is active, ignoring\n");
+                    continue;
+                }
                 fail = 1;
             }
 
             /* Invoke the handler */
             prev_func = new_func;
             handler_result = HANDLER_NOT_CALLED;
-            handler_sig_expect = (sig_atomic_t) sig;
+            handler_sig_expect = (sig_atomic_t)sig;
+            handler_sig_count = 0;
 
+            printf("    call raise(%d)\n", sig);
             ret = raise(sig);
+            printf("        got %d (errno %d)\n", ret, errno);
             if (ret != 0) {
                 printf("signal %d: raise returned %d\n", sig, ret);
                 fail = 1;
@@ -128,11 +151,19 @@ int main(void)
                     fail = 1;
                     break;
                 case HANDLER_SUCCESS:
-                    prev_func = SIG_DFL;
+                    if (handler_sig_count != HANDLER_RECURSE) {
+                        printf("signal %d: handler didn't recurse %d times (only %d)\n", sig,
+                               HANDLER_RECURSE, (int)handler_sig_count);
+                        fail = 1;
+                    }
                     break;
                 case HANDLER_FAILED:
-                    printf("signal %d: handler failed, received signal %d\n",
-                           sig, (int) handler_sig_received);
+                    printf("signal %d: handler failed, received signal %d\n", sig,
+                           (int)handler_sig_received);
+                    fail = 1;
+                    break;
+                case HANDLER_NOT_BLOCKED:
+                    printf("signal %d: signal not blocked in handler\n", sig);
                     fail = 1;
                     break;
                 }
@@ -142,10 +173,12 @@ int main(void)
                 break;
             }
 
+            printf("    call signal(%d, SIG_DFL)\n", sig);
             old_func = signal(sig, SIG_DFL);
+            printf("        got %p\n", old_func);
             if (old_func != prev_func) {
-                printf("signal %d: after test, signal is %p expected %p\n",
-                       sig, old_func, prev_func);
+                printf("signal %d: after test, signal is %p expected %p\n", sig, old_func,
+                       prev_func);
                 fail = 1;
             }
         }

@@ -51,7 +51,7 @@
 #include <zephyr/sys/time_units.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/toolchain.h>
 
 #include "audio.h"
@@ -603,7 +603,7 @@ static int cmd_select_unicast(const struct shell *sh, size_t argc, char *argv[])
 		return -ENOEXEC;
 	}
 
-	if (index > ARRAY_SIZE(unicast_streams)) {
+	if (index >= ARRAY_SIZE(unicast_streams)) {
 		shell_error(sh, "Invalid index: %lu", index);
 
 		return -ENOEXEC;
@@ -1138,7 +1138,7 @@ static int cmd_config(const struct shell *sh, size_t argc, char *argv[])
 		return -ENOEXEC;
 	}
 
-	if (index > ARRAY_SIZE(unicast_streams)) {
+	if (index >= ARRAY_SIZE(unicast_streams)) {
 		shell_error(sh, "Invalid index: %lu", index);
 
 		return -ENOEXEC;
@@ -2786,7 +2786,11 @@ static void audio_recv(struct bt_bap_stream *stream,
 	if (sh_stream->rx.lc3_decoder != NULL) {
 		const uint8_t frame_blocks_per_sdu = sh_stream->lc3_frame_blocks_per_sdu;
 		const uint16_t octets_per_frame = sh_stream->lc3_octets_per_frame;
+		const bool valid_sdu = (info->flags & BT_ISO_FLAGS_VALID) != 0U;
 		const uint8_t chan_cnt = sh_stream->lc3_chan_cnt;
+		const uint16_t expected_sdu_size =
+			octets_per_frame * chan_cnt * frame_blocks_per_sdu;
+		const bool valid_sdu_len = expected_sdu_size == buf->len;
 		struct lc3_data *data;
 
 		/* Allocate a context that holds both the buffer and the stream so that we can
@@ -2800,17 +2804,20 @@ static void audio_recv(struct bt_bap_stream *stream,
 		}
 		(void)memset(data, 0, sizeof(*data));
 
-		if ((info->flags & BT_ISO_FLAGS_VALID) == 0) {
+		if (!valid_sdu || !valid_sdu_len) {
 			data->do_plc = true;
-		} else if (buf->len != (octets_per_frame * chan_cnt * frame_blocks_per_sdu)) {
-			if (buf->len != 0U) {
-				bt_shell_error(
-					"Expected %u frame blocks with %u channels of size %u, but "
-					"length is %u",
-					frame_blocks_per_sdu, chan_cnt, octets_per_frame, buf->len);
+
+			if (valid_sdu && !valid_sdu_len &&
+			    sh_stream->rx.last_sdu_invalid_len != buf->len) {
+				bt_shell_error("Expected %u frame blocks with %u channels of size "
+					       "%u (total %u), but length is %u",
+					       frame_blocks_per_sdu, chan_cnt, octets_per_frame,
+					       expected_sdu_size, buf->len);
 			}
 
-			data->do_plc = true;
+			sh_stream->rx.last_sdu_invalid_len = buf->len;
+		} else {
+			sh_stream->rx.last_sdu_invalid_len = 0U; /* clear */
 		}
 
 		data->buf = net_buf_ref(buf);
@@ -3142,12 +3149,12 @@ static void stream_stopped_cb(struct bt_bap_stream *stream, uint8_t reason)
 }
 
 #if defined(CONFIG_BT_BAP_UNICAST)
-static void stream_configured_cb(struct bt_bap_stream *stream,
-				 const struct bt_bap_qos_cfg_pref *pref)
+static void stream_codec_configured_cb(struct bt_bap_stream *stream,
+				       const struct bt_bap_qos_cfg_pref *pref)
 {
-	ARG_UNUSED(pref);
-
 	bt_shell_print("Stream %p configured", stream);
+
+	print_qos_pref(pref);
 }
 
 static void stream_released_cb(struct bt_bap_stream *stream)
@@ -3157,7 +3164,9 @@ static void stream_released_cb(struct bt_bap_stream *stream)
 	bt_shell_print("Stream %p released", stream);
 
 #if defined(CONFIG_BT_BAP_UNICAST_CLIENT)
-	if (default_unicast_group.bap_group != NULL && !default_unicast_group.is_cap) {
+	if ((IS_ENABLED(CONFIG_BT_CAP_INITIATOR) && default_unicast_group.is_cap &&
+	     default_unicast_group.cap_group != NULL) ||
+	    default_unicast_group.bap_group != NULL) {
 		bool group_can_be_deleted = true;
 
 		for (size_t i = 0U; i < ARRAY_SIZE(unicast_streams); i++) {
@@ -3182,12 +3191,21 @@ static void stream_released_cb(struct bt_bap_stream *stream)
 
 			bt_shell_print("All streams released, deleting group");
 
-			err = bt_bap_unicast_group_delete(default_unicast_group.bap_group);
+			if (IS_ENABLED(CONFIG_BT_CAP_INITIATOR) && default_unicast_group.is_cap) {
+				err = bt_cap_unicast_group_delete(default_unicast_group.cap_group);
+				if (err == 0) {
+					default_unicast_group.cap_group = NULL;
+					default_unicast_group.is_cap = false;
+				}
+			} else {
+				err = bt_bap_unicast_group_delete(default_unicast_group.bap_group);
+				if (err == 0) {
+					default_unicast_group.bap_group = NULL;
+				}
+			}
 
 			if (err != 0) {
 				bt_shell_error("Failed to delete unicast group: %d", err);
-			} else {
-				default_unicast_group.bap_group = NULL;
 			}
 		}
 	}
@@ -3202,7 +3220,7 @@ static struct bt_bap_stream_ops stream_ops = {
 	.recv = audio_recv,
 #endif /* CONFIG_BT_AUDIO_RX */
 #if defined(CONFIG_BT_BAP_UNICAST)
-	.configured = stream_configured_cb,
+	.codec_configured = stream_codec_configured_cb,
 	.released = stream_released_cb,
 	.enabled = stream_enabled_cb,
 	.metadata_updated = stream_metadata_updated_cb,
@@ -3230,7 +3248,7 @@ static int cmd_select_broadcast_source(const struct shell *sh, size_t argc,
 		return -ENOEXEC;
 	}
 
-	if (index > ARRAY_SIZE(broadcast_source_streams)) {
+	if (index >= ARRAY_SIZE(broadcast_source_streams)) {
 		shell_error(sh, "Invalid index: %lu", index);
 
 		return -ENOEXEC;

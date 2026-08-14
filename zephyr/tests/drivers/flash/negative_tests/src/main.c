@@ -14,6 +14,8 @@
 #define TEST_AREA_DEV_NODE DT_INST(0, nordic_qspi_nor)
 #elif defined(CONFIG_SPI_NOR)
 #define TEST_AREA_DEV_NODE DT_INST(0, jedec_spi_nor)
+#elif defined(CONFIG_FLASH_INFINEON_RRAM)
+#define TEST_AREA storage_partition_rram
 #else
 #define TEST_AREA storage_partition
 #endif
@@ -26,7 +28,8 @@
 #define TEST_AREA_SIZE   PARTITION_SIZE(TEST_AREA)
 #define TEST_AREA_DEVICE PARTITION_DEVICE(TEST_AREA)
 
-#if defined(CONFIG_SOC_SERIES_NRF54L) || defined(CONFIG_SOC_FAMILY_MICROCHIP_SAM_D5X_E5X)
+#if defined(CONFIG_SOC_SERIES_NRF54L) || defined(CONFIG_SOC_FAMILY_MICROCHIP_SAM_D5X_E5X) ||       \
+	defined(CONFIG_FLASH_MCHP_NVMCTRL_G3)
 #define TEST_FLASH_START (DT_REG_ADDR(DT_MEM_FROM_PARTITION(DT_NODELABEL(TEST_AREA))))
 #define TEST_FLASH_SIZE  (DT_REG_SIZE(DT_MEM_FROM_PARTITION(DT_NODELABEL(TEST_AREA))))
 #elif defined(CONFIG_SOC_NRF54H20) || defined(CONFIG_SOC_SERIES_NRF92)
@@ -43,6 +46,9 @@
 /* We need to go up two levels: storage_partition -> partitions -> flash0 */
 #define TEST_FLASH_START (DT_REG_ADDR(DT_PARENT(DT_PARENT(DT_NODELABEL(TEST_AREA)))))
 #define TEST_FLASH_SIZE  (DT_REG_SIZE(DT_PARENT(DT_PARENT(DT_NODELABEL(TEST_AREA)))))
+#elif defined(CONFIG_SOC_FAMILY_INFINEON_EDGE)
+#define TEST_FLASH_START (DT_REG_ADDR(DT_MEM_FROM_PARTITION(DT_NODELABEL(TEST_AREA))))
+#define TEST_FLASH_SIZE  (DT_REG_SIZE(DT_MEM_FROM_PARTITION(DT_NODELABEL(TEST_AREA))))
 #elif defined(CONFIG_SOC_SERIES_LPC84X)
 #define TEST_FLASH_START (DT_REG_ADDR(DT_PARENT(DT_PARENT(DT_NODELABEL(TEST_AREA)))))
 #define TEST_FLASH_SIZE  (DT_REG_SIZE(DT_PARENT(DT_PARENT(DT_NODELABEL(TEST_AREA)))))
@@ -174,7 +180,6 @@ ZTEST(flash_driver_negative, test_negative_flash_erase_unaligned)
 	/* Check error returned when erasing unaligned memory */
 	rc = flash_erase(flash_dev, (TEST_AREA_OFFSET + 1), page_info.size);
 	zassert_true(rc < 0, "Invalid use of flash_erase (unaligned erase size) returned %d", rc);
-
 	/* Check error returned when erasing unaligned size */
 	rc = flash_erase(flash_dev, TEST_AREA_OFFSET, page_info.size + 1);
 	zassert_true(rc < 0, "Invalid use of flash_erase (unaligned size) returned %d", rc);

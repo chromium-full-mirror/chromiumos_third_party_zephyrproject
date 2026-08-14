@@ -40,6 +40,7 @@ check_set_compiler_property(PROPERTY warning_base
                             -Wno-unused-but-set-variable
                             -Wno-typedef-redefinition
                             -Wno-deprecated-non-prototype
+                            -Wno-parentheses-equality
 )
 
 # C implicit promotion rules will want to make floats into doubles very easily
@@ -133,6 +134,17 @@ if(CONFIG_COVERAGE_NATIVE_SOURCE)
 else()
   set_compiler_property(PROPERTY coverage --coverage -fno-inline)
 endif()
+
+# clang flags for heap KASAN instrumentation.
+set_compiler_property(PROPERTY heap_kasan
+  -fsanitize=kernel-address
+  -mllvm;-asan-instrumentation-with-call-threshold=0
+  -mllvm;-asan-globals=0
+  -mllvm;-asan-stack=0
+  -mllvm;-asan-instrument-reads=0)
+
+# Flag to disable heap KASAN instrumentation on a specific source file.
+set_compiler_property(PROPERTY no_heap_kasan -fno-sanitize=kernel-address)
 
 # No property flag, clang doesn't understand fortify at all
 set_compiler_property(PROPERTY security_fortify_compile_time)

@@ -10,8 +10,8 @@
  * @ingroup sensing_api
  */
 
-#ifndef ZEPHYR_INCLUDE_SENSING_H_
-#define ZEPHYR_INCLUDE_SENSING_H_
+#ifndef ZEPHYR_INCLUDE_SENSING_SENSING_H_
+#define ZEPHYR_INCLUDE_SENSING_SENSING_H_
 
 /**
  * @defgroup sensing_api Sensing
@@ -37,6 +37,7 @@ extern "C" {
  * @brief Sensor Version
  */
 struct sensing_sensor_version {
+	/** The version as a whole value or split into its individual fields. */
 	union {
 		uint32_t value; /**< The version represented as a 32-bit value. */
 		struct {
@@ -208,6 +209,7 @@ struct sensing_sensor_config {
 	/** \ref SENSING_SENSITIVITY_INDEX_ALL */
 	int8_t data_field; /**< Data field of the sensor configuration. */
 
+	/** Configuration value, the member to use is selected by the attribute. */
 	union {
 		/** Interval between two sensor samples in microseconds (us). */
 		uint32_t interval;
@@ -328,4 +330,4 @@ const struct sensing_sensor_info *sensing_get_sensor_info(
  * @}
  */
 
-#endif /*ZEPHYR_INCLUDE_SENSING_H_*/
+#endif /* ZEPHYR_INCLUDE_SENSING_SENSING_H_ */
