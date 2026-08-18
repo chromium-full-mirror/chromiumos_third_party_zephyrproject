@@ -10,7 +10,7 @@
 #include <zephyr/arch/cpu.h>
 #include <zephyr/init.h>
 #include <zephyr/irq.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <soc.h>
 #include <zephyr/drivers/timer/system_timer.h>
 #include "xlnx_psttc_timer_priv.h"
@@ -101,7 +101,7 @@ static void ttc_isr(const void *arg)
 	sys_clock_announce(ticks);
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
 #ifdef CONFIG_TICKLESS_KERNEL
 	uint32_t cycles;

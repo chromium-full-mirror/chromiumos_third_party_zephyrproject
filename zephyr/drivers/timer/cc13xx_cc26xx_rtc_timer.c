@@ -21,7 +21,7 @@
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/irq.h>
 #include <zephyr/spinlock.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/sys/util.h>
 
 #include <driverlib/interrupt.h>
@@ -187,8 +187,9 @@ static void startDevice(void)
 	irq_unlock(key);
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 
 #ifdef CONFIG_TICKLESS_KERNEL
 

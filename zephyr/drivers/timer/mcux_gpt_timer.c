@@ -9,7 +9,7 @@
 #include <zephyr/init.h>
 #include <zephyr/drivers/timer/system_timer.h>
 #include <fsl_gpt.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/spinlock.h>
 #include <zephyr/sys/time_units.h>
 #include <zephyr/irq.h>
@@ -130,7 +130,7 @@ void mcux_imx_gpt_isr(const void *arg)
  * Next needed call to sys_clock_announce will not be until the specified number
  * of ticks from the current time have elapsed.
  */
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		/* Not supported on tickful kernels */

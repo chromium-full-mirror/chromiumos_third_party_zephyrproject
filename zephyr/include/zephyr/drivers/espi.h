@@ -28,6 +28,8 @@ extern "C" {
  * @brief Interfaces for Enhanced Serial Peripheral Interface (eSPI)
  *        target hardware.
  * @defgroup espi_interface ESPI
+ * @since 2.0
+ * @version 1.0.0
  * @ingroup io_interfaces
  * @{
  */
@@ -465,6 +467,13 @@ struct espi_evt_data_acpi {
 	/** Reserved field for future use */
 	uint32_t reserved: 16;
 };
+
+/** ACPI event: Input Buffer Full. Host wrote a data register */
+#define ESPI_EVENT_DATA_ACPI_TYPE_HOST_TO_EC_DATA    0
+/** ACPI event: Input Buffer Full. Host wrote command register */
+#define ESPI_EVENT_DATA_ACPI_TYPE_HOST_TO_EC_CMD     1U
+/** ACPI event: Output Buffer Empty: Host read data EC put in EC-to-Host register */
+#define ESPI_EVENT_DATA_ACPI_TYPE_HOST_RD_EC_TO_HOST 2U
 
 /**
  * @brief Event data format for Private Channel (PVT) events.
@@ -1045,7 +1054,7 @@ static inline int z_impl_espi_write_flash(const struct device *dev,
 }
 
 /**
- * @brief Sends a write request packet for shared flash.
+ * @brief Sends an erase request packet for shared flash.
  *
  * This routine provides an interface to send a request to erase the flash
  * components shared between the eSPI controller and eSPI targets.

@@ -6,7 +6,7 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/irq.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/kernel.h>
 
 #include "ti_rti_timer.h"
@@ -77,8 +77,9 @@ static void ti_rti_timer_isr(void *param)
 	sys_clock_announce(1);
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 	ARG_UNUSED(ticks);
 	/* This driver doesn't support tickless kernel, return immediately */
 }

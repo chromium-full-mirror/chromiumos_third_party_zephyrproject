@@ -12,7 +12,7 @@
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/drivers/timer/nrf_rtc_timer.h>
 #include <zephyr/sys/util.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/sys/barrier.h>
 #include <haly/nrfy_rtc.h>
 #include <zephyr/irq.h>
@@ -667,40 +667,31 @@ bail:
 	return err;
 }
 
-void sys_clock_unused(void)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
-	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
-		return;
-	}
-
-	/* No timeout pending: follow the free-running-compare model and stop
-	 * reprogramming. The last compare still catches the counter wrap and
-	 * the next sys_clock_set_timeout() re-arms us, so sloppy idle needs no
-	 * periodic wakeup here. Only clear the busy flag consumed by the
-	 * overflow trigger path.
-	 */
-	sys_busy = false;
-}
-
-void sys_clock_set_timeout(uint32_t ticks)
-{
+	ARG_UNUSED(idle);
 	uint64_t target_time;
 
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;
 	}
 
-	target_time = last_count +
-		      ((uint64_t)last_elapsed + (uint64_t)ticks) * CYC_PER_TICK;
-	/* Clamp to fit the 24-bit compare register and keep the
-	 * anchor in its valid range (see anchor_update). A resulting
-	 * target in the past is fine: compare_set forces an immediate
-	 * IRQ and the handler catches up in one shot.
-	 */
-	if ((target_time - last_count) > MAX_CYCLES) {
+	if (IS_ENABLED(CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE) && ticks == SYS_CLOCK_MAX_WAIT) {
 		target_time = last_count + MAX_CYCLES;
+		sys_busy = false;
+	} else {
+		target_time = last_count +
+			      ((uint64_t)last_elapsed + (uint64_t)ticks) * CYC_PER_TICK;
+		/* Clamp to fit the 24-bit compare register and keep the
+		 * anchor in its valid range (see anchor_update). A resulting
+		 * target in the past is fine: compare_set forces an immediate
+		 * IRQ and the handler catches up in one shot.
+		 */
+		if ((target_time - last_count) > MAX_CYCLES) {
+			target_time = last_count + MAX_CYCLES;
+		}
+		sys_busy = true;
 	}
-	sys_busy = true;
 
 	compare_set(SYS_CLOCK_CH, target_time, sys_clock_timeout_handler, NULL, false);
 }
@@ -782,7 +773,9 @@ static int sys_clock_driver_init(void)
 
 	compare_set(SYS_CLOCK_CH, initial_timeout, sys_clock_timeout_handler, NULL, false);
 
-#if defined(CONFIG_CLOCK_CONTROL_NRF)
+#if defined(CONFIG_CLOCK_CONTROL_NRF) ||                                                           \
+	(defined(CONFIG_CLOCK_CONTROL_NRF_COMMON) &&                                               \
+	 !(defined(CONFIG_SOC_SERIES_NRF54H) || defined(CONFIG_SOC_SERIES_NRF92)))
 	static const enum nrf_lfclk_start_mode mode =
 		IS_ENABLED(CONFIG_SYSTEM_CLOCK_NO_WAIT) ?
 			CLOCK_CONTROL_NRF_LF_START_NOWAIT :

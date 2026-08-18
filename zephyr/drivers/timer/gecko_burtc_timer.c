@@ -20,7 +20,7 @@
 #include <soc.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/timer/system_timer.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/irq.h>
 #include <zephyr/spinlock.h>
 #include <zephyr/logging/log.h>
@@ -109,8 +109,9 @@ static void burtc_isr(const void *arg)
 	sys_clock_announce(unannounced);
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;

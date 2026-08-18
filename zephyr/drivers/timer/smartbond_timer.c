@@ -8,7 +8,7 @@
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/drivers/clock_control/smartbond_clock_control.h>
 #include <zephyr/drivers/timer/system_timer.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/spinlock.h>
 #include <cmsis_core.h>
 #include <zephyr/irq.h>
@@ -107,7 +107,7 @@ static void schedule_next_interrupt(uint32_t ticks)
 	}
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;

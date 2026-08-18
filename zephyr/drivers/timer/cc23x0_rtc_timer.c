@@ -13,7 +13,7 @@
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/irq.h>
 #include <zephyr/spinlock.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/sys/util.h>
 
 #include <inc/hw_rtc.h>
@@ -31,8 +31,9 @@ static uint32_t last_rtc_count;
 
 #define TICK_PERIOD_MICRO_SEC (1000000 / CONFIG_SYS_CLOCK_TICKS_PER_SEC)
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 
 	/* Get current value as early as possible */
 	uint32_t ticks_now = HWREG(RTC_BASE + RTC_O_TIME8U);

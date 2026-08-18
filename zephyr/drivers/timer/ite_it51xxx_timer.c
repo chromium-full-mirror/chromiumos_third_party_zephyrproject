@@ -10,7 +10,7 @@
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 
 LOG_MODULE_REGISTER(timer, LOG_LEVEL_ERR);
 
@@ -193,20 +193,9 @@ static void free_run_timer_overflow_isr(const void *unused)
 	/* TODO: to increment 32-bit "top half" here for software 64-bit timer emulation. */
 }
 
-void sys_clock_unused(void)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
-	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
-		return;
-	}
-
-	k_spinlock_key_t key = k_spin_lock(&lock);
-
-	ext_timer_disable(EVENT_TIMER);
-	k_spin_unlock(&lock, key);
-}
-
-void sys_clock_set_timeout(uint32_t ticks)
-{
+	ARG_UNUSED(idle);
 
 	uint32_t hw_cnt, next_cycs, now, dcycles;
 
@@ -221,6 +210,18 @@ void sys_clock_set_timeout(uint32_t ticks)
 	/* Disable event timer */
 	ext_timer_disable(EVENT_TIMER);
 
+	if (IS_ENABLED(CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE) && ticks == SYS_CLOCK_MAX_WAIT) {
+		/*
+		 * The kernel has no pending timeout, which it signals with
+		 * ticks == SYS_CLOCK_MAX_WAIT. Under sloppy idle no future
+		 * timer interrupt is required, so leave the event timer
+		 * disabled and stop waking up. Without sloppy idle we fall
+		 * through and still schedule the (capped) timeout so the
+		 * uptime tick count stays correct.
+		 */
+		k_spin_unlock(&lock, key);
+		return;
+	}
 	/*
 	 * If ticks <= 1 means the kernel wants the tick announced as soon as possible,
 	 * ideally no more than one system tick in the future. So set event timer count
@@ -367,6 +368,29 @@ void arch_busy_wait(uint32_t usec_to_wait)
 	}
 }
 #endif
+
+#ifdef CONFIG_PM
+static uint64_t cyc_deep_sleep_total;
+static uint32_t cyc_enter_deep_sleep;
+
+void ite_ec_clock_capture_low_freq_timer(void)
+{
+	cyc_enter_deep_sleep = ~read_timer_obser(FREE_RUN_TIMER);
+}
+
+void ite_ec_clock_compensate_system_timer(void)
+{
+	uint32_t now = ~read_timer_obser(FREE_RUN_TIMER);
+	uint32_t cyc_elapsed_in_deep = now - cyc_enter_deep_sleep;
+
+	cyc_deep_sleep_total += cyc_elapsed_in_deep;
+}
+
+uint64_t ite_ec_clock_get_sleep_ticks(void)
+{
+	return k_cyc_to_ticks_floor64(cyc_deep_sleep_total);
+}
+#endif /* CONFIG_PM */
 
 static int sys_clock_driver_init(void)
 {

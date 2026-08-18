@@ -149,11 +149,13 @@ static void restore_mpu_state(void)
 static void config_wakeup_gpio_pins(void)
 {
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(pin0))
-	pin_cfg = IOMUX_GPIO_IDX(24) | IOMUX_TYPE(IOMUX_GPIO);
+	pin_cfg = IOMUX_GPIO_IDX(24) | IOMUX_TYPE(IOMUX_GPIO) |
+		  IOMUX_PAD_PULL(DT_ENUM_IDX(DT_NODELABEL(pin0), wakeup_level) ? 0x2 : 0x1);
 	pinctrl_configure_pins(&pin_cfg, 1, 0);
 #endif
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(pin1))
-	pin_cfg = IOMUX_GPIO_IDX(25) | IOMUX_TYPE(IOMUX_GPIO);
+	pin_cfg = IOMUX_GPIO_IDX(25) | IOMUX_TYPE(IOMUX_GPIO) |
+		  IOMUX_PAD_PULL(DT_ENUM_IDX(DT_NODELABEL(pin1), wakeup_level) ? 0x2 : 0x1);
 	pinctrl_configure_pins(&pin_cfg, 1, 0);
 #endif
 }
@@ -216,7 +218,7 @@ __weak void pm_state_set(enum pm_state state, uint8_t substate_id)
 		{
 			k_spinlock_key_t key = sys_clock_lock();
 
-			sys_clock_idle_enter(0);
+			sys_clock_set_timeout(0, true);
 			sys_clock_unlock(key);
 		}
 
@@ -237,7 +239,7 @@ __weak void pm_state_set(enum pm_state state, uint8_t substate_id)
 				{
 					k_spinlock_key_t key = sys_clock_lock();
 
-					sys_clock_idle_enter(0);
+					sys_clock_set_timeout(0, true);
 					sys_clock_unlock(key);
 				}
 				/* GDET got enabled when exiting PM3, disable it

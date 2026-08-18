@@ -639,6 +639,15 @@ int nxp_wifi_internal_tx(const struct device *dev, struct net_pkt *pkt, bool pkt
 	/* Save the ethernet header */
 	net_pkt_set_overwrite(pkt, false);
 	net_pkt_read(pkt, ((outbuf_t *)wmm_outbuf)->eth_header, ETH_HDR_LEN);
+	/* The ETH header has been copied into outbuf->eth_header.
+	 * If the first frag only contained the ETH header, remove it
+	 * to free one tx_buf back to the pool.
+	 */
+	if (pkt->frags != NULL && pkt->frags->len == ETH_HDR_LEN &&
+	    pkt->frags->frags != NULL) {
+		net_pkt_frag_del(pkt, NULL, pkt->frags);
+	}
+
 	((outbuf_t *)wmm_outbuf)->buffer = pkt;
 	/* Save the data payload pointer without ethernet header */
 	if (net_pkt_len > ETH_HDR_LEN) {
@@ -1156,14 +1165,17 @@ int net_get_if_addr(struct net_ip_config *addr, void *intrfc_handle)
 		int i;
 
 		for (i = 0; i < CONFIG_DNS_RESOLVER_MAX_SERVERS; i++) {
-			if (ctx->servers[i].dns_server.sa_family == AF_INET) {
+			struct net_sockaddr *server_addr =
+				net_sad(&ctx->servers[i].dns_server_addr);
+
+			if (ctx->servers[i].dns_server_addr.ss_family == AF_INET) {
 				if (i == 0) {
-					addr->ipv4.dns1 = net_sin(&ctx->servers[i].dns_server)
-								  ->sin_addr.s_addr;
+					addr->ipv4.dns1 =
+						net_sin(server_addr)->sin_addr.s_addr;
 				}
 				if (i == 1) {
-					addr->ipv4.dns2 = net_sin(&ctx->servers[i].dns_server)
-								  ->sin_addr.s_addr;
+					addr->ipv4.dns2 =
+						net_sin(server_addr)->sin_addr.s_addr;
 				}
 			}
 		}
@@ -1332,7 +1344,11 @@ int net_get_if_ip_addr(uint32_t *ip, void *intrfc_handle)
 	interface_t *if_handle = (interface_t *)intrfc_handle;
 	struct net_if_ipv4 *ipv4 = if_handle->netif->config.ip.ipv4;
 
-	*ip = NET_IPV4_ADDR_U32(ipv4->unicast[0].ipv4.address);
+	if (ipv4 != NULL) {
+		*ip = NET_IPV4_ADDR_U32(ipv4->unicast[0].ipv4.address);
+	} else {
+		*ip = 0U;
+	}
 #else
 	ARG_UNUSED(intrfc_handle);
 	*ip = 0U;

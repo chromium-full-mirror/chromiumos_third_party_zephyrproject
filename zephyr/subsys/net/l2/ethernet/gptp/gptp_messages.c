@@ -195,6 +195,7 @@ struct net_pkt *gptp_prepare_sync(int port)
 	}
 
 	net_pkt_set_priority(pkt, NET_PRIORITY_IC);
+	net_pkt_set_tx_timestamping(pkt, true);
 
 	port_ds = GPTP_PORT_DS(port);
 	sync = GPTP_SYNC(pkt);
@@ -300,6 +301,7 @@ struct net_pkt *gptp_prepare_pdelay_req(int port)
 	}
 
 	net_pkt_set_priority(pkt, NET_PRIORITY_IC);
+	net_pkt_set_tx_timestamping(pkt, true);
 
 	port_ds = GPTP_PORT_DS(port);
 	req = GPTP_PDELAY_REQ(pkt);
@@ -355,6 +357,7 @@ struct net_pkt *gptp_prepare_pdelay_resp(int port,
 	}
 
 	net_pkt_set_priority(pkt, NET_PRIORITY_IC);
+	net_pkt_set_tx_timestamping(pkt, true);
 
 	port_ds = GPTP_PORT_DS(port);
 

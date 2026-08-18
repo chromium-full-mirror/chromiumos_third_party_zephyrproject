@@ -31,8 +31,8 @@ RUN (apt-get update || apt-get update || apt-get update) && \
     else \
 	echo "No host tools found"; \
     fi && \
+    if [ -f /opt/zephyr-sdk-*/setup.sh ]; then \
+        echo "Setting up SDK"; \
+	/opt/zephyr-sdk-*/setup.sh -t all -h -o -c; \
+    fi && \
     rm -rf /var/lib/apt/lists/*
-
-ADD --checksum=sha256:0b33f39766fe9db67f40418aed6a5b3d7b2f4f7fab025a8213264b77a2d0e1b1 https://github.com/ccache/ccache/releases/download/v4.8.2/ccache-4.8.2-linux-x86_64.tar.xz /
-RUN tar xf ccache-4.8.2-linux-x86_64.tar.xz -C /usr/bin --strip-components=1 --no-same-owner ccache-4.8.2-linux-x86_64/ccache && \
-    rm -f ccache-*-linux-x86_64.tar.xz

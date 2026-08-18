@@ -12,7 +12,7 @@
 #include <zephyr/irq.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/spinlock.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 
 LOG_MODULE_REGISTER(pit64b, CONFIG_CLOCK_CONTROL_LOG_LEVEL);
 
@@ -79,8 +79,9 @@ static void pit64b_isr(const void *arg)
 	}
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;

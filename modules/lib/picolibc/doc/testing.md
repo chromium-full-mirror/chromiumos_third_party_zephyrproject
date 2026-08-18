@@ -16,11 +16,8 @@ DIR=`dirname $0`
 meson $DIR \
     -Dmultilib=false \
     -Dnewlib-wide-orient=false\
-    -Dnewlib-nano-malloc=true\
-    -Dlite-exit=true\
-    -Dnewlib-global-atexit=true\
-    -Dincludedir=lib/newlib-nano/include \
-    -Dlibdir=lib/newlib-nano/lib \
+    -Dincludedir=lib/picolibc/include \
+    -Dlibdir=lib/picolibc/lib \
     -Dtests=true \
     --buildtype debug
 ```
@@ -29,7 +26,7 @@ Again, create a directory and build there:
 
     $ mkdir build-native
     $ cd build-native
-    $ ../do-native-configure
+    $ ../scripts/do-native-configure
     $ ninja
 
 This will also build a test case for printf and scanf in the

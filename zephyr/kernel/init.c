@@ -53,9 +53,9 @@ atomic_t _cpus_active;
 
 /* init/main and idle threads */
 K_THREAD_STACK_DEFINE(z_main_stack, CONFIG_MAIN_STACK_SIZE);
-struct k_thread z_main_thread;
 
 #ifdef CONFIG_MULTITHREADING
+struct k_thread z_main_thread;
 struct k_thread z_idle_threads[CONFIG_MP_MAX_NUM_CPUS];
 
 static K_KERNEL_STACK_ARRAY_DEFINE(z_idle_stacks,
@@ -324,9 +324,11 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 #endif /* CONFIG_KERNEL_COHERENCE */
 
 #ifdef CONFIG_SMP
-	if (!IS_ENABLED(CONFIG_SMP_BOOT_DELAY)) {
-		z_smp_init();
-	}
+	/* Start the secondary CPUs; CPUs whose devicetree node carries
+	 * zephyr,deferred-start are skipped and left for a run-time
+	 * k_smp_cpu_start()/k_smp_cpu_resume().
+	 */
+	z_smp_init();
 	z_sys_init_run_level(INIT_LEVEL_SMP);
 #endif /* CONFIG_SMP */
 
@@ -347,8 +349,10 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 	(void)main();
 #endif /* CONFIG_BOOTARGS */
 
+#ifdef CONFIG_MULTITHREADING
 	/* Mark non-essential since main() has no more work to do */
 	z_thread_essential_clear(&z_main_thread);
+#endif
 
 #ifdef CONFIG_COVERAGE_DUMP
 	/* Dump coverage data once the main() has exited. */

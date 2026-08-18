@@ -16,7 +16,7 @@
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/timer/system_timer.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/irq.h>
 #include <zephyr/spinlock.h>
 
@@ -137,8 +137,9 @@ void stimer_isr(const void *arg)
 	}
 }
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;

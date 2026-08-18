@@ -7,7 +7,7 @@
 #define DT_DRV_COMPAT intel_hpet
 #include <zephyr/init.h>
 #include <zephyr/drivers/timer/system_timer.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/irq.h>
 #include <zephyr/linker/sections.h>
 
@@ -245,41 +245,16 @@ static inline void hpet_int_sts_set(uint32_t val)
 }
 #endif
 
-/* ensure the comparator is always set ahead of the current counter value */
-static inline void hpet_timer_comparator_set_safe(uint64_t next)
-{
-	hpet_timer_comparator_set(next);
-
-	uint64_t now = hpet_counter_get();
-
-	if (unlikely((int64_t)(next - now) <= 0)) {
-		uint32_t bump = 1;
-
-		do {
-			next = now + bump;
-			bump *= 2;
-			hpet_timer_comparator_set(next);
-			now = hpet_counter_get();
-		} while ((int64_t)(next - now) <= 0);
-	}
-}
-
 /*
- * Free-running 64-bit counter plus an equality-match comparator: a COMPARE
- * backend. The comparator matches only count == cmp, so an already-past target
- * is rearmed by hpet_timer_comparator_set_safe(), satisfying the core's "must
- * not miss a past deadline" contract. Under QEMU SMP the shared counter can be
+ * Free-running 64-bit counter plus a comparator that matches only on
+ * count == cmp, so a target written after the counter has passed it is lost for
+ * a whole counter period. That is the COMPARE_EXACT backend: the core writes
+ * the comparator through its verify loop, so this driver needs no rearming of
+ * its own and no minimum-delay floor. Under QEMU SMP the shared counter can be
  * observed reading backwards, handled via TIMER_CORE_COUNTER_NONMONOTONIC.
- *
- * The counter is genuinely 64 bits wide even on a 32-bit CPU, so declare its
- * width rather than take the core's native-register default: a 32-bit mask
- * would alias any delta beyond 2^32 cycles, and the comparator (checked
- * against the full 64-bit count) would then be armed a whole 2^32-cycle
- * period behind the counter.
  */
-#define TIMER_CORE_BACKEND_COMPARE
-#define TIMER_CORE_64BIT_CYCLES
-#define TIMER_CORE_CYCLES_WIDTH 64
+#define TIMER_CORE_BACKEND_COMPARE_EXACT
+#define TIMER_CORE_COUNTER_WIDTH 64
 #if defined(CONFIG_SMP) && defined(CONFIG_QEMU_TARGET)
 #define TIMER_CORE_COUNTER_NONMONOTONIC
 #endif
@@ -291,7 +266,7 @@ static inline uint64_t timer_driver_cycle_get(void)
 
 static inline void timer_driver_set_compare(uint64_t cycles)
 {
-	hpet_timer_comparator_set_safe(cycles);
+	hpet_timer_comparator_set(cycles);
 }
 
 #include "system_timer_generic.h"
@@ -341,14 +316,55 @@ void smp_timer_init(void)
 	 */
 }
 
-void sys_clock_unused(void)
+void sys_clock_no_timeout(void)
 {
+	__ASSERT(sys_clock_is_locked(), "system clock lock not held");
+
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		return;
 	}
 
-	uint32_t reg = hpet_gconf_get();
+	/* Nothing pending: park the comparator where it cannot match, in one
+	 * register write. The counter keeps running, which is what this hook
+	 * requires.
+	 *
+	 * QEMU's HPET model converts the distance to the target into nanoseconds
+	 * in a signed 64-bit value, so an extreme target overflows and the timer
+	 * fires immediately and forever. Cap the distance there. 2^48 cycles is
+	 * over three hundred days at 10 MHz, and stays overflow-free for any
+	 * counter period up to tens of microseconds.
+	 */
+	if (IS_ENABLED(CONFIG_QEMU_TARGET)) {
+		hpet_timer_comparator_set(hpet_counter_get() + BIT64(48));
+	} else {
+		hpet_timer_comparator_set(UINT64_MAX);
+	}
+}
 
+void sys_clock_idle_enter(uint32_t ticks)
+{
+	uint32_t reg;
+
+	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL) || ticks != SYS_CLOCK_IDLE_FOREVER) {
+		sys_clock_set_timeout(ticks, false);
+		return;
+	}
+
+	if (IS_ENABLED(CONFIG_SMP)) {
+		/* The HPET counter is shared by every CPU and only this one is
+		 * going idle, so it must keep running for the others: nothing
+		 * to do here.
+		 */
+		return;
+	}
+
+	/* Nothing to wake up for and the uptime may drift: stop the main
+	 * counter. There is one CPU here, so nothing else can observe it
+	 * standing still. sys_clock_idle_exit() starts it again and it resumes
+	 * where it stopped, so the comparator stays coherent and only real time
+	 * is lost.
+	 */
+	reg = hpet_gconf_get();
 	reg &= ~GCONF_ENABLE;
 	hpet_gconf_set(reg);
 }

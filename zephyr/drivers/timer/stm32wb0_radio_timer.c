@@ -10,7 +10,7 @@
 #include <zephyr/irq.h>
 #include <zephyr/kernel.h>
 #include <zephyr/spinlock.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/sys/util.h>
 #include "stm32wb0x_hal_radio_timer.h"
 
@@ -105,8 +105,9 @@ static void radio_timer_txrx_wkup_isr(void *args)
 }
 #endif /* CONFIG_SOC_STM32WB06XX || CONFIG_SOC_STM32WB07XX */
 
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
+	ARG_UNUSED(idle);
 
 	if (IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		uint32_t current_time, delay;

@@ -10,7 +10,7 @@
 #include <zephyr/dt-bindings/interrupt-controller/ite-intc.h>
 #include <soc.h>
 #include <zephyr/spinlock.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 
 #include <zephyr/logging/log.h>
 #include <zephyr/irq.h>
@@ -223,22 +223,11 @@ static void free_run_timer_overflow_isr(const void *unused)
 	 */
 }
 
-void sys_clock_unused(void)
-{
-	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
-		return;
-	}
-
-	k_spinlock_key_t key = k_spin_lock(&lock);
-
-	IT8XXX2_EXT_CTRLX(EVENT_TIMER) &= ~IT8XXX2_EXT_ETXEN;
-	k_spin_unlock(&lock, key);
-}
-
-void sys_clock_set_timeout(uint32_t ticks)
+void sys_clock_set_timeout(uint32_t ticks, bool idle)
 {
 	uint32_t hw_cnt;
 
+	ARG_UNUSED(idle);
 
 	if (!IS_ENABLED(CONFIG_TICKLESS_KERNEL)) {
 		/* Always return for non-tickless kernel system */
@@ -251,7 +240,18 @@ void sys_clock_set_timeout(uint32_t ticks)
 	/* Disable event timer */
 	IT8XXX2_EXT_CTRLX(EVENT_TIMER) &= ~IT8XXX2_EXT_ETXEN;
 
-	{
+	if (IS_ENABLED(CONFIG_SYSTEM_CLOCK_SLOPPY_IDLE) && ticks == SYS_CLOCK_MAX_WAIT) {
+		/*
+		 * The kernel has no pending timeout, which it signals with
+		 * ticks == SYS_CLOCK_MAX_WAIT. Under sloppy idle no future
+		 * timer interrupt is required, so leave the event timer
+		 * disabled and stop waking up. Without sloppy idle we fall
+		 * through to the else and still schedule the (capped) timeout
+		 * so the uptime tick count stays correct.
+		 */
+		k_spin_unlock(&lock, key);
+		return;
+	} else {
 		uint32_t next_cycs;
 		uint32_t now;
 		uint32_t dcycles;
@@ -396,11 +396,34 @@ static int timer_init(enum ext_timer_idx ext_timer,
 	return 0;
 }
 
-bool ite_ec_timer_block_idle(void)
+bool ite_it8xxx2_timer_block_idle(void)
 {
 	return (IT8XXX2_EXT_CNTOX(EVENT_TIMER) < IDLE_BLOCK_TIMER_TICKS) ||
 	       (IT8XXX2_EXT_CNTOX(FREE_RUN_TIMER) < IDLE_BLOCK_TIMER_TICKS);
 }
+
+#ifdef CONFIG_PM
+static uint64_t cyc_deep_sleep_total;
+static uint32_t cyc_enter_deep_sleep;
+
+void ite_ec_clock_capture_low_freq_timer(void)
+{
+	cyc_enter_deep_sleep = ~(IT8XXX2_EXT_CNTOX(FREE_RUN_TIMER));
+}
+
+void ite_ec_clock_compensate_system_timer(void)
+{
+	uint32_t now = ~(IT8XXX2_EXT_CNTOX(FREE_RUN_TIMER));
+	uint32_t cyc_elapsed_in_deep = now - cyc_enter_deep_sleep;
+
+	cyc_deep_sleep_total += cyc_elapsed_in_deep;
+}
+
+uint64_t ite_ec_clock_get_sleep_ticks(void)
+{
+	return k_cyc_to_ticks_floor64(cyc_deep_sleep_total);
+}
+#endif /* CONFIG_PM */
 
 static int sys_clock_driver_init(void)
 {

@@ -147,6 +147,8 @@ struct udc_ft_data
 
 #define EP_DEDAULT_PACK_LEN 8
 
+static  uint8_t ft_ep_out_data_recived=0;
+
 /**
  * @brief usb clock handling
  */
@@ -499,7 +501,10 @@ static int ft_udc_xfer_out(const struct device *dev, uint8_t ep, bool strict)
             // set ClrDataTog
             USBx->RXCSR_L = csr_l;
         }
-        csr_l &= (~DEV_RXCSR_RXPKTRDY);
+        if(ft_ep_out_data_recived){
+            csr_l &= (~DEV_RXCSR_RXPKTRDY);
+            ft_ep_out_data_recived=0;
+        }
         USBx->RXCSR_L = csr_l;
 
  
@@ -771,11 +776,9 @@ static inline int ft_udc_msg_handle_out(const struct device *dev, struct udc_ft_
     USBx->EINDEX = ep_idx;
     read_count = USBx->RXCOUNTR;
 
-    
 
     if(read_count==0){
-        read_count=msg->setup.packet[6]|(msg->setup.packet[7]<<8);
-        printk("use read cnt from INT=%d\n",read_count);
+        printk("wrn len0\n");
     }
 
     data_len = net_buf_tailroom(buf); // ready to receive data_len data
@@ -788,6 +791,16 @@ static inline int ft_udc_msg_handle_out(const struct device *dev, struct udc_ft_
 #else  /*CONFIG_UDC_FT_DMA*/
     udc_ft_read_packet(fifo_ptr, data_ptr, data_len);
 
+    if (ep != USB_CONTROL_EP_OUT){
+        uint8_t csr_l = USBx->RXCSR_L;
+    
+        if(ft_ep_out_data_recived){
+            csr_l &= (~DEV_RXCSR_RXPKTRDY);
+            USBx->RXCSR_L = csr_l;
+            //printk("epout not cleared\n");
+        }
+        ft_ep_out_data_recived=1;
+    }
 
 #endif /*CONFIG_UDC_FT_DMA*/
     USBx->EINDEX = saved_idx;
@@ -936,7 +949,7 @@ static int ft_udc_handle_ep0_setup(const struct device *dev,FT_USBD_Type *const 
     /* Update to next stage of CTRL transfer */
     
     if((setup->bmRequestType&0x60)==0x20){
-        printk("USB_REQUEST_CLASS\n");
+        //printk("USB_REQUEST_CLASS\n");
         USBx->E0CSR_L = csr_l;
 
     }else{
@@ -973,11 +986,10 @@ static int ft_udc_handle_ep0_setup(const struct device *dev,FT_USBD_Type *const 
                     USBx->E0CSR_L=DEV_CSR0_SERVICE_RXPKTRDY|DEV_CSR0_DATAEND;
                     break;
                 case USB_SREQ_CLEAR_FEATURE:
-                    printk("USB_CLEAR_FEATURE\n");
                     USBx->E0CSR_L=DEV_CSR0_SERVICE_RXPKTRDY|DEV_CSR0_DATAEND;
+              
                     break;
                 case USB_SREQ_SET_FEATURE:
-                    printk("USB_SET_FEATURE\n");
                     USBx->E0CSR_L=DEV_CSR0_SERVICE_RXPKTRDY|DEV_CSR0_DATAEND;
                     break;
                 case USB_SREQ_GET_DESCRIPTOR:
@@ -986,7 +998,7 @@ static int ft_udc_handle_ep0_setup(const struct device *dev,FT_USBD_Type *const 
                     break;
           
                 default:
-                    printk("unsport bRequest=%x\n",setup->bRequest);
+                    LOG_ERR("unsport bRequest=%x\n",setup->bRequest);
                    // USBC_EP0ClearSendStall(config->base);
                     break;
         }
@@ -1128,6 +1140,7 @@ static int ft_udc_msg_handle_reset(const struct device *dev, struct udc_ft_msg *
 
     priv->enum_done = false;
     priv->setup_action=0;
+    ft_ep_out_data_recived=0;
     irq_unlock(key);
 #ifdef CONFIG_PM
     ft_pm_enter_deep_sleep(false);
@@ -1173,7 +1186,8 @@ static int ft_udc_msg_handle_suspend(const struct device *dev, struct udc_ft_msg
 {
 
     struct udc_ft_data *priv = udc_get_private(dev);
-    printk("usb suspend\n");
+    //printk("usb suspend\n");
+ 
 
     LOG_WRN("SUSPEND");
     if (!priv->enum_done)
@@ -1309,6 +1323,7 @@ static ALWAYS_INLINE void ft_thread_handler(void *const arg)
 static inline void ft_usb_resume_event(const struct device *dev)
 {
 #ifdef CONFIG_PM
+    ft_pm_enter_deep_sleep(false);
     udc_ft_pm_policy_lock_get(dev);
 #endif
     if (udc_is_suspended(dev) && udc_is_enabled(dev))
@@ -1330,8 +1345,6 @@ static void ft_udbd_isr(const struct device *dev)
     uint8_t usbd_intrusb;
     uint16_t usbd_inttx;
     uint16_t usbd_intrx;
-    uint8_t saved_idx;
-    uint16_t read_count;
     FT_USBD_Type *const USBx = config->base;
 
 #ifdef CONFIG_UDC_FT_DMA
@@ -1426,15 +1439,10 @@ static void ft_udbd_isr(const struct device *dev)
         if (usbd_intrx & (1 << ep_idx))
         {
             
-            saved_idx = USBx->EINDEX;
-            USBx->EINDEX = ep_idx;
-            read_count = USBx->RXCOUNTR;
-            USBx->EINDEX=saved_idx;
+         
             ep = ep_idx | USB_EP_DIR_OUT;
             msg.type = FT_UDC_MSG_TYPE_OUT;
             msg.out.ep = ep;
-            msg.setup.packet[6]=read_count&0xff;
-            msg.setup.packet[7]=(read_count>>8)&0xff;
 
             ft_udc_send_msg(dev, &msg);
             usbd_intrx &= ~(1 << ep_idx);
@@ -1711,7 +1719,7 @@ static int udc_ft_host_wakeup(const struct device *dev)
     const struct udc_ft_config *config = dev->config;
     FT_USBD_Type *const USBx = config->base;
 
-    printk("ft remote wakeup--\n");
+    //printk("ft remote wakeup--\n");
 
     struct udc_ft_data *priv = udc_get_private(dev);
 
