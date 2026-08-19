@@ -19,7 +19,6 @@ LOG_MODULE_REGISTER(net_ethernet, CONFIG_NET_L2_ETHERNET_LOG_LEVEL);
 #if defined(CONFIG_NET_DSA)
 #include <zephyr/net/dsa_core.h>
 #endif
-#include <zephyr/net/gptp.h>
 #include <zephyr/random/random.h>
 
 #if defined(CONFIG_NET_LLDP)
@@ -189,23 +188,41 @@ static inline bool eth_is_vlan_tag_stripped(struct net_if *iface)
 #if defined(CONFIG_NET_IPV4) || defined(CONFIG_NET_IPV6)
 /* Drop packet if it has broadcast destination MAC address but the IP
  * address is not multicast or broadcast address. See RFC 1122 ch 3.3.6
+ *
+ * This runs after the Ethernet header has been pulled off the packet, so the
+ * destination MAC address is read from the link address stored in the packet
+ * and the IPv4 header is fetched through the cursor.
  */
-static inline
-enum net_verdict ethernet_check_ipv4_bcast_addr(struct net_pkt *pkt,
-						struct net_eth_hdr *hdr)
+static enum net_verdict ethernet_check_ipv4_bcast_addr(struct net_pkt *pkt)
 {
+	NET_PKT_DATA_ACCESS_CONTIGUOUS_DEFINE(ipv4_access, struct net_ipv4_hdr);
+	struct net_linkaddr *lladdr = net_pkt_lladdr_dst(pkt);
+	enum net_verdict verdict = NET_OK;
+	struct net_pkt_cursor cur;
+	struct net_ipv4_hdr *hdr;
+
 	if (IS_ENABLED(CONFIG_NET_L2_ETHERNET_ACCEPT_MISMATCH_L3_L2_ADDR)) {
 		return NET_OK;
 	}
 
-	if (net_eth_is_addr_broadcast(&hdr->dst) &&
-	    !(net_ipv4_is_addr_mcast_raw(NET_IPV4_HDR(pkt)->dst) ||
-	      net_ipv4_is_addr_bcast_raw(net_pkt_iface(pkt),
-					 NET_IPV4_HDR(pkt)->dst))) {
-		return NET_DROP;
+	if (lladdr->len != sizeof(struct net_eth_addr) ||
+	    !net_eth_is_addr_broadcast((struct net_eth_addr *)lladdr->addr)) {
+		return NET_OK;
 	}
 
-	return NET_OK;
+	net_pkt_cursor_backup(pkt, &cur);
+	net_pkt_cursor_init(pkt);
+
+	hdr = (struct net_ipv4_hdr *)net_pkt_get_data(pkt, &ipv4_access);
+	if (hdr == NULL ||
+	    !(net_ipv4_is_addr_mcast_raw(hdr->dst) ||
+	      net_ipv4_is_addr_bcast_raw(net_pkt_iface(pkt), hdr->dst))) {
+		verdict = NET_DROP;
+	}
+
+	net_pkt_cursor_restore(pkt, &cur);
+
+	return verdict;
 }
 #endif
 
@@ -221,7 +238,11 @@ static void ethernet_mcast_monitor_cb(struct net_if *iface, const struct net_add
 	};
 
 	const struct device *dev = net_if_get_device(iface);
-	const struct ethernet_api *api = dev->api;
+	const struct ethernet_api *api;
+
+	NET_ASSERT(dev != NULL);
+
+	api = dev->api;
 
 	/* Make sure we're an ethernet device */
 	if (net_if_l2(iface) != &NET_L2_GET_NAME(ETHERNET)) {
@@ -266,6 +287,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 	bool is_vlan_pkt = false;
 	bool handled = false;
 	struct net_linkaddr *lladdr;
+	struct net_linkaddr *mac_addr;
 	uint16_t type;
 	bool dst_broadcast, dst_eth_multicast, dst_iface_addr;
 	struct net_if *iface_eth = iface;
@@ -287,17 +309,10 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 				  sizeof(struct net_eth_addr), NET_LINK_ETHERNET);
 
 	if (IS_ENABLED(CONFIG_NET_ETHERNET_BRIDGE) && net_eth_iface_is_bridged(ctx)) {
-		verdict = eth_bridge_input_process(iface, pkt);
+		verdict = eth_bridge_input_process(iface, pkt, &iface);
 		if (verdict == NET_DROP) {
 			goto drop;
 		}
-
-		/* Handled by bridge locally */
-		if (verdict == NET_OK) {
-			iface = net_eth_get_bridge(ctx);
-		}
-
-		/* For NET_CONTINUE case, current iface continues to handle the pkt. */
 	}
 
 	type = net_ntohs(hdr->type);
@@ -308,6 +323,16 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 			struct net_eth_vlan_hdr *hdr_vlan =
 				(struct net_eth_vlan_hdr *)NET_ETH_HDR(pkt);
 			struct net_if *vlan_iface;
+
+			/* The frame was only checked to hold a non-tagged
+			 * Ethernet header so far. Make sure the larger VLAN
+			 * header is fully present before reading the tag out
+			 * of it and before pulling it below.
+			 */
+			if (pkt->buffer->len < sizeof(struct net_eth_vlan_hdr)) {
+				NET_DBG("Dropping frame, truncated VLAN header");
+				goto drop;
+			}
 
 			net_pkt_set_vlan_tci(pkt, net_ntohs(hdr_vlan->vlan.tci));
 			type = net_ntohs(hdr_vlan->type);
@@ -347,11 +372,14 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 	}
 
 	lladdr = net_pkt_lladdr_dst(pkt);
+	mac_addr = net_if_get_link_addr(iface);
+
+	NET_ASSERT(mac_addr != NULL);
 
 	net_pkt_set_ll_proto_type(pkt, type);
 	dst_broadcast = net_eth_is_addr_broadcast((struct net_eth_addr *)lladdr->addr);
 	dst_eth_multicast = net_eth_is_addr_multicast((struct net_eth_addr *)lladdr->addr);
-	dst_iface_addr = net_linkaddr_cmp(net_if_get_link_addr(iface), lladdr);
+	dst_iface_addr = net_linkaddr_cmp(mac_addr, lladdr);
 
 	if (is_vlan_pkt) {
 		print_vlan_ll_addrs(pkt, type, net_pkt_vlan_tci(pkt),
@@ -370,7 +398,7 @@ static enum net_verdict ethernet_recv(struct net_if *iface,
 		 * are different.
 		 */
 		NET_DBG("Dropping frame, not for me [%s]",
-			net_sprint_ll_addr(net_if_get_link_addr(iface)->addr,
+			net_sprint_ll_addr(mac_addr->addr,
 					   sizeof(struct net_eth_addr)));
 		goto drop;
 	}
@@ -436,9 +464,7 @@ static enum net_verdict ethernet_ip_recv(struct net_if *iface,
 	ARG_UNUSED(iface);
 
 	if (ptype == NET_ETH_PTYPE_IP) {
-		struct net_eth_hdr *hdr = NET_ETH_HDR(pkt);
-
-		if (ethernet_check_ipv4_bcast_addr(pkt, hdr) == NET_DROP) {
+		if (ethernet_check_ipv4_bcast_addr(pkt) == NET_DROP) {
 			return NET_DROP;
 		}
 
@@ -512,11 +538,14 @@ static int ethernet_ll_prepare_on_ipv4(struct net_if *iface,
 	}
 
 	if (IS_ENABLED(CONFIG_NET_ARP)) {
-		return net_arp_prepare(pkt,
-				       request_ip != NULL ?
-				       (struct net_in_addr *)request_ip :
-				       (struct net_in_addr *)NET_IPV4_HDR(pkt)->dst,
-				       NULL, out);
+		struct net_in_addr addr;
+
+		if (request_ip == NULL) {
+			net_ipv4_addr_copy_raw((uint8_t *)&addr, NET_IPV4_HDR(pkt)->dst);
+			request_ip = &addr;
+		}
+
+		return net_arp_prepare(pkt, (struct net_in_addr *)request_ip, NULL, out);
 	}
 
 	return NET_ARP_COMPLETE;
@@ -548,24 +577,18 @@ static bool ethernet_fill_in_dst_on_ipv6_mcast(struct net_pkt *pkt,
 #define ethernet_fill_in_dst_on_ipv6_mcast(...) false
 #endif /* CONFIG_NET_IPV6 */
 
-static inline size_t get_reserve_ll_header_size(struct net_if *iface)
+static inline size_t get_reserve_ll_header_size(bool is_vlan)
 {
-	bool is_vlan = false;
-
-#if defined(CONFIG_NET_VLAN)
-	if (net_if_l2(iface) == &NET_L2_GET_NAME(VIRTUAL)) {
-		iface = net_eth_get_vlan_main(iface);
-		is_vlan = true;
-	}
-#endif
-
-	if (net_if_l2(iface) != &NET_L2_GET_NAME(ETHERNET)) {
-		return 0U;
-	}
-
 	if (!IS_ENABLED(CONFIG_NET_L2_ETHERNET_RESERVE_HEADER)) {
 		return 0U;
 	}
+
+#if defined(CONFIG_NET_VLAN) && (CONFIG_NET_VLAN_COUNT == 0)
+	/* When CONFIG_NET_VLAN_COUNT = 0, priority-tagged
+	 * frames are supported on the main Ethernet interface.
+	 */
+	is_vlan = true;
+#endif
 
 	if (is_vlan) {
 		return sizeof(struct net_eth_vlan_hdr);
@@ -579,9 +602,7 @@ static struct net_buf *ethernet_fill_header(struct ethernet_context *ctx,
 					    struct net_pkt *pkt,
 					    uint32_t ptype)
 {
-	struct net_if *orig_iface = iface;
 	struct net_buf *hdr_frag;
-	struct net_eth_hdr *hdr;
 	size_t reserve_ll_header;
 	size_t hdr_len;
 	bool is_vlan;
@@ -589,19 +610,11 @@ static struct net_buf *ethernet_fill_header(struct ethernet_context *ctx,
 	is_vlan = IS_ENABLED(CONFIG_NET_VLAN) &&
 		net_eth_is_vlan_enabled(ctx, iface) &&
 		net_pkt_vlan_tag(pkt) != NET_VLAN_TAG_UNSPEC;
-	if (is_vlan) {
-		orig_iface = net_eth_get_vlan_iface(iface, net_pkt_vlan_tag(pkt));
-	}
 
-	reserve_ll_header = get_reserve_ll_header_size(orig_iface);
+	reserve_ll_header = get_reserve_ll_header_size(is_vlan);
 	if (reserve_ll_header > 0) {
 		hdr_len = reserve_ll_header;
 		hdr_frag = pkt->buffer;
-
-		NET_DBG("Making room for link header %zd bytes", hdr_len);
-
-		/* Make room for the header */
-		net_buf_push(pkt->buffer, hdr_len);
 	} else {
 		hdr_len = IS_ENABLED(CONFIG_NET_VLAN) ?
 			sizeof(struct net_eth_vlan_hdr) :
@@ -616,9 +629,14 @@ static struct net_buf *ethernet_fill_header(struct ethernet_context *ctx,
 	if (is_vlan) {
 		struct net_eth_vlan_hdr *hdr_vlan;
 
+		NET_ASSERT(hdr_len >= sizeof(struct net_eth_vlan_hdr));
+		hdr_len = sizeof(struct net_eth_vlan_hdr);
+
 		if (reserve_ll_header == 0U) {
-			hdr_len = sizeof(struct net_eth_vlan_hdr);
 			net_buf_add(hdr_frag, hdr_len);
+		} else {
+			/* Make room for the header */
+			net_buf_push(pkt->buffer, hdr_len);
 		}
 
 		hdr_vlan = (struct net_eth_vlan_hdr *)(hdr_frag->data);
@@ -642,12 +660,19 @@ static struct net_buf *ethernet_fill_header(struct ethernet_context *ctx,
 				    hdr_len,
 				    &hdr_vlan->src, &hdr_vlan->dst, false);
 	} else {
-		hdr = (struct net_eth_hdr *)(hdr_frag->data);
+		struct net_eth_hdr *hdr;
+
+		NET_ASSERT(hdr_len >= sizeof(struct net_eth_hdr));
+		hdr_len = sizeof(struct net_eth_hdr);
 
 		if (reserve_ll_header == 0U) {
-			hdr_len = sizeof(struct net_eth_hdr);
 			net_buf_add(hdr_frag, hdr_len);
+		} else {
+			/* Make room for the header */
+			net_buf_push(pkt->buffer, hdr_len);
 		}
+
+		hdr = (struct net_eth_hdr *)(hdr_frag->data);
 
 		if (ptype == net_htons(NET_ETH_PTYPE_ARP) ||
 		    (!ethernet_fill_in_dst_on_ipv4_mcast(pkt, &hdr->dst) &&
@@ -692,11 +717,16 @@ static void ethernet_update_tx_stats(struct net_if *iface, struct net_pkt *pkt)
 
 static int ethernet_send(struct net_if *iface, struct net_pkt *pkt)
 {
-	const struct ethernet_api *api = net_if_get_device(iface)->api;
+	const struct device *dev = net_if_get_device(iface);
+	const struct ethernet_api *api;
 	struct ethernet_context *ctx = net_if_l2_data(iface);
 	uint16_t ptype = net_htons(net_pkt_ll_proto_type(pkt));
 	struct net_pkt *orig_pkt = pkt;
 	int ret;
+
+	NET_ASSERT(dev != NULL);
+
+	api = dev->api;
 
 	NET_ASSERT(api != NULL);
 	NET_ASSERT(api->send != NULL);
@@ -780,7 +810,7 @@ static int ethernet_send(struct net_if *iface, struct net_pkt *pkt)
 	net_pkt_cursor_init(pkt);
 
 send:
-	ret = net_l2_send(api->send, net_if_get_device(iface), iface, pkt);
+	ret = net_l2_send(api->send, dev, iface, pkt);
 	if (ret != 0) {
 		eth_stats_update_errors_tx(iface);
 		goto arp_error;
@@ -815,8 +845,13 @@ arp_error:
 static inline int ethernet_enable(struct net_if *iface, bool state)
 {
 	const struct device *dev = net_if_get_device(iface);
-	const struct ethernet_api *eth = dev->api;
+	const struct ethernet_api *eth;
 	struct net_linkaddr *mac_addr;
+	int ret;
+
+	NET_ASSERT(dev != NULL);
+
+	eth = dev->api;
 
 	NET_ASSERT(eth != NULL);
 
@@ -830,16 +865,29 @@ static inline int ethernet_enable(struct net_if *iface, bool state)
 		return 0;
 	}
 
+	if (eth->start) {
+		ret = eth->start(dev, iface);
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	/* Validate the MAC address after the driver has started so that
+	 * companion chipsets which fetch their address from firmware/OTP
+	 * during bring-up have a valid link address by this point. A failure
+	 * here is terminal: net_if_up() fails and the interface is left
+	 * unusable, the same as if eth->start() itself had failed, so there
+	 * is no need to roll back with eth->stop() (which not every driver
+	 * implements).
+	 */
 	mac_addr = net_if_get_link_addr(iface);
+
+	NET_ASSERT(mac_addr != NULL);
 
 	if ((mac_addr->len != NET_ETH_ADDR_LEN) ||
 	    !net_eth_is_addr_valid((struct net_eth_addr *)mac_addr->addr)) {
 		NET_ERR("Invalid MAC address for iface %d (%p)", net_if_get_by_iface(iface), iface);
 		return -EINVAL;
-	}
-
-	if (eth->start) {
-		return eth->start(dev, iface);
 	}
 
 	return 0;
@@ -849,6 +897,8 @@ enum net_l2_flags ethernet_flags(struct net_if *iface)
 {
 	struct ethernet_context *ctx = net_if_l2_data(iface);
 
+	NET_ASSERT(ctx != NULL);
+
 	return ctx->ethernet_l2_flags;
 }
 
@@ -857,11 +907,12 @@ static int ethernet_l2_alloc(struct net_if *iface, struct net_pkt *pkt,
 			     size_t size, enum net_ip_protocol proto,
 			     k_timeout_t timeout)
 {
-	size_t reserve = get_reserve_ll_header_size(iface);
+	size_t reserve = get_reserve_ll_header_size(false);
 	struct ethernet_config config;
 
-	if (net_eth_get_hw_config(iface, ETHERNET_CONFIG_TYPE_EXTRA_TX_PKT_HEADROOM,
-				  &config) == 0) {
+	if (IS_ENABLED(CONFIG_NET_L2_ETHERNET_EXTRA_TX_PKT_HEADROOM) &&
+	    net_eth_get_hw_config(iface,
+				  ETHERNET_CONFIG_TYPE_EXTRA_TX_PKT_HEADROOM, &config) == 0) {
 		reserve += config.extra_tx_pkt_headroom;
 	}
 
@@ -907,6 +958,8 @@ void net_eth_carrier_set(struct net_if *iface, bool carrier_up)
 {
 	struct ethernet_context *ctx = net_if_l2_data(iface);
 
+	NET_ASSERT(ctx != NULL);
+
 	if (atomic_test_and_set_bit_to(&ctx->flags, ETH_CARRIER_UP, carrier_up)) {
 		k_work_submit(&ctx->carrier_work);
 	}
@@ -915,7 +968,11 @@ void net_eth_carrier_set(struct net_if *iface, bool carrier_up)
 const struct device *net_eth_get_phy(struct net_if *iface)
 {
 	const struct device *dev = net_if_get_device(iface);
-	const struct ethernet_api *api = dev->api;
+	const struct ethernet_api *api;
+
+	NET_ASSERT(dev != NULL);
+
+	api = dev->api;
 
 	NET_ASSERT(api != NULL);
 
@@ -934,15 +991,15 @@ const struct device *net_eth_get_phy(struct net_if *iface)
 const struct device *net_eth_get_ptp_clock(struct net_if *iface)
 {
 	const struct device *dev = net_if_get_device(iface);
-	const struct ethernet_api *api = dev->api;
+	const struct ethernet_api *api;
+
+	NET_ASSERT(dev != NULL);
+
+	api = dev->api;
 
 	NET_ASSERT(api != NULL);
 
 	if (net_if_l2(iface) != &NET_L2_GET_NAME(ETHERNET)) {
-		return NULL;
-	}
-
-	if (!(net_eth_get_hw_capabilities(iface) & ETHERNET_PTP)) {
 		return NULL;
 	}
 
@@ -1037,6 +1094,9 @@ int net_eth_mac_filter(struct net_if *iface, struct net_eth_addr *mac,
 void ethernet_init(struct net_if *iface)
 {
 	struct ethernet_context *ctx = net_if_l2_data(iface);
+	enum ethernet_hw_caps caps;
+
+	NET_ASSERT(ctx != NULL);
 
 	NET_DBG("Initializing Ethernet L2 %p for iface %d (%p)", ctx,
 		net_if_get_by_iface(iface), iface);
@@ -1055,15 +1115,21 @@ void ethernet_init(struct net_if *iface)
 	ctx->iface = iface;
 	k_work_init(&ctx->carrier_work, carrier_on_off);
 
-	if (net_eth_get_hw_capabilities(iface) & ETHERNET_PROMISC_MODE) {
+	caps = net_eth_get_hw_capabilities(iface);
+
+	if ((caps & ETHERNET_PROMISC_MODE) != 0) {
 		ctx->ethernet_l2_flags |= NET_L2_PROMISC_MODE;
 	}
 
 #if defined(CONFIG_NET_NATIVE_IP) && !defined(CONFIG_NET_RAW_MODE)
-	if (net_eth_get_hw_capabilities(iface) & ETHERNET_HW_FILTERING) {
+	if ((caps & ETHERNET_HW_FILTERING) != 0) {
 		net_if_mcast_mon_register(&mcast_monitor, NULL, ethernet_mcast_monitor_cb);
 	}
 #endif
+
+	if ((caps & ETHERNET_LLDP) != 0) {
+		net_lldp_set_lldpdu(iface);
+	}
 
 	ctx->is_init = true;
 }

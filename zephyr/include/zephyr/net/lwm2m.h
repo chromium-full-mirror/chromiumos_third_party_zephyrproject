@@ -209,7 +209,14 @@ enum lwm2m_socket_states {
  */
 struct lwm2m_ctx {
 	/** Destination address storage */
-	struct net_sockaddr remote_addr;
+	union {
+		/** Destination address */
+		struct net_sockaddr_storage remote_addr_storage;
+/** @cond INTERNAL_HIDDEN */
+		/* Use remote_addr_storage instead of remote_addr */
+		struct net_sockaddr remote_addr;
+/** @endcond */
+	};
 
 	/** @cond INTERNAL_HIDDEN
 	 * Private CoAP and networking structures + 1 is for RD Client own message
@@ -774,7 +781,7 @@ int lwm2m_swmgmt_set_write_package_cb(uint16_t obj_inst_id, lwm2m_engine_set_dat
  * @param[in] error_code The result code of the operation. Zero on success
  * otherwise it should be a negative integer.
  *
- * return 0 on success, otherwise a negative integer.
+ * @return 0 on success, otherwise a negative integer.
  */
 int lwm2m_swmgmt_install_completed(uint16_t obj_inst_id, int error_code);
 

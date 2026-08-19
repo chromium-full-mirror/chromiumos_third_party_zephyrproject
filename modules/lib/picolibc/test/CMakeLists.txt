@@ -34,51 +34,30 @@
 #
 
 set(tests
-  printf_scanf
-  printf-tests
-  rand
-  regex
-  ungetc
-  fenv
-  long_double
-  math_errhandling
-  malloc
-  tls
-  ffs
-  setjmp
-  atexit
-  on_exit
-  math-funcs
-  timegm
-  time-tests
-  test-funopen
-  test-strtod
-  test-strchr
-  test-memset
-  test-put
-  test-efcvt
-  test-fma
-  test-sprintf-percent-n
-  malloc_stress
-  test-memchr
-  test-memcpy_s
-  test-memset_s
-  test-memmove_s
-  test-strcat_s
-  test-strcpy_s
-  test-strerror_s
-  test-strerrorlen_s
-  test-strncat_s
-  test-strncpy_s
-  test-strnlen_s
-  test-sprintf_s
+  test-argv
+  test-atomic
+  test-environ
+  test-getdate
+  test-getopt
+  test-hello
+  test-hosted-exit
+  test-raise
+  test-regex
+  test-scmpu
+  test-setjmp
+  test-strftime
+  test-time
+  test-time2
+  test-timegm
+  test-tls
   test-uchar
-  test-vfprintf_s
-  test-vsnprintf_s
+  test-wcsftime
+  test-wctomb
   )
 
 set(tests_fail
   test-except
+  test-hosted-exit-fail
   )
   
 function(picolibc_test test)
@@ -106,4 +85,10 @@ foreach(test IN LISTS tests_fail)
   set_tests_properties(${test} PROPERTIES WILL_FAIL ON)
 endforeach()
 
-picolibc_test(rounding-mode rounding-mode-sub.c)
+add_subdirectory(test-ctype)
+add_subdirectory(test-math)
+add_subdirectory(test-monetary)
+add_subdirectory(test-posix)
+add_subdirectory(test-stdio)
+add_subdirectory(test-stdlib)
+add_subdirectory(test-string)

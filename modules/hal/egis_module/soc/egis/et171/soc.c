@@ -177,6 +177,12 @@ static int soc_pre_init(void)
 	z_clock_hw_cycles_per_sec = HAL_SMU_GetClock(SMU_CLK_APB);
 #endif
 
+	/* Overwrite the default I/O configurations to reduce power consumption.                                     */
+	sys_write32(0x0001F074, 0xF0700030); /* DATAOUT_SET: set gpio 3~6,12~16 output high                          */
+	sys_write32(sys_read32(0xF0700028) | 0x0001F074, 0xF0700028); /* DIRECTION: set gpio 3~6,12~16 as output     */
+	sys_write32((sys_read32(0xF0E00100) & ~0x000FFC00) | 0x00055C00, 0xF0E00100); /* MUXA: mux pad 5~9 to gpio   */
+	sys_write32((sys_read32(0xF0E00104) & ~0x0003FC00) | 0x00015400, 0xF0E00104); /* MUXB: mux pad 21~24 to gpio */
+
 	disable_unused_device();
 
 	return 0;

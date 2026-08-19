@@ -34,12 +34,40 @@
  */
 
 #include <stddef.h>
+
+#if defined(__riscv_shadow_stack)
+#define _PICOLIBC_CFISS_ENABLED 1
+#endif
+
+#ifdef _PICOLIBC_CFISS_ENABLED
+/*
+ * Optional shadow-stack initialization hook. The default implementation
+ * (defined below) is a no-op; targets that need to set up page-table
+ * or PMP protection for the shadow stack and program the SSP CSR can
+ * provide a strong override of this symbol.
+ *
+ * Called from __start() via POST_MEMORY_SETUP, i.e. after .bss has been
+ * cleared, so that any storage used as the shadow stack (which typically
+ * lives in .bss) has been zeroed before it is marked as a shadow-stack
+ * region.
+ */
+extern void _init_cfiss(void);
+#define POST_MEMORY_SETUP() _init_cfiss()
+#endif
+
 #include "../../crt0.h"
+
+#ifdef _PICOLIBC_CFISS_ENABLED
+__attribute__((weak)) void
+_init_cfiss(void)
+{
+}
+#endif
 
 static void __used __section(".init")
 _cstart(void)
 {
-	__start();
+    __start();
 }
 
 #ifdef CRT0_SEMIHOST
@@ -54,197 +82,298 @@ _cstart(void)
 #endif
 
 #if __riscv_xlen == 32
-#define FMT     "%08lx"
-#define SD      "sw"
+#define FMT "%08lx"
+#define SD  "sw"
 #else
-#define FMT     "%016lx"
-#define SD      "sd"
+#define FMT "%016lx"
+#define SD  "sd"
 #endif
 
 struct fault {
-        unsigned long   r[NUM_REG];
-        unsigned long   mepc;
-        unsigned long   mcause;
-        unsigned long   mtval;
+    unsigned long r[NUM_REG];
+    unsigned long mepc;
+    unsigned long mcause;
+    unsigned long mtval;
 };
 
-static const char *const names[NUM_REG] = {
-        "zero", "ra",   "sp",   "gp",   "tp",   "t0",   "t1",   "t2",
-        "s0/fp","s1",   "a0",   "a1",   "a2",   "a3",   "a4",   "a5",
+static const char * const names[NUM_REG] = {
+    "zero",  "ra", "sp",  "gp",  "tp", "t0", "t1", "t2",
+    "s0/fp", "s1", "a0",  "a1",  "a2", "a3", "a4", "a5",
 #if NUM_REG > 16
-        "a6",   "a7",   "s2",   "s3",   "s4",   "s5",   "s6",   "s7",
-        "s8",   "s9",   "s10",  "s11",  "t3",   "t4",   "t5",   "t6",
+    "a6",    "a7", "s2",  "s3",  "s4", "s5", "s6", "s7",
+    "s8",    "s9", "s10", "s11", "t3", "t4", "t5", "t6",
 #endif
 };
-
 
 static void __used __section(".init")
 _ctrap(struct fault *fault)
 {
-        int r;
-        printf("RISCV fault\n");
-        for (r = 0; r < NUM_REG; r++)
-                printf("\tx%d %-5.5s%s 0x" FMT "\n", r, names[r], r < 10 ? " " : "", fault->r[r]);
-        printf("\tmepc:     0x" FMT "\n", fault->mepc);
-        printf("\tmcause:   0x" FMT "\n", fault->mcause);
-        printf("\tmtval:    0x" FMT "\n", fault->mtval);
-        _exit(1);
+    int r;
+    printf("RISCV fault\n");
+    for (r = 0; r < NUM_REG; r++)
+        printf("\tx%d %-5.5s%s 0x" FMT "\n", r, names[r], r < 10 ? " " : "", fault->r[r]);
+    printf("\tmepc:     0x" FMT "\n", fault->mepc);
+    printf("\tmcause:   0x" FMT "\n", fault->mcause);
+    printf("\tmtval:    0x" FMT "\n", fault->mtval);
+    _exit(1);
 }
 
 #define _PASTE(r) #r
-#define PASTE(r) _PASTE(r)
+#define PASTE(r)  _PASTE(r)
 
 void __naked __section(".init") __used __attribute((aligned(4)))
+__attribute__((target("arch=+zicsr")))
 _trap(void)
 {
 #ifndef __clang__
-        __asm__(".option	nopic");
+    __asm__(".option	nopic");
 #endif
 
-        /* Build a known-working C environment */
-	__asm__(".option	push\n"
-                ".option	norelax\n"
-                "csrrw  sp, mscratch, sp\n"
+    /* Build a known-working C environment */
+    __asm__(".option	push\n"
+            ".option	norelax\n"
+            "csrrw  sp, mscratch, sp\n"
 #ifdef __riscv_cmodel_large
-                "ld     sp, .trap_sp\n"
+            "ld     sp, .trap_sp\n"
 #else
-                "la	sp, __heap_end\n"
+            "la	sp, __heap_end\n"
 #endif
-                ".option	pop");
+            ".option	pop");
 
-        /* Make space for saved registers */
-        __asm__("addi   sp, sp, %0\n"
+    /* Make space for saved registers */
+    __asm__("addi   sp, sp, %0\n"
 #ifdef __GCC_HAVE_DWARF2_CFI_ASM
-                ".cfi_def_cfa sp, 0\n"
+            ".cfi_def_cfa sp, 0\n"
 #endif
-                :: "i"(-sizeof(struct fault)));
+            ::"i"(-sizeof(struct fault)));
 
-        /* Save registers on stack */
-#define SAVE_REG(num)   \
-        __asm__(SD"     x%0, %1(sp)" :: "i" (num), \
-                "i" ((num) * sizeof(unsigned long) + offsetof(struct fault, r)))
+    /* Save registers on stack */
+#define SAVE_REG(num)                                                       \
+    __asm__(SD "     x%0, %1(sp)" ::"i"(num),                               \
+            "i"((num) * sizeof(unsigned long) + offsetof(struct fault, r)))
 
 #define SAVE_REGS_8(base) \
-        SAVE_REG(base+0); SAVE_REG(base+1); SAVE_REG(base+2); SAVE_REG(base+3); \
-        SAVE_REG(base+4); SAVE_REG(base+5); SAVE_REG(base+6); SAVE_REG(base+7)
+    SAVE_REG(base + 0);   \
+    SAVE_REG(base + 1);   \
+    SAVE_REG(base + 2);   \
+    SAVE_REG(base + 3);   \
+    SAVE_REG(base + 4);   \
+    SAVE_REG(base + 5);   \
+    SAVE_REG(base + 6);   \
+    SAVE_REG(base + 7)
 
-        SAVE_REGS_8(0);
-        SAVE_REGS_8(8);
+    SAVE_REGS_8(0);
+    SAVE_REGS_8(8);
 #ifndef __riscv_32e
-        SAVE_REGS_8(16);
-        SAVE_REGS_8(24);
+    SAVE_REGS_8(16);
+    SAVE_REGS_8(24);
 #endif
 
-#define SAVE_CSR(name)  \
-        __asm__("csrr   t0, "PASTE(name));\
-        __asm__(SD"  t0, %0(sp)" :: "i" (offsetof(struct fault, name)))
+#define SAVE_CSR(name)                                             \
+    __asm__("csrr   t0, " PASTE(name));                            \
+    __asm__(SD "  t0, %0(sp)" ::"i"(offsetof(struct fault, name)))
 
-        /*
-         * Save the trapping frame's stack pointer that was stashed in mscratch
-         * and tell the unwinder where we can find the return address (mepc).
-         */
-        __asm__("csrr   ra, mepc\n"
-                SD "    ra, %0(sp)\n"
+    /*
+     * Save the trapping frame's stack pointer that was stashed in mscratch
+     * and tell the unwinder where we can find the return address (mepc).
+     */
+    __asm__("csrr   ra, mepc\n" SD "    ra, %0(sp)\n"
 #ifdef __GCC_HAVE_DWARF2_CFI_ASM
-                ".cfi_offset ra, %0\n"
+            ".cfi_offset ra, %0\n"
 #endif
-                "csrrw t0, mscratch, zero\n"
-                SD "    t0, %1(sp)\n"
+            "csrrw t0, mscratch, zero\n" SD "    t0, %1(sp)\n"
 #ifdef __GCC_HAVE_DWARF2_CFI_ASM
-                ".cfi_offset sp, %1\n"
+            ".cfi_offset sp, %1\n"
 #endif
-                :: "i"(offsetof(struct fault, mepc)),
-                   "i"(offsetof(struct fault, r[2])));
-        SAVE_CSR(mcause);
-        SAVE_CSR(mtval);
+            ::"i"(offsetof(struct fault, mepc)),
+            "i"(offsetof(struct fault, r[2])));
+    SAVE_CSR(mcause);
+    SAVE_CSR(mtval);
 
-        /*
-         * Pass pointer to saved registers in first parameter register
-         */
-	__asm__(".option	push\n"
-                ".option	norelax\n"
+    /*
+     * Ensure GP and JVT are initialized before calling C
+     */
+    __asm__(".option	push\n"
+            ".option	norelax\n"
 #ifdef __riscv_cmodel_large
-                "ld     gp,.trap_gp\n"
+            "ld     gp,.trap_gp\n"
 #else
-                "la	gp, __global_pointer$\n"
+            "la	gp, __global_pointer$\n"
 #endif
-                ".option	pop");
-        __asm__("mv     a0, sp");
+            ".option	pop");
 
-        /* Enable FPU (just in case) */
-#ifdef __riscv_flen
-	__asm__("csrr	t0, mstatus\n"
-                "li	t1, 8192\n"     	// 1 << 13 = 8192
-                "or	t0, t1, t0\n"
-                "csrw	mstatus, t0\n"
-                "csrwi	fcsr, 0");
-#endif
-        __asm__("jal    _ctrap");
+#if defined(__riscv_zcmt) || defined(__riscv_xqccmt)
+    __asm__(".weak __jvt_base$\n"
 #ifdef __riscv_cmodel_large
-        __asm__(".align 3\n.trap_sp:\n.dword __stack");
-        __asm__(".align 3\n.trap_gp:\n.dword __global_pointer$");
+            "ld t0, .trap_jvt_base\n"
+#else
+            "la t0, __jvt_base$\n"
+#endif
+            // __jvt_base$ is weak, so skip initializing `CSR[jvt]` if it is zero (undefined)
+            "beqz t0, .Lafter_jvt_init_trap\n"
+            "csrw jvt, t0\n"
+            ".Lafter_jvt_init_trap:\n");
+#endif
+
+    /* Enable FPU (just in case) */
+#ifdef __riscv_flen
+    __asm__("csrr	t0, mstatus\n"
+            "li	t1, 8192\n" // 1 << 13 = 8192
+            "or	t0, t1, t0\n"
+            "csrw	mstatus, t0\n"
+            "csrwi	fcsr, 0");
+#endif
+
+    /*
+     * Call to C passing the saved registers as the first parameter.
+     */
+    __asm__("mv     a0, sp\n"
+            "jal    _ctrap");
+
+#ifdef __riscv_cmodel_large
+    __asm__(".align 3\n"
+            ".trap_sp: .dword __stack\n" /* FIXME: this is __heap_end in non-large code models. */
+            ".trap_gp: .dword __global_pointer$\n"
+#if defined(__riscv_zcmt) || defined(__riscv_xqccmt)
+            ".trap_jvt_base: .dword __jvt_base$\n"
+#endif
+    );
 #endif
 }
 #endif
 
-void __naked __section(".text.init.enter") __used
+void __naked __section(".text.init.enter") __used __attribute__((target("arch=+zicsr")))
 _start(void)
 {
 
-	/**
-	 * seems clang has no option "nopic". Now this could be problematic,
-	 * since according to the clang devs at [0], that option has an effect
-	 * on `la`. However, the resulting crt0.o looks the same as the one from
-	 * gcc (same opcodes + pc relative relocations where I used `la`), so
-	 * this could be okay.
-	 * [0] https://reviews.llvm.org/D55325
-	 */
+    /**
+     * seems clang has no option "nopic". Now this could be problematic,
+     * since according to the clang devs at [0], that option has an effect
+     * on `la`. However, the resulting crt0.o looks the same as the one from
+     * gcc (same opcodes + pc relative relocations where I used `la`), so
+     * this could be okay.
+     * [0] https://reviews.llvm.org/D55325
+     */
 #ifndef __clang__
-        __asm__(".option	nopic");
+    __asm__(".option	nopic");
 #endif
 
-	__asm__(".option	push\n"
-                ".option	norelax\n"
+    __asm__(".option	push\n"
+            ".option	norelax\n"
 #ifdef __riscv_cmodel_large
-                "ld     sp,.start_sp\n"
-                "ld     gp,.start_gp\n"
+            "ld     sp,.start_sp\n"
+            "ld     gp,.start_gp\n"
 #else
-                "la	sp, __stack\n"
-                "la	gp, __global_pointer$\n"
+            "la	sp, __stack\n"
+            "la	gp, __global_pointer$\n"
 #endif
-                ".option	pop");
+            ".option	pop");
 
 #ifdef __riscv_flen
-	__asm__("csrr	t0, mstatus\n"
-                "li	t1, 8192\n"     	// 1 << 13 = 8192
-                "or	t0, t1, t0\n"
-                "csrw	mstatus, t0\n"
-                "csrwi	fcsr, 0");
+    __asm__("csrr	t0, mstatus\n"
+            "li	t1, 8192\n" // 1 << 13 = 8192
+            "or	t0, t1, t0\n"
+            "csrw	mstatus, t0\n"
+            "csrwi	fcsr, 0");
 #endif
 #ifdef __riscv_vector
-	__asm__("csrr	t0, mstatus\n"
-                "li	t1, 512\n"     	        // 1 << 9 = 512
-                "or	t0, t1, t0\n"
-                "csrw	mstatus, t0\n"
-                "csrwi	vxrm, 1");
+    __asm__("csrr	t0, mstatus\n"
+            "li	t1, 512\n" // 1 << 9 = 512
+            "or	t0, t1, t0\n"
+            "csrw	mstatus, t0\n"
+            "csrwi	vxrm, 1");
 #endif
-#ifdef CRT0_SEMIHOST
+
+#if defined(__riscv_zcmt) || defined(__riscv_xqccmt)
+    __asm__(".weak __jvt_base$\n"
 #ifdef __riscv_cmodel_large
-        __asm__("ld     t0,.start_trap");
+            "ld t0, .start_jvt_base\n"
 #else
-        __asm__("la     t0, _trap");
+            "la t0, __jvt_base$\n"
 #endif
-        __asm__("csrw   mtvec, t0");
-        __asm__("csrr   t1, mtvec");
+            // __jvt_base$ is weak, so skip initializing `CSR[jvt]` if it is zero (undefined)
+            "beqz t0, .Lafter_jvt_init\n"
+            "csrw jvt, t0\n"
+            ".Lafter_jvt_init:\n");
 #endif
-        __asm__("j      _cstart");
-#ifdef __riscv_cmodel_large
-        __asm__(".align 3\n"
-                ".start_sp: .dword __stack\n"
-                ".start_gp: .dword __global_pointer$\n"
+
+#ifdef __riscv_landing_pad
+    /*
+     * Zicfilp: enable M-mode landing-pad enforcement by setting
+     * mseccfg.MLPE (bit 10). This macro is defined by the compiler
+     * only when both the Zicfilp extension is enabled and code is
+     * generated with -fcf-protection=branch (so that `lpad`
+     * instructions are emitted at indirect-call targets). After this
+     * is set, every indirect call or jump executed in M-mode must
+     * target an `lpad` instruction or a software-check exception
+     * (mcause=18, mtval=2) is raised.
+     */
+    __asm__("csrr	t0, mseccfg\n"
+            "li	t1, 1024\n"
+            "or	t0, t0, t1\n"
+            "csrw	0x747, t0");
+    /*
+     * Also enable landing-pad enforcement in S- and U-mode via
+     * menvcfg.LPE (bit 2) and senvcfg.LPE (bit 2). This is harmless on
+     * pure M-mode runs and is required when a crt0 variant drops to
+     * S/U-mode (e.g. for the Zicfiss shadow-stack MMU configuration).
+     */
+    __asm__("csrr	t0, menvcfg\n"
+            "li	t1, 4\n"
+            "or	t0, t0, t1\n"
+            "csrw	menvcfg, t0\n"
+            "csrr	t0, senvcfg\n"
+            "or	t0, t0, t1\n"
+            "csrw	senvcfg, t0");
+#endif
+#ifdef __riscv_shadow_stack
+    /*
+     * Zicfiss: enable shadow-stack support in mseccfg (SSE = bit 3) so
+     * that ssp may be written from M-mode, and in menvcfg/senvcfg so
+     * that the shadow-stack instructions are enabled for S/U.  The
+     * actual shadow-stack page mapping and ssp initialization is
+     * deferred to _init_cfiss() (invoked from POST_MEMORY_SETUP).
+     */
+    __asm__("csrr	t0, mseccfg\n"
+            "li	t1, 8\n"
+            "or	t0, t0, t1\n"
+            "csrw	0x747, t0\n"
+            "csrr	t0, menvcfg\n"
+            "or	t0, t0, t1\n"
+            "csrw	menvcfg, t0\n"
+            "csrr	t0, senvcfg\n"
+            "or	t0, t0, t1\n"
+            "csrw	senvcfg, t0");
+#endif
 #ifdef CRT0_SEMIHOST
-                ".start_trap: .dword _trap"
+#ifdef __riscv_cmodel_large
+    __asm__("ld     t0,.start_trap");
+#else
+    __asm__("la     t0, _trap");
 #endif
-            );
+    __asm__("csrw   mtvec, t0");
+    __asm__("csrr   t1, mtvec");
+#ifdef CRT0_SMRNMI
+    __asm__(".globl __riscv_enable_smrnmi");
+    __asm__("__riscv_enable_smrnmi: csrsi 0x744, 0x8"); // mnstatus = 0x744, 1 << 3 = 8
+#endif
+#endif
+
+    /*
+     * Call into C start function
+     */
+    __asm__("j      _cstart");
+
+#ifdef __riscv_cmodel_large
+    __asm__(".align 3\n"
+            ".start_sp: .dword __stack\n"
+            ".start_gp: .dword __global_pointer$\n"
+#ifdef CRT0_SEMIHOST
+            ".start_trap: .dword _trap\n"
+#endif
+#if defined(__riscv_zcmt) || defined(__riscv_xqccmt)
+            ".start_jvt_base: .dword __jvt_base$\n"
+#endif
+    );
 #endif
 }

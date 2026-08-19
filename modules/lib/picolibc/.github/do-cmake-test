@@ -1,12 +1,25 @@
-#!/bin/sh
+#!/bin/bash
 TARGET=$1
 DIR=build-"$TARGET"
 CONFIGURE=do-"$TARGET"-configure
 shift
 
-for p in /opt/*/bin /opt/*/models/*; do
-    PATH="$p":$PATH
-done
+# Put only the relevant toolchain in PATH for specific CI targets.
+# Fallback to previous behavior for other targets.
+case "$TARGET" in
+    *clang-thumb*)
+        for p in /opt/ATfE-*/bin /opt/*/models/*; do
+            [ -d "$p" ] && PATH="$p":$PATH
+        done
+        ;;
+    *)
+        for p in /opt/*/bin /opt/*/models/*; do
+            PATH="$p":$PATH
+        done
+        ;;
+esac
+
+export CTEST_PARALLEL_LEVEL=
 
 mkdir $DIR
 trap 'rm -rf "$DIR"' 0
@@ -14,7 +27,7 @@ trap 'rm -rf "$DIR"' 0
  echo '##################################################'
  echo '##########' ../scripts/"$CONFIGURE" "$@"
  echo '##################################################'
- ../scripts/$CONFIGURE "$@"
+ ../scripts/$CONFIGURE "$@" >& config.log
  case $? in
      0)
 	 echo 'Configuration succeeded'
@@ -25,8 +38,29 @@ trap 'rm -rf "$DIR"' 0
 	 ;;
      *)
 	 echo 'Configuration failed'
+	 cat config.log
 	 exit 1
 	 ;;
  esac
- cat CMakeFiles/CMakeOutput.log
- ninja && ninja test) || exit 1
+ ninja >& ninja.log
+ case $? in
+     0)
+	 echo 'Build succeeded'
+	 ;;
+     *)
+	 echo 'Build failed'
+	 cat ninja.log
+	 exit 1
+	 ;;
+ esac
+ ninja --quiet test >& test.log
+ case $? in
+     0)
+	 echo 'Tests passed'
+	 ;;
+     *)
+	 echo 'Tests failed'
+	 cat test.log
+	 exit 1
+	 ;;
+ esac) || exit 1

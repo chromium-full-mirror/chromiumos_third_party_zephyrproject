@@ -37,6 +37,7 @@
 		zephyr,dtcm = &dtcm;
 		zephyr,itcm = &itcm;
 		zephyr,touch = &ft5406;
+		zephyr,entropy = &mxcrypto_trng;
 	};
 };
 
@@ -89,6 +90,11 @@ uart4: &scb4 {
 			hci-operation-speed = <115200>;
 		};
 	};
+};
+
+&rram0 {
+	reg = <0x02000000 DT_SIZE_K(512)>;
+	ranges = <0x0 0x02000000 DT_SIZE_K(512)>;
 };
 
 &peri1_group2_8bit_0 {
@@ -150,4 +156,12 @@ uart4: &scb4 {
 		disk-name = "SD";
 		status = "okay";
 	};
+};
+
+&mxcrypto_trng {
+	status = "okay";
+};
+
+&mxcrypto_crypto {
+	status = "okay";
 };

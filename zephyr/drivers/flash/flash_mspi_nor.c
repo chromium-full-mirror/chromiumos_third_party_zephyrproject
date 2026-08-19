@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT jedec_mspi_nor
+#define DT_DRV_COMPAT jedec_nor
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
@@ -30,7 +30,8 @@ LOG_MODULE_REGISTER(flash_mspi_nor, CONFIG_FLASH_LOG_LEVEL);
 			  MSPI_DEVICE_CONFIG_TX_DUMMY | \
 			  MSPI_DEVICE_CONFIG_IO_MODE)
 
-#define NON_XIP_DEV_CFG_MASK (MSPI_DEVICE_CONFIG_ALL & ~XIP_DEV_CFG_MASK)
+#define NON_XIP_DEV_CFG_MASK ((MSPI_DEVICE_CONFIG_ALL & ~XIP_DEV_CFG_MASK) | \
+			      MSPI_DEVICE_CONFIG_IO_MODE)
 
 static void set_up_xfer(const struct device *dev, enum mspi_xfer_direction dir,
 			enum mspi_xfer_mode xfer_mode);
@@ -272,7 +273,7 @@ static int _acquire(const struct device *dev)
 
 	rc = pm_device_runtime_get(dev_config->bus);
 	if (rc < 0) {
-		LOG_ERR("pm_device_runtime_get() for bus failed: %d", rc);
+		LOG_ERR_PM_DEVICE_RUNTIME_GET(dev_config->bus, rc);
 	} else {
 		enum mspi_dev_cfg_mask mask;
 
@@ -313,7 +314,7 @@ static int acquire(const struct device *dev)
 
 	rc = pm_device_runtime_get(dev);
 	if (rc < 0) {
-		LOG_ERR("pm_device_runtime_get() failed: %d", rc);
+		LOG_ERR_PM_DEVICE_RUNTIME_GET(dev, rc);
 		return rc;
 	}
 
@@ -362,12 +363,45 @@ static inline uint16_t dev_page_size(const struct device *dev)
 	return dev_config->page_size;
 }
 
+static inline uint32_t dev_erase_block_size(const struct device *dev)
+{
+	const struct flash_mspi_nor_config *dev_config = dev->config;
+
+	return dev_config->erase_block_size;
+}
+
 static inline
 const struct jesd216_erase_type *dev_erase_types(const struct device *dev)
 {
 	struct flash_mspi_nor_data *dev_data = dev->data;
 
 	return dev_data->erase_types;
+}
+
+static int validate_erase_block_size(const struct device *dev)
+{
+	const uint32_t erase_block_size = dev_erase_block_size(dev);
+	const struct jesd216_erase_type *erase_types = dev_erase_types(dev);
+	uint32_t min_erase_size = 0;
+
+	for (int i = 0; i < JESD216_NUM_ERASE_TYPES; ++i) {
+		const struct jesd216_erase_type *et = &erase_types[i];
+
+		if ((et->exp != 0) &&
+		    ((min_erase_size == 0) || (BIT(et->exp) < min_erase_size))) {
+			min_erase_size = BIT(et->exp);
+		}
+	}
+
+	if ((min_erase_size == 0) || (erase_block_size < min_erase_size) ||
+	    ((erase_block_size % min_erase_size) != 0)) {
+		LOG_ERR("%s: erase-block-size %u is incompatible with minimum "
+			"supported erase size %u",
+			dev->name, erase_block_size, min_erase_size);
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static uint8_t get_rx_dummy(const struct device *dev)
@@ -520,17 +554,18 @@ static int api_erase(const struct device *dev, off_t addr, size_t size)
 	const struct flash_mspi_nor_config *dev_config = dev->config;
 	struct flash_mspi_nor_data *dev_data = dev->data;
 	const uint32_t flash_size = dev_flash_size(dev);
+	const uint32_t erase_block_size = dev_erase_block_size(dev);
 	int rc = 0;
 
 	if ((addr < 0) || ((addr + size) > flash_size)) {
 		return -EINVAL;
 	}
 
-	if (!SPI_NOR_IS_SECTOR_ALIGNED(addr)) {
+	if ((addr % erase_block_size) != 0) {
 		return -EINVAL;
 	}
 
-	if ((size % SPI_NOR_SECTOR_SIZE) != 0) {
+	if ((size % erase_block_size) != 0) {
 		return -EINVAL;
 	}
 
@@ -1310,20 +1345,11 @@ static int flash_chip_init(const struct device *dev)
 				sfdp_signature, JESD216_SFDP_MAGIC);
 			return -ENODEV;
 		}
-
-		/* sfdp_read() may have changed io mode, so make sure
-		 * to switch back to target io mode.
-		 */
-		rc = switch_to_target_io_mode(dev);
-		if (rc < 0) {
-			LOG_ERR("Failed to switch to target io mode: %d", rc);
-			return rc;
-		}
 	}
 
-#if defined(CONFIG_MSPI_XIP)
+#if defined(CONFIG_MSPI_MEMMAP)
 	/* Enable XIP access for this chip if specified so in DT. */
-	if (dev_config->xip_cfg.enable) {
+	if (dev_config->memmap_cfg.enable) {
 		struct mspi_dev_cfg mspi_cfg = {
 			.io_mode = dev_config->read_io_mode,
 			.addr_length = dev_data->cmd_info.uses_4byte_addr
@@ -1351,8 +1377,8 @@ static int flash_chip_init(const struct device *dev)
 			return rc;
 		}
 
-		rc = mspi_xip_config(dev_config->bus, &dev_config->mspi_id,
-				     &dev_config->xip_cfg);
+		rc = mspi_memmap_config(dev_config->bus, &dev_config->mspi_id,
+					&dev_config->memmap_cfg);
 		if (rc < 0) {
 			LOG_ERR("Failed to enable XIP: %d", rc);
 			return rc;
@@ -1381,7 +1407,7 @@ static int drv_init(const struct device *dev)
 
 	rc = pm_device_runtime_get(dev_config->bus);
 	if (rc < 0) {
-		LOG_ERR("pm_device_runtime_get() failed: %d", rc);
+		LOG_ERR_PM_DEVICE_RUNTIME_GET(dev_config->bus, rc);
 		return rc;
 	}
 
@@ -1410,6 +1436,11 @@ static int drv_init(const struct device *dev)
 			"use \"write-command\" property to specify it.",
 			dev->name);
 		return -EINVAL;
+	}
+
+	rc = validate_erase_block_size(dev);
+	if (rc < 0) {
+		return rc;
 	}
 
 	LOG_DBG("%s - size: %u, page %u%s",
@@ -1535,6 +1566,9 @@ BUILD_ASSERT((FLASH_SIZE_INST(inst) % CONFIG_FLASH_MSPI_NOR_LAYOUT_PAGE_SIZE) ==
 		     FLASH_PAGE_SIZE_INST(inst) <= PACKET_DATA_LIMIT(inst),	\
 		"Page size for " DT_NODE_FULL_NAME(DT_DRV_INST(inst))		\
 		" exceeds controller packet data limit");			\
+	BUILD_ASSERT(IS_POWER_OF_TWO(DT_INST_PROP(inst, erase_block_size)),	\
+		"Erase block size for " DT_NODE_FULL_NAME(DT_DRV_INST(inst))	\
+		" must be a power of 2");					\
 	SFDP_BUILD_ASSERTS(inst);						\
 	PM_DEVICE_DT_INST_DEFINE(inst, dev_pm_action_cb);			\
 	DEFAULT_ERASE_TYPES_DEFINE(inst);					\
@@ -1544,12 +1578,13 @@ BUILD_ASSERT((FLASH_SIZE_INST(inst) % CONFIG_FLASH_MSPI_NOR_LAYOUT_PAGE_SIZE) ==
 		.packet_data_limit = DT_PROP_OR(DT_INST_BUS(inst),		\
 						packet_data_limit, 0),		\
 		.flash_size = FLASH_SIZE_INST(inst),				\
+		.erase_block_size = DT_INST_PROP(inst, erase_block_size),	\
 		.page_size = FLASH_PAGE_SIZE_INST(inst),			\
 		.mspi_id = MSPI_DEVICE_ID_DT_INST(inst),			\
 		.mspi_nor_cfg = MSPI_DEVICE_CONFIG_DT_INST(inst),		\
 		.mspi_control_cfg = FLASH_CONTROL_CMD_CONFIG(inst),		\
-	IF_ENABLED(CONFIG_MSPI_XIP,						\
-		(.xip_cfg = MSPI_XIP_CONFIG_DT_INST(inst),))			\
+	IF_ENABLED(CONFIG_MSPI_MEMMAP,						\
+		(.memmap_cfg = MSPI_MEMMAP_CONFIG_DT_INST(inst),))		\
 	IF_ENABLED(WITH_SUPPLY_GPIO,						\
 		(.supply = GPIO_DT_SPEC_INST_GET_OR(inst, supply_gpios, {0}),))	\
 	IF_ENABLED(WITH_RESET_GPIO,						\

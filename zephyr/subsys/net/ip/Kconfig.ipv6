@@ -137,6 +137,21 @@ config NET_IPV6_PMTU_DESTINATION_CACHE_ENTRIES
 	help
 	  How many PMTU entries we can track for each destination address.
 
+config NET_IPV6_PMTU_PTB
+	bool "IPv6 PMTU Discovery using ICMP messages"
+	default y
+	depends on NET_IPV6_PMTU
+	help
+	  Enables IPv6 Path MTU Discovery using
+	  ICMPv6 Packet Too Big messages (see RFC 8201).
+
+config NET_IPV6_PMTU_DPLPMTUD
+	bool "IPv6 PMTU Discovery using datagram messages"
+	depends on NET_UDP
+	depends on NET_IPV6_PMTU
+	help
+	  Enables IPv6 Datagram Packetization Layer Path MTU Discovery (see RFC 8899)
+
 config NET_INITIAL_HOP_LIMIT
 	int "Initial IPv6 hop limit value for unicast packets"
 	default 64
@@ -346,6 +361,22 @@ config NET_IPV6_NS_TIMEOUT
 	  The timeout in milliseconds between attempts to send a Neighbor
 	  Solicitation message.
 
+config NET_IPV6_UNSOLICITED_NA
+	bool "Send unsolicited Neighbor Advertisements"
+	depends on NET_IPV6_NBR_CACHE
+	depends on NET_MGMT_EVENT
+	depends on NET_MGMT_EVENT_INFO
+	help
+	  When enabled, the node multicasts an unsolicited Neighbor Advertisement
+	  (to the all-nodes address, with the Override flag set) for each of its
+	  unicast addresses when the address is added or passes Duplicate Address
+	  Detection, as described in RFC 4861 chapter 7.2.6. This lets neighbors
+	  that still hold an entry for this node correct a stale link-layer
+	  address without waiting for Neighbor Unreachability Detection; it is the
+	  IPv6 counterpart of gratuitous ARP (NET_ARP_GRATUITOUS). Note that a
+	  neighbor which has already dropped its entry ignores the advertisement
+	  (RFC 4861 chapter 7.2.5).
+
 config NET_IPV6_RS_TIMEOUT
 	int "Timeout of Router Solicitation messaging"
 	depends on NET_IPV6_ND
@@ -363,6 +394,44 @@ config NET_IPV6_RA_RDNSS
 	help
 	  Support Router Advertisement Recursive DNS Server option.
 	  See RFC 6106 for details. The value depends on your network needs.
+
+config NET_IPV6_ND_RA_TX
+	bool "Transmit IPv6 Router Advertisements (router role)"
+	depends on NET_IPV6_ND
+	help
+	  Enable the ability for an interface to act as an IPv6 router:
+	  respond to received Router Solicitations and periodically transmit
+	  unsolicited Router Advertisements. The advertisements include a
+	  Prefix Information Option for each prefix that has been marked for
+	  advertisement on the interface (for example a prefix obtained via
+	  DHCPv6 prefix delegation, RFC 8415). This is required in order to
+	  delegate a prefix onto a downstream link so that hosts on that link
+	  can configure addresses via SLAAC.
+
+if NET_IPV6_ND_RA_TX
+
+config NET_IPV6_ND_RA_TX_INTERVAL
+	int "Interval between unsolicited Router Advertisements (seconds)"
+	range 4 1800
+	default 600
+	help
+	  Time in seconds between successive unsolicited Router Advertisement
+	  transmissions on a router interface. Note that the interval is fixed,
+	  it is not randomized between MinRtrAdvInterval and MaxRtrAdvInterval
+	  as described in RFC 4861 ch. 6.2.1, and that no initial burst of
+	  MAX_INITIAL_RTR_ADVERTISEMENTS is sent when the router role is
+	  enabled. Solicited advertisements are sent in addition to these.
+
+config NET_IPV6_ND_RA_TX_ROUTER_LIFETIME
+	int "Router lifetime advertised in Router Advertisements (seconds)"
+	range 0 9000
+	default 1800
+	help
+	  Lifetime in seconds advertised in the Router Advertisement header.
+	  A value of 0 indicates that the node is not to be used as a default
+	  router.
+
+endif # NET_IPV6_ND_RA_TX
 
 choice NET_IPV6_IID_GENERATION
 	prompt "IPv6 Interface Identifier (IID) generation"
@@ -494,11 +563,13 @@ config NET_MAX_6LO_CONTEXTS
 	  network and memory consumption. More 6CO options uses more memory.
 
 if NET_6LO
+
 module = NET_6LO
 module-dep = NET_LOG
 module-str = Log level for 6LoWPAN library
 module-help = Enables 6LoWPAN code to output debug messages.
 source "subsys/net/Kconfig.template.log_config.net"
+
 endif # NET_6LO
 
 module = NET_IPV6
@@ -538,4 +609,5 @@ module-help = Enables IPv6 routing engine debug messages.
 source "subsys/net/Kconfig.template.log_config.net"
 
 endif # NET_NATIVE_IPV6
+
 endif # NET_IPV6

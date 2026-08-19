@@ -60,7 +60,7 @@
         status = "okay";
 };
 
-&rcc {
+&cpm {
         status = "okay";
 };
 
