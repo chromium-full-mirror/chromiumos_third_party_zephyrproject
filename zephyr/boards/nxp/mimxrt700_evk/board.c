@@ -4,8 +4,8 @@
  */
 #include <zephyr/init.h>
 #include <zephyr/device.h>
-#include "fsl_power.h"
-#include "fsl_clock.h"
+#include <fsl_power.h>
+#include <fsl_clock.h>
 #include <soc.h>
 #include <fsl_glikey.h>
 
@@ -407,11 +407,21 @@ void board_early_init_hook(void)
 	ITRC->OUT_SEL[4][0] = 0xAAAAAA0A;
 #endif
 
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(sai0)) || \
+		DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(micfil))
+	CLOCK_AttachClk(kAUDIO_PLL_PFD3_to_AUDIO_VDD2);
+#endif
+
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(sai0))
 	/* SAI clock 368.64 / 15 = 24.576MHz */
-	CLOCK_AttachClk(kAUDIO_PLL_PFD3_to_AUDIO_VDD2);
 	CLOCK_AttachClk(kAUDIO_VDD2_to_SAI012);
 	CLOCK_SetClkDiv(kCLOCK_DivSai012Clk, 15U);
+#endif
+
+#if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(micfil))
+	CLOCK_SetClkDiv(kCLOCK_DivMicfil0Clk, 15U);
+	CLOCK_AttachClk(kAUDIO_PLL_PFD3_to_MICFIL0);
+	RESET_ClearPeripheralReset(kPDM_RST_SHIFT_RSTn);
 #endif
 
 #if DT_NODE_HAS_STATUS_OKAY(DT_NODELABEL(sc_timer))
@@ -512,6 +522,11 @@ void board_early_init_hook(void)
 
 	POWER_DisablePD(kPDRUNCFG_APD_XSPI2);
 	POWER_DisablePD(kPDRUNCFG_PPD_XSPI2);
+	POWER_ApplyPD();
+#endif
+#ifdef CONFIG_NXP_NEUTRON
+	POWER_DisablePD(kPDRUNCFG_APD_NPU);
+	POWER_DisablePD(kPDRUNCFG_PPD_NPU);
 	POWER_ApplyPD();
 #endif
 }

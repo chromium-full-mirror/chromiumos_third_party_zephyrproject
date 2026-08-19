@@ -221,9 +221,17 @@ if(CONFIG_BUILD_WITH_TFM)
   # TODO: Add support for cross-compile toolchain variant
   # TODO: Enforce GCC version check against TF-M compiler requirements
   if(${ZEPHYR_TOOLCHAIN_VARIANT} STREQUAL "zephyr")
-    set(TFM_TOOLCHAIN_FILE "toolchain_GNUARM.cmake")
-    set(TFM_TOOLCHAIN_PREFIX "arm-zephyr-eabi")
-    set(TFM_TOOLCHAIN_PATH ${ZEPHYR_SDK_INSTALL_DIR}/gnu/arm-zephyr-eabi/bin)
+    if(${TOOLCHAIN_VARIANT_COMPILER} STREQUAL "gnu")
+      set(TFM_TOOLCHAIN_FILE "toolchain_GNUARM.cmake")
+      set(TFM_TOOLCHAIN_PREFIX "arm-zephyr-eabi")
+      set(TFM_TOOLCHAIN_PATH ${ZEPHYR_SDK_INSTALL_DIR}/gnu/arm-zephyr-eabi/bin)
+    elseif(${TOOLCHAIN_VARIANT_COMPILER} STREQUAL "llvm")
+      set(TFM_TOOLCHAIN_FILE "toolchain_ATFE.cmake")
+      set(TFM_TOOLCHAIN_PREFIX "arm-none-eabi")
+      set(TFM_TOOLCHAIN_PATH ${ZEPHYR_SDK_INSTALL_DIR}/llvm/bin)
+    else()
+      message(FATAL_ERROR "Unsupported TOOLCHAIN_VARIANT_COMPILER: ${TOOLCHAIN_VARIANT_COMPILER}")
+    endif()
   elseif(${ZEPHYR_TOOLCHAIN_VARIANT} STREQUAL "gnuarmemb")
     set(TFM_TOOLCHAIN_FILE "toolchain_GNUARM.cmake")
     set(TFM_TOOLCHAIN_PREFIX "arm-none-eabi")
@@ -232,17 +240,15 @@ if(CONFIG_BUILD_WITH_TFM)
     message(FATAL_ERROR "Unsupported ZEPHYR_TOOLCHAIN_VARIANT: ${ZEPHYR_TOOLCHAIN_VARIANT}")
   endif()
 
-  if(CONFIG_TFM_PARTITION_INITIAL_ATTESTATION AND CONFIG_TFM_QCBOR_PATH STREQUAL "")
-    # TODO: Remove this when QCBOR licensing issues w/t_cose have been resolved,
-    # or only allow it when 'QCBOR_PATH' is set to a local path where QCBOR has
-    # been manually downloaded by the user before starting the build.
+  if(CONFIG_TFM_PARTITION_INITIAL_ATTESTATION AND
+     (CONFIG_TFM_QCBOR_PATH STREQUAL "" OR CONFIG_TFM_T_COSE_PATH STREQUAL ""))
     message(FATAL_ERROR "CONFIG_TFM_PARTITION_INITIAL_ATTESTATION is not available "
       "with TF-M due to licensing issues with a dependent library. This "
       "restriction will be removed once licensing issues have been resolved."
       )
   endif()
 
-  if(CONFIG_TFM_ZEPHYR_4_0_TO_4_2_COMPATIBILITY)
+  if(CONFIG_TFM_ZEPHYR_4_2_COMPATIBILITY)
     list(APPEND TFM_CMAKE_ARGS -DPROFILE_DEFINITION_LARGE=ON)
   endif()
 
@@ -279,27 +285,16 @@ if(CONFIG_BUILD_WITH_TFM)
     )
   endif()
 
-  if(CONFIG_SOC_SERIES_PSE84)
-    include(${ZEPHYR_BASE}/soc/infineon/edge/pse84/pse84_metadata.cmake)
-    list(APPEND TFM_CMAKE_ARGS -DIFX_EPC=epc2)
-
-    # Use local hal_infineon assets instead of fetching from GitHub
-    list(APPEND TFM_CMAKE_ARGS
-      -DIFX_CORE_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/core-lib
-      -DIFX_DEV_SUPPORT_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/mtb-dsl-pse8xxgp
-      -DIFX_MTB_SRF_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/mtb-srf
-      -DIFX_ABSTRACTION_RTOS_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/abstraction-rtos
-      -DIFX_MTB_IPC_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/mtb-ipc
-      -DIFX_DEVICE_DB_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/device-db
-      -DIFX_BSP_LIB_PATH=${ZEPHYR_HAL_INFINEON_MODULE_DIR}/mtb-template-pse8xxgp/files
+  if(CONFIG_TFM_INSTALL_TF_PSA_CRYPTO_HEADERS)
+    # The PSA Crypto client headers are the ones installed by TF-M. TF-M
+    # exports the matching configuration through its "psa_crypto_config" CMake
+    # target, but Zephyr does not consume TF-M's CMake targets, so set the same
+    # definitions here.
+    zephyr_compile_definitions(
+      TFM_PSA_CRYPTO_CLIENT_ONLY
+      TF_PSA_CRYPTO_CONFIG_FILE="${TFM_INTERFACE_INCLUDE_DIR}/mbedtls/tf_psa_crypto_config.h"
     )
-  endif()
-
-  # By default TF-M installs TF-PSA-Crypto include files in the build directory,
-  # but this will duplicate what's already provided by the TF-PSA-Crypto library
-  # itself. Disable this, unless CONFIG_TFM_USE_NS_APP is set because in that
-  # case the NS app is built in a completely different way than what Zephyr does.
-  if(NOT CONFIG_TFM_USE_NS_APP)
+  else()
     list(APPEND TFM_CMAKE_ARGS -DTFM_INSTALL_TF_PSA_CRYPTO_HEADERS=OFF)
   endif()
 
@@ -325,7 +320,8 @@ if(CONFIG_BUILD_WITH_TFM)
     COMMAND ${CMAKE_COMMAND}
       -G${CMAKE_GENERATOR}
       -DTFM_TOOLCHAIN_FILE=${ZEPHYR_TRUSTED_FIRMWARE_M_MODULE_DIR}/${TFM_TOOLCHAIN_FILE}
-      -DCROSS_COMPILE=${TFM_TOOLCHAIN_PATH}/${TFM_TOOLCHAIN_PREFIX}
+      -DCMAKE_PROGRAM_PATH=${TFM_TOOLCHAIN_PATH}
+      -DCROSS_COMPILE=${TFM_TOOLCHAIN_PREFIX}
       -DCMAKE_BUILD_TYPE=${TFM_CMAKE_BUILD_TYPE}
       -DTFM_PLATFORM=${CONFIG_TFM_BOARD}
       -DCONFIG_TFM_BUILD_LOG_QUIET=ON

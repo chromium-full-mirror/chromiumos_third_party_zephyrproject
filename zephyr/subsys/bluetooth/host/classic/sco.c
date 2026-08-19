@@ -17,12 +17,12 @@
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 
-#include "common/bt_str.h"
+#include <common/bt_str.h>
 
-#include "host/addr_internal.h"
-#include "host/hci_core.h"
+#include <host/addr_internal.h>
+#include <host/hci_core.h>
 #include "br.h"
-#include "host/conn_internal.h"
+#include <host/conn_internal.h>
 #include "sco_internal.h"
 
 #define LOG_LEVEL CONFIG_BT_CONN_LOG_LEVEL
@@ -398,10 +398,7 @@ void bt_sco_cleanup_acl(struct bt_conn *sco)
 {
 	LOG_DBG("%p", sco);
 
-	if (sco->sco.acl) {
-		bt_conn_unref(sco->sco.acl);
-		sco->sco.acl = NULL;
-	}
+	bt_conn_drop(&sco->sco.acl);
 }
 
 static int sco_setup_sync_conn(struct bt_conn *sco_conn)

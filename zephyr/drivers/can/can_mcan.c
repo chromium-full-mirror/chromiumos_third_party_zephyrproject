@@ -1377,6 +1377,7 @@ int can_mcan_configure_mram(const struct device *dev, uintptr_t mrba, uintptr_t 
 		return err;
 	}
 
+#if defined(CONFIG_CAN_FD_MODE) || defined(CONFIG_CAN_MCAN_FIXED_MRAM_LAYOUT)
 	/* 64 byte Tx Buffer data fields size */
 	reg = CAN_MCAN_TXESC_TBDS;
 	err = can_mcan_write_reg(dev, CAN_MCAN_TXESC, reg);
@@ -1390,6 +1391,7 @@ int can_mcan_configure_mram(const struct device *dev, uintptr_t mrba, uintptr_t 
 	if (err != 0) {
 		return err;
 	}
+#endif /* defined(CONFIG_CAN_FD_MODE) || defined(CONFIG_CAN_MCAN_FIXED_MRAM_LAYOUT) */
 
 	return 0;
 }
@@ -1417,8 +1419,6 @@ int can_mcan_init(const struct device *dev)
 	__ASSERT_NO_MSG(cbs->num_std <= config->mram_elements[CAN_MCAN_MRAM_CFG_STD_FILTER]);
 	__ASSERT_NO_MSG(cbs->num_ext <= config->mram_elements[CAN_MCAN_MRAM_CFG_EXT_FILTER]);
 
-	k_mutex_init(&data->lock);
-	k_mutex_init(&data->tx_mtx);
 	k_sem_init(&data->tx_sem, cbs->num_tx, cbs->num_tx);
 
 	if (config->common.phy != NULL && !device_is_ready(config->common.phy)) {

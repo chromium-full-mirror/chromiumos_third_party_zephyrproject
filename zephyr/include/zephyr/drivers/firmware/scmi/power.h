@@ -10,8 +10,8 @@
  * @brief Header file for the SCMI Power Domain Protocol.
  */
 
-#ifndef _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_POWER_H_
-#define _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_POWER_H_
+#ifndef ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_POWER_H_
+#define ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_POWER_H_
 
 #include <zephyr/drivers/firmware/scmi/protocol.h>
 
@@ -22,8 +22,10 @@
  * @{
  */
 
+/** POWER_STATE_SET flag: perform the power state change asynchronously */
 #define SCMI_POWER_STATE_SET_FLAGS_ASYNC BIT(0)
 
+/** Version of the SCMI power domain protocol supported by this driver */
 #define SCMI_POWER_DOMAIN_PROTOCOL_SUPPORTED_VERSION	0x30001
 
 /**
@@ -69,29 +71,29 @@
  * command
  */
 struct scmi_power_state_config {
+	/** Request flags (see SCMI_POWER_STATE_SET_FLAGS_*) */
 	uint32_t flags;
+	/** ID of the power domain to configure */
 	uint32_t domain_id;
+	/** Power state to set (see @ref SCMI_POWER_STATE_PARAM) */
 	uint32_t power_state;
 };
 
 /**
  * @brief Send the POWER_STATE_SET command and get its reply
  *
- * @param cfg pointer to structure containing configuration
- * to be set
+ * @param cfg Pointer to structure containing configuration to be set
  *
- * @retval 0 if successful
- * @retval negative errno if failure
+ * @return 0 on success, negative errno value on failure.
  */
 int scmi_power_state_set(struct scmi_power_state_config *cfg);
 /**
  * @brief Query the power domain state
  *
  * @param domain_id ID of the power domain for which the query is done
- * @param power_state pointer to be set via this command
+ * @param power_state Pointer to be set via this command
  *
- * @retval 0 if successful
- * @retval negative errno if failure
+ * @return 0 on success, negative errno value on failure.
  */
 int scmi_power_state_get(uint32_t domain_id, uint32_t *power_state);
 
@@ -99,4 +101,4 @@ int scmi_power_state_get(uint32_t domain_id, uint32_t *power_state);
  * @}
  */
 
-#endif /* _INCLUDE_ZEPHYR_DRIVERS_FIRMWARE_SCMI_POWER_H_ */
+#endif /* ZEPHYR_INCLUDE_DRIVERS_FIRMWARE_SCMI_POWER_H_ */

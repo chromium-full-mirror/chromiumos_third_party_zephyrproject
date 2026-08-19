@@ -123,17 +123,14 @@ siwx91x_configure_scan_dwell_time(sl_wifi_scan_type_t scan_type, uint16_t dwell_
 						 dwell_time_passive);
 		return ret;
 	case SL_WIFI_SCAN_TYPE_ADV_SCAN:
-		__ASSERT(advanced_scan_config, "advanced_scan_config cannot be NULL");
-
-		if (!dwell_time_active) {
-			dwell_time_active = CONFIG_WIFI_SILABS_SIWX91X_ADV_ACTIVE_SCAN_DURATION;
+		if (dwell_time_active || dwell_time_passive) {
+			LOG_DBG("Ignoring per-call dwell times for background scan; "
+				"using CONFIG_WIFI_SILABS_SIWX91X_ADV_*_SCAN_DURATION");
 		}
-		advanced_scan_config->active_channel_time = dwell_time_active;
-
-		if (!dwell_time_passive) {
-			dwell_time_passive = CONFIG_WIFI_SILABS_SIWX91X_ADV_PASSIVE_SCAN_DURATION;
-		}
-		advanced_scan_config->passive_channel_time = dwell_time_passive;
+		advanced_scan_config->active_channel_time =
+			CONFIG_WIFI_SILABS_SIWX91X_ADV_ACTIVE_SCAN_DURATION;
+		advanced_scan_config->passive_channel_time =
+			CONFIG_WIFI_SILABS_SIWX91X_ADV_PASSIVE_SCAN_DURATION;
 		return 0;
 	default:
 		return 0;
@@ -245,7 +242,7 @@ int siwx91x_scan(const struct device *dev,
 	if (IS_ENABLED(CONFIG_WIFI_MGMT_SCAN_SSID_FILT_MAX)) {
 		if (z_scan_config->ssids[0]) {
 			strncpy(ssid.value, z_scan_config->ssids[0], WIFI_SSID_MAX_LEN);
-			ssid.length = strlen(z_scan_config->ssids[0]);
+			ssid.length = strnlen(z_scan_config->ssids[0], WIFI_SSID_MAX_LEN);
 		}
 	}
 

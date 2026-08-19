@@ -277,7 +277,7 @@ ZTEST_USER(userspace, test_disable_mmu_mpu)
 
 #if defined(CONFIG_XTENSA_MMU)
 	/* Reset way 6 to do identity mapping.
-	 * Complier would complain addr going out of range if we
+	 * Compiler would complain addr going out of range if we
 	 * simply do addr = i * 0x20000000 inside the loop. So
 	 * we do increment instead.
 	 */
@@ -360,13 +360,6 @@ ZTEST_USER(userspace, test_write_kernro)
 
 	in_rodata = ptr < __rodata_region_end &&
 		    ptr >= __rodata_region_start;
-
-#ifdef CONFIG_LINKER_USE_PINNED_SECTION
-	if (!in_rodata) {
-		in_rodata = ptr < lnkr_pinned_rodata_end &&
-			    ptr >= lnkr_pinned_rodata_start;
-	}
-#endif
 
 	zassert_true(in_rodata,
 		     "_errno_neg_eagain is not in rodata");
@@ -614,7 +607,7 @@ ZTEST_USER(userspace, test_write_other_stack)
  * @brief Test to revoke access to kobject without permission
  *
  * @details User thread can only revoke their own access to an object.
- * In that test user thread to revokes access to unathorized object, as a result
+ * In that test user thread to revokes access to unauthorized object, as a result
  * the system will assert.
  *
  * @ingroup kernel_memprotect_tests
@@ -780,7 +773,6 @@ ZTEST(userspace_domain, test_1st_init_and_access_other_memdomain)
 #if (defined(CONFIG_ARM) || (defined(CONFIG_GEN_PRIV_STACKS) && defined(CONFIG_RISCV)))
 extern uint8_t *z_priv_stack_find(void *obj);
 #endif
-extern k_thread_stack_t ztest_thread_stack[];
 
 /**
  * Show that changing between memory domains and dropping to user mode works
@@ -795,7 +787,8 @@ ZTEST(userspace_domain, test_domain_add_thread_drop_to_user)
 	drop_user(&alt_bool);
 }
 
-/* @brief Test adding application memory partition to memory domain
+/**
+ * @brief Test adding application memory partition to memory domain
  *
  * @details Show that adding a partition to a domain and then dropping to user
  * mode works as expected.
@@ -846,7 +839,8 @@ ZTEST(userspace_domain_ctx, test_domain_add_thread_context_switch)
 	spawn_user(&alt_bool);
 }
 
-/* Show that adding a partition to a domain and then switching to another
+/**
+ * Show that adding a partition to a domain and then switching to another
  * user thread in the same domain works as expected.
  *
  * @ingroup kernel_memprotect_tests
@@ -933,7 +927,8 @@ static struct k_sem recycle_sem;
  * @details Test recycle valid/invalid kernel object, see if
  * perms_count changes as expected.
  *
- * @see k_object_recycle(), k_object_find()
+ * @see k_object_recycle()
+ * @see k_object_find()
  *
  * @ingroup kernel_memprotect_tests
  */
@@ -1018,7 +1013,7 @@ static inline void z_vrfy_check_syscall_context(void)
 }
 #include <zephyr/syscalls/check_syscall_context_mrsh.c>
 
-ZTEST_USER(userspace, test_syscall_context)
+ZTEST_USER(userspace, test_userspace_syscall_context)
 {
 	check_syscall_context();
 }

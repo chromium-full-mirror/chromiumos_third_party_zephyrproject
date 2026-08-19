@@ -49,7 +49,6 @@ LOG_MODULE_REGISTER(uart_ns16550, CONFIG_UART_LOG_LEVEL);
 #define UART_NS16550_DMAS_ENABLED DT_ANY_INST_HAS_PROP_STATUS_OKAY(dmas)
 
 #if DT_ANY_INST_ON_BUS_STATUS_OKAY(pcie)
-BUILD_ASSERT(IS_ENABLED(CONFIG_PCIE), "NS16550(s) in DT need CONFIG_PCIE");
 #include <zephyr/drivers/pcie/pcie.h>
 #endif
 
@@ -102,6 +101,7 @@ BUILD_ASSERT(IS_ENABLED(CONFIG_PCIE), "NS16550(s) in DT need CONFIG_PCIE");
 #define REG_DLF 0xC0  /* Divisor Latch Fraction         */
 #define REG_PCP 0x200 /* PRV_CLOCK_PARAMS (Apollo Lake) */
 #define REG_MDR1 0x08 /* Mode control reg. (TI_K3) */
+#define REG_BRD1 0x10 /* Baud rate divisor. (BCM283x) */
 
 #if defined(CONFIG_UART_NS16550_INTEL_LPSS_DMA)
 #define REG_LPSS_SRC_TRAN 0xAF8 /* SRC Transfer LPSS DMA */
@@ -155,6 +155,11 @@ BUILD_ASSERT(IS_ENABLED(CONFIG_PCIE), "NS16550(s) in DT need CONFIG_PCIE");
 #define MDR1_FIR_MODE					(5)
 #define MDR1_CIR_MODE					(6)
 #define MDR1_DISABLE					(7)
+
+/* Modes available for BCM283x Auxiliary UART module */
+
+#define MDR1_RX_EN				     BIT(0)
+#define MDR1_TX_EN				     BIT(1)
 
 /*
  * Per PC16550D (Literature Number: SNLS378B):
@@ -262,6 +267,7 @@ BUILD_ASSERT(IS_ENABLED(CONFIG_PCIE), "NS16550(s) in DT need CONFIG_PCIE");
 #define LSR(dev) (get_port(dev) + (REG_LSR * reg_interval(dev)))
 #define MSR(dev) (get_port(dev) + (REG_MSR * reg_interval(dev)))
 #define MDR1(dev) (get_port(dev) + (REG_MDR1 * reg_interval(dev)))
+#define BRD1(dev) (get_port(dev) + (REG_BRD1 * reg_interval(dev)))
 #define USR(dev) (get_port(dev) + REG_USR)
 #define DLF(dev) (get_port(dev) + REG_DLF)
 #define PCP(dev) (get_port(dev) + REG_PCP)
@@ -511,7 +517,11 @@ static uint32_t get_uart_baudrate_divisor(const struct device *dev,
 	 * calculate baud rate divisor. a variant of
 	 * (uint32_t)(pclk / (16.0 * baud_rate) + 0.5)
 	 */
+#ifdef CONFIG_UART_NS16550_BCM283X_AUX
+	return ((pclk / (baud_rate * 8)) - 1);
+#else
 	return ((pclk + (baud_rate << 3)) / baud_rate) >> 4;
+#endif
 }
 
 #ifdef CONFIG_UART_NS16550_ITE_HIGH_SPEED_BAUDRATE
@@ -574,9 +584,13 @@ static void set_baud_rate(const struct device *dev, uint32_t baud_rate, uint32_t
 		/* set the DLAB to access the baud rate divisor registers */
 		lcr_cache = ns16550_inbyte(dev_cfg, LCR(dev));
 		ns16550_outbyte(dev_cfg, LCR(dev), LCR_DLAB | lcr_cache);
+
+#ifdef CONFIG_UART_NS16550_BCM283X_AUX
+		ns16550_outbyte(dev_cfg, BRD1(dev), (unsigned char)(divisor & 0xff));
+#else
 		ns16550_outbyte(dev_cfg, BRDL(dev), (unsigned char)(divisor & 0xff));
 		ns16550_outbyte(dev_cfg, BRDH(dev), (unsigned char)((divisor >> 8) & 0xff));
-
+#endif
 		/* restore the DLAB to access the baud rate divisor registers */
 		ns16550_outbyte(dev_cfg, LCR(dev), lcr_cache);
 
@@ -934,6 +948,10 @@ static int uart_ns16550_init(const struct device *dev)
 
 #ifdef CONFIG_UART_INTERRUPT_DRIVEN
 	dev_cfg->irq_config_func(dev);
+#endif
+
+#ifdef CONFIG_UART_NS16550_BCM283X_AUX
+	ns16550_outbyte(dev_cfg, MDR1(dev), (MDR1_RX_EN | MDR1_TX_EN));
 #endif
 
 	/* clear the port */
@@ -1953,8 +1971,6 @@ static DEVICE_API(uart, uart_ns16550_driver_api) = {
 	{                                                                     \
 		BUILD_ASSERT(DT_INST_IRQN(n) == PCIE_IRQ_DETECT,              \
 			     "Only runtime IRQ configuration is supported");  \
-		BUILD_ASSERT(IS_ENABLED(CONFIG_DYNAMIC_INTERRUPTS),           \
-			     "NS16550 PCIe requires dynamic interrupts");     \
 		const struct uart_ns16550_dev_config *dev_cfg = dev->config;  \
 		unsigned int irq = pcie_alloc_irq(dev_cfg->pcie->bdf);        \
 		if (irq == PCIE_CONF_INTR_IRQ_NONE) {                         \

@@ -35,7 +35,7 @@
 #include <zephyr/sys/slist.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/toolchain.h>
 
 #if defined(CONFIG_BT_GATT_CACHING)
@@ -51,7 +51,7 @@
 #include "gatt_internal.h"
 #include "hci_core.h"
 #include "keys.h"
-#include "long_wq.h"
+#include "common/long_wq.h"
 #include "l2cap_internal.h"
 #include "settings.h"
 #include "smp.h"
@@ -1204,7 +1204,7 @@ populate:
 static inline void sc_work_submit(k_timeout_t timeout)
 {
 #if defined(CONFIG_BT_GATT_SERVICE_CHANGED)
-	k_work_reschedule(&gatt_sc.work, timeout);
+	bt_work_reschedule(&gatt_sc.work, timeout);
 #endif
 }
 
@@ -1366,8 +1366,8 @@ static void gatt_delayed_store_enqueue(uint8_t id, const bt_addr_le_t *peer_addr
 
 		atomic_set_bit(el->flags, flag);
 
-		k_work_reschedule(&gatt_delayed_store.work,
-				  K_MSEC(CONFIG_BT_SETTINGS_DELAYED_STORE_MS));
+		bt_work_reschedule(&gatt_delayed_store.work,
+				   K_MSEC(CONFIG_BT_SETTINGS_DELAYED_STORE_MS));
 	}
 }
 
@@ -1448,7 +1448,7 @@ void bt_gatt_init(void)
 	if (IS_ENABLED(CONFIG_BT_LONG_WQ)) {
 		bt_long_wq_schedule(&db_hash.work, DB_HASH_TIMEOUT);
 	} else {
-		k_work_schedule(&db_hash.work, DB_HASH_TIMEOUT);
+		bt_work_schedule(&db_hash.work, DB_HASH_TIMEOUT);
 	}
 #endif /* CONFIG_BT_GATT_CACHING */
 
@@ -1536,7 +1536,7 @@ static void db_changed(void)
 	if (IS_ENABLED(CONFIG_BT_LONG_WQ)) {
 		bt_long_wq_reschedule(&db_hash.work, DB_HASH_TIMEOUT);
 	} else {
-		k_work_reschedule(&db_hash.work, DB_HASH_TIMEOUT);
+		bt_work_reschedule(&db_hash.work, DB_HASH_TIMEOUT);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(cf_cfg); i++) {
@@ -2346,10 +2346,7 @@ static void cleanup_notify(struct bt_conn *conn)
 {
 	struct net_buf **buf = &nfy_mult[bt_conn_index(conn)];
 
-	if (*buf) {
-		net_buf_unref(*buf);
-		*buf = NULL;
-	}
+	net_buf_drop(buf);
 }
 
 static void gatt_add_nfy_to_buf(struct net_buf *buf,
@@ -2404,11 +2401,10 @@ static int gatt_notify_mult(struct bt_conn *conn, uint16_t handle,
 	LOG_DBG("handle 0x%04x len %u", handle, params->len);
 	gatt_add_nfy_to_buf(*buf, handle, params);
 
-	/* Use `k_work_schedule` to keep the original deadline, instead of
+	/* Use `bt_work_schedule` to keep the original deadline, instead of
 	 * re-setting the timeout whenever a new notification is appended.
 	 */
-	k_work_schedule(&nfy_mult_work,
-			K_MSEC(CONFIG_BT_GATT_NOTIFY_MULTIPLE_FLUSH_MS));
+	bt_work_schedule(&nfy_mult_work, K_MSEC(CONFIG_BT_GATT_NOTIFY_MULTIPLE_FLUSH_MS));
 
 	return 0;
 }
@@ -4182,6 +4178,7 @@ static uint16_t parse_read_std_char_desc(struct bt_conn *conn, const void *pdu,
 					 uint16_t length)
 {
 	const struct bt_att_read_type_rsp *rsp;
+	const struct bt_att_data *data;
 	uint16_t handle = 0U;
 	uint16_t uuid_val;
 
@@ -4198,6 +4195,11 @@ static uint16_t parse_read_std_char_desc(struct bt_conn *conn, const void *pdu,
 
 	rsp = pdu;
 
+	if (rsp->len < sizeof(*data)) {
+		LOG_WRN("Invalid data len %u", rsp->len);
+		goto done;
+	}
+
 	/* Parse characteristics found */
 	for (length--, pdu = rsp->data; length >= rsp->len;
 	     length -= rsp->len, pdu = (const uint8_t *)pdu + rsp->len) {
@@ -4207,7 +4209,6 @@ static uint16_t parse_read_std_char_desc(struct bt_conn *conn, const void *pdu,
 			struct bt_gatt_cep cep;
 			struct bt_gatt_scc scc;
 		} value;
-		const struct bt_att_data *data;
 		struct bt_gatt_attr attr;
 
 		if (length < sizeof(*data)) {

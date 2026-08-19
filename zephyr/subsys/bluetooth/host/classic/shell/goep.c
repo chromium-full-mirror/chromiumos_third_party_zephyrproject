@@ -23,8 +23,8 @@
 
 #include <zephyr/shell/shell.h>
 
-#include "host/shell/bt.h"
-#include "common/bt_shell_private.h"
+#include <host/shell/bt.h>
+#include <common/bt_shell_private.h>
 
 #define GOEP_MOPL CONFIG_BT_GOEP_RFCOMM_MTU
 
@@ -1663,8 +1663,7 @@ static int cmd_release_buf(const struct shell *sh, size_t argc, char **argv)
 		return -EINVAL;
 	}
 
-	net_buf_unref(goep_app.tx_buf);
-	goep_app.tx_buf = NULL;
+	net_buf_drop(&goep_app.tx_buf);
 
 	return 0;
 }
