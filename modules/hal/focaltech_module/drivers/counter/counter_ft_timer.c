@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT ft_ft90_timer
+#define DT_DRV_COMPAT focaltech_ft9001_timer
 
 #include <tc_drv.h>
 #include <zephyr/device.h>

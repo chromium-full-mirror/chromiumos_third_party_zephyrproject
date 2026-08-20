@@ -10,8 +10,8 @@
  * @ingroup shell_uart
  */
 
-#ifndef ZEPHYR_INCLUDE_SHELL_UART_H_
-#define ZEPHYR_INCLUDE_SHELL_UART_H_
+#ifndef ZEPHYR_INCLUDE_SHELL_SHELL_UART_H_
+#define ZEPHYR_INCLUDE_SHELL_SHELL_UART_H_
 
 #include <zephyr/drivers/serial/uart_async_rx.h>
 #include <zephyr/mgmt/mcumgr/transport/smp_shell.h>
@@ -70,6 +70,7 @@ struct shell_uart_async {
 	struct uart_async_rx async_rx;
 	struct uart_async_rx_config async_rx_config;
 	atomic_t pending_rx_req;
+	bool rx_enabled;
 	uint8_t rx_data[ASYNC_RX_BUF_SIZE];
 };
 
@@ -132,4 +133,4 @@ struct smp_shell_data *shell_uart_smp_shell_data_get_ptr(void);
 }
 #endif
 
-#endif /* ZEPHYR_INCLUDE_SHELL_UART_H_ */
+#endif /* ZEPHYR_INCLUDE_SHELL_SHELL_UART_H_ */

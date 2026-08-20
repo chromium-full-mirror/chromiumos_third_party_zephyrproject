@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT ft_ft90_gpio
+#define DT_DRV_COMPAT focaltech_ft9001_gpio
 
 #include <eport_drv.h>
 #include <errno.h>
@@ -441,7 +441,7 @@ static int gpio_ft_pm_action(const struct device *port, enum pm_device_action ac
     {                                                                                                                  \
         LISTIFY(DT_INST_PROP_OR(n, ngpios, 8), GPIO_IRQ_CONNECT, (), n)                                                \
         const struct gpio_ft_config *config = port->config;                                                            \
-        const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcc));                                                   \
+        const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(cpm));                                                   \
         int ret = 0;                                                                                                   \
         ret = clock_control_on(clk, (clock_control_subsys_t *)&config->clkid);                                         \
         if (ret < 0)                                                                                                   \

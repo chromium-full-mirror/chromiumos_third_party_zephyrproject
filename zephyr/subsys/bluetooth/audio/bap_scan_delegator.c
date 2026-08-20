@@ -163,7 +163,7 @@ static bool valid_bis_sync_request(uint32_t requested_bis_syncs, uint32_t aggreg
 {
 	/* Verify that the request BIS sync indexes are unique or no preference */
 	if (!bis_syncs_unique_or_no_pref(requested_bis_syncs, aggregated_bis_syncs)) {
-		LOG_DBG("Duplicate BIS index 0x%08x (aggregated %x)", requested_bis_syncs,
+		LOG_DBG("Duplicate BIS index 0x%08x (aggregated 0x%08X)", requested_bis_syncs,
 			aggregated_bis_syncs);
 		return false;
 	}
@@ -1390,6 +1390,22 @@ static int bass_unregister(void)
 	return 0;
 }
 
+static int scan_delegator_init(void)
+{
+	ARRAY_FOR_EACH_PTR(scan_delegator.recv_states, internal_state) {
+		__maybe_unused int err;
+
+		err = k_mutex_init(&internal_state->mutex);
+		__ASSERT(err == 0, "Failed to initialize mutex: %d", err);
+
+		k_work_init_delayable(&internal_state->notify_work, notify_work_handler);
+	}
+
+	return 0;
+}
+
+SYS_INIT(scan_delegator_init, APPLICATION, 0);
+
 /****************************** PUBLIC API ******************************/
 int bt_bap_scan_delegator_register(struct bt_bap_scan_delegator_cb *cb)
 {
@@ -1419,15 +1435,6 @@ int bt_bap_scan_delegator_register(struct bt_bap_scan_delegator_cb *cb)
 	scan_delegator.recv_states[2].index = 2U;
 #endif /* CONFIG_BT_BAP_SCAN_DELEGATOR_RECV_STATE_COUNT > 2 */
 #endif /* CONFIG_BT_BAP_SCAN_DELEGATOR_RECV_STATE_COUNT > 1 */
-
-	for (size_t i = 0U; i < ARRAY_SIZE(scan_delegator.recv_states); i++) {
-		struct bass_recv_state_internal *internal_state = &scan_delegator.recv_states[i];
-
-		err = k_mutex_init(&internal_state->mutex);
-		__ASSERT(err == 0, "Failed to initialize mutex");
-
-		k_work_init_delayable(&internal_state->notify_work, notify_work_handler);
-	}
 
 	scan_delegator_cbs = cb;
 
@@ -1499,6 +1506,7 @@ int bt_bap_scan_delegator_set_bis_sync_state(
 	uint32_t bis_synced[CONFIG_BT_BAP_BASS_MAX_SUBGROUPS])
 {
 	struct bass_recv_state_internal *internal_state = bass_lookup_src_id(src_id);
+	uint32_t big_sync_bitfield;
 	__maybe_unused int err;
 	bool notify = false;
 
@@ -1510,20 +1518,14 @@ int bt_bap_scan_delegator_set_bis_sync_state(
 	err = k_mutex_lock(&internal_state->mutex, SCAN_DELEGATOR_BUF_SEM_TIMEOUT);
 	__ASSERT(err == 0, "Failed to lock mutex: %d", err);
 
-	if (internal_state->state.pa_sync_state != BT_BAP_PA_STATE_SYNCED) {
-		err = k_mutex_unlock(&internal_state->mutex);
-		__ASSERT(err == 0, "Failed to unlock mutex: %d", err);
-
-		LOG_DBG("PA for src_id %u isn't synced, cannot be BIG synced",
-			src_id);
-		return -EINVAL;
-	}
-
 	/* Verify state for all subgroups before assigning any data */
+	big_sync_bitfield = 0U;
 	for (uint8_t i = 0U; i < internal_state->state.num_subgroups; i++) {
 		if (i >= CONFIG_BT_BAP_BASS_MAX_SUBGROUPS) {
 			break;
 		}
+
+		big_sync_bitfield |= bis_synced[i];
 
 		if (bis_synced[i] == BT_BAP_BIS_SYNC_NO_PREF ||
 		    !bits_subset_of(bis_synced[i],
@@ -1531,10 +1533,19 @@ int bt_bap_scan_delegator_set_bis_sync_state(
 			err = k_mutex_unlock(&internal_state->mutex);
 			__ASSERT(err == 0, "Failed to unlock mutex: %d", err);
 
-			LOG_DBG("Subgroup[%u] invalid bis_sync value %x for %x",
-				i, bis_synced[i], internal_state->requested_bis_sync[i]);
+			LOG_DBG("Subgroup[%u] invalid bis_sync value 0x%08X for 0x%08X", i,
+				bis_synced[i], internal_state->requested_bis_sync[i]);
 			return -EINVAL;
 		}
+	}
+
+	if (internal_state->state.pa_sync_state != BT_BAP_PA_STATE_SYNCED &&
+	    big_sync_bitfield != 0U) {
+		err = k_mutex_unlock(&internal_state->mutex);
+		__ASSERT(err == 0, "Failed to unlock mutex: %d", err);
+
+		LOG_DBG("PA for src_id %u isn't synced, cannot be BIG synced", src_id);
+		return -EINVAL;
 	}
 
 	for (uint8_t i = 0U; i < internal_state->state.num_subgroups; i++) {
@@ -1794,8 +1805,8 @@ int bt_bap_scan_delegator_mod_src(const struct bt_bap_scan_delegator_mod_src_par
 			err = k_mutex_unlock(&internal_state->mutex);
 			__ASSERT(err == 0, "Failed to unlock mutex: %d", err);
 
-			LOG_DBG("Subgroup[%d] invalid bis_sync value %x for %x",
-				i, bis_sync, bis_sync_requested);
+			LOG_DBG("Subgroup[%d] invalid bis_sync value 0x%08X for 0x%08X", i,
+				bis_sync, bis_sync_requested);
 			return -EINVAL;
 		}
 	}
@@ -1807,11 +1818,6 @@ int bt_bap_scan_delegator_mod_src(const struct bt_bap_scan_delegator_mod_src_par
 		if (subgroup->bis_sync != param_subgroup->bis_sync) {
 			subgroup->bis_sync = param_subgroup->bis_sync;
 			state_changed = true;
-		}
-
-		/* If the metadata len is 0, we shall not overwrite the existing metadata */
-		if (param_subgroup->metadata_len == 0U) {
-			continue;
 		}
 
 		if (subgroup->metadata_len != param_subgroup->metadata_len) {

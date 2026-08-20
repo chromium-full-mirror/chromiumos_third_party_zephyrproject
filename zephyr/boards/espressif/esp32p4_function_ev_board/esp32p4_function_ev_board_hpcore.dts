@@ -21,6 +21,7 @@
 		zephyr,shell-uart = &usb_serial;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,bt-hci = &esp_hosted_mcu_hci;
 	};
 
 	aliases {
@@ -38,6 +39,19 @@
 			zephyr,code = <INPUT_KEY_0>;
 		};
 	};
+};
+
+/*
+ * This board carries pre-v3 (v1.3) ESP32-P4 silicon, whose valid CPU
+ * frequencies are 90/180/360 MHz. Using a frequency outside that set
+ * builds but fails at boot with "invalid CPU frequency".
+ */
+&cpu0 {
+	clock-frequency = <DT_FREQ_M(360)>;
+};
+
+&cpu1 {
+	clock-frequency = <DT_FREQ_M(360)>;
 };
 
 &uart0 {
@@ -130,6 +144,37 @@
 			status = "okay";
 		};
 	};
+
+	sdhc1: sdhc@1 {
+		status = "okay";
+		bus-width = <4>;
+		max-bus-freq = <40000000>;
+		clk-pin = <18>;
+		cmd-pin = <19>;
+		d0-pin = <14>;
+		d1-pin = <15>;
+		d2-pin = <16>;
+		d3-pin = <17>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		esp_hosted_mcu: esp-hosted-mcu@0 {
+			compatible = "espressif,esp-hosted-mcu";
+			reg = <0>;
+			reset-gpios = <&gpio1 22 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+
+			esp_hosted_mcu_wifi: wifi {
+				compatible = "espressif,esp-hosted-mcu-wifi";
+				status = "okay";
+			};
+
+			esp_hosted_mcu_hci: bt-hci {
+				compatible = "espressif,esp-hosted-mcu-bt-hci";
+				status = "okay";
+			};
+		};
+	};
 };
 
 &mdio {
@@ -148,4 +193,8 @@
 	phy-handle = <&phy>;
 	pinctrl-0 = <&rmii_default>;
 	pinctrl-names = "default";
+};
+
+zephyr_udc0: &usb_otg {
+	status = "okay";
 };

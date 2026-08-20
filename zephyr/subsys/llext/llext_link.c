@@ -47,6 +47,45 @@ __weak int arch_elf_relocate_global(struct llext_loader *ldr, struct llext *ext,
 }
 
 /*
+ * Resolve addresses within the copied / merged memory regions tracked by
+ * ext->mem[] and ldr->sect_map
+ */
+static uint8_t *llext_file_offset_to_addr(struct llext_loader *ldr, struct llext *ext,
+					  ssize_t offset)
+{
+	for (int i = 0; i < ext->sect_cnt; ++i) {
+		elf_shdr_t *shdr = ext->sect_hdrs + i;
+		enum llext_mem mem_idx = ldr->sect_map[i].mem_idx;
+
+		/*
+		 * Skip anything we cannot address: SHT_NOBITS sections occupy
+		 * no space in the file, so their [sh_offset, sh_offset + sh_size)
+		 * range overlaps that of the following section; and sections that
+		 * were never assigned a mem_idx (e.g. TLS sections) have no address in
+		 * ext->mem[], even though a relocation may still reference them
+		 * and their bytes may still be reachable elsewhere. Returning NULL
+		 * for these is correct: the caller treats it as "not patchable"
+		 * and skips the relocation.
+		 */
+		if (shdr->sh_type == SHT_NOBITS || !(shdr->sh_flags & SHF_ALLOC) ||
+		    mem_idx == LLEXT_MEM_COUNT) {
+			continue;
+		}
+
+		if (offset >= (ssize_t)shdr->sh_offset) {
+			ssize_t sect_offset = offset - (ssize_t)shdr->sh_offset;
+
+			if (sect_offset < (ssize_t)shdr->sh_size) {
+				return (uint8_t *)ext->mem[mem_idx] + ldr->sect_map[i].offset +
+				       sect_offset;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+/*
  * Find the memory region containing the supplied offset and return the
  * corresponding file offset
  */
@@ -326,24 +365,7 @@ static int llext_link_plt(struct llext_loader *ldr, struct llext *ext, elf_shdr_
 			continue;
 		}
 
-		/*
-		 * Both r_offset and sh_addr are addresses for which the extension
-		 * has been built.
-		 *
-		 * NOTE: The calculations below assumes offsets from the
-		 * beginning of the .text section in the ELF file can be
-		 * applied to the memory location of mem[LLEXT_MEM_TEXT].
-		 *
-		 * This is valid only for LLEXT_STORAGE_WRITABLE loaders
-		 * since the buffer will be directly modified.
-		 */
-		if (ldr->storage != LLEXT_STORAGE_WRITABLE) {
-			LOG_WRN("PLT: cannot link read-only ELF file");
-			continue;
-		}
-
-		uint8_t *rel_addr = (uint8_t *)ext->mem[LLEXT_MEM_TEXT] -
-			ldr->sects[LLEXT_MEM_TEXT].sh_offset;
+		uint8_t *rel_addr = NULL;
 
 		if (tgt) {
 			/* Relocatable / partially linked ELF. */
@@ -353,7 +375,15 @@ static int llext_link_plt(struct llext_loader *ldr, struct llext *ext, elf_shdr_
 					(size_t)rela.r_offset, (size_t)tgt->sh_size);
 				continue;
 			}
-			rel_addr += rela.r_offset + tgt->sh_offset;
+
+			const void *sect_ptr = llext_loaded_sect_ptr(ldr, ext, shdr->sh_info);
+
+			if (!sect_ptr) {
+				LOG_WRN("PLT: section %u not loaded, skipping", shdr->sh_info);
+				continue;
+			}
+
+			rel_addr = (uint8_t *)((uintptr_t)sect_ptr + rela.r_offset);
 		} else {
 			/* Shared / dynamically linked ELF */
 			ssize_t offset = llext_file_offset(ldr, rela.r_offset);
@@ -364,7 +394,14 @@ static int llext_link_plt(struct llext_loader *ldr, struct llext *ext, elf_shdr_
 				continue;
 			}
 
-			rel_addr += offset;
+			rel_addr = llext_file_offset_to_addr(ldr, ext, offset);
+
+			if (rel_addr == NULL) {
+				LOG_WRN("PLT: offset %#zx not mapped to any loaded section, "
+					"skipping",
+					offset);
+				continue;
+			}
 		}
 
 		uint32_t stb = ELF_ST_BIND(sym.st_info);
@@ -526,6 +563,8 @@ int llext_link(struct llext_loader *ldr, struct llext *ext, const struct llext_l
 
 		sect_base = (uintptr_t) llext_loaded_sect_ptr(ldr, ext, shdr->sh_info);
 
+		size_t tgt_sect_size = ext->sect_hdrs[shdr->sh_info].sh_size;
+
 		for (int j = 0; j < rel_cnt; j++) {
 			/* get each relocation entry */
 			ret = llext_seek(ldr, shdr->sh_offset + j * shdr->sh_entsize);
@@ -536,6 +575,20 @@ int llext_link(struct llext_loader *ldr, struct llext *ext, const struct llext_l
 			ret = llext_read(ldr, &rel, shdr->sh_entsize);
 			if (ret != 0) {
 				return ret;
+			}
+
+			/*
+			 * The relocation writes a field starting at r_offset
+			 * within the target section. Reject an offset at or past
+			 * the section end before applying it. This bounds the
+			 * start of the write; the field width is relocation-type
+			 * specific and left to the per-arch handler.
+			 */
+			if (rel.r_offset >= tgt_sect_size) {
+				LOG_ERR("relocation r_offset %#zx out of section %d "
+					"(size %#zx)",
+					(size_t)rel.r_offset, shdr->sh_info, tgt_sect_size);
+				return -ENOEXEC;
 			}
 
 #if CONFIG_LLEXT_LOG_LEVEL > LOG_LEVEL_INF /* also gets skipped without CONFIG_LOG */

@@ -7,6 +7,7 @@
 #include <zephyr/tc_util.h>
 #include <zephyr/ztest.h>
 #include <zephyr/kernel.h>
+#include <zephyr/cache.h>
 #include <ksched.h>
 
 #if CONFIG_MP_MAX_NUM_CPUS < 2
@@ -186,7 +187,9 @@ static void child_fn(void *p1, void *p2, void *p3)
  * @ingroup kernel_smp_tests
  *
  * @details Verify whether thread running on other core is
- * parent thread from child thread
+ * parent thread from child thread. Relies on the SMP initialization having
+ * brought up the secondary CPUs so that a child thread can run on a different
+ * core than its parent.
  */
 ZTEST(smp, test_cpu_id_threads)
 {
@@ -684,6 +687,56 @@ ZTEST(smp, test_get_cpu)
 	k_thread_join(thread_id, K_FOREVER);
 }
 
+/**
+ * @brief Verify the number of active CPUs honors the configured maximum
+ *
+ * @ingroup kernel_smp_tests
+ *
+ * @details The maximum number of CPUs is configurable via
+ * CONFIG_MP_MAX_NUM_CPUS. Verify that the number of CPUs the kernel brought up
+ * and reports through arch_num_cpus() is at least one and never exceeds the
+ * configured maximum.
+ *
+ * @see arch_num_cpus()
+ */
+ZTEST(smp, test_num_cpus)
+{
+	unsigned int num_cpus = arch_num_cpus();
+
+	zassert_between_inclusive(num_cpus, 1, CONFIG_MP_MAX_NUM_CPUS,
+				  "active CPUs (%u) outside the configured range [1, %d]",
+				  num_cpus, CONFIG_MP_MAX_NUM_CPUS);
+}
+
+/* A statically defined kernel object lives in shared kernel data. */
+static K_SEM_DEFINE(coherence_sem, 0, 1);
+
+/**
+ * @brief Verify shared kernel data is placed in coherent memory
+ *
+ * @ingroup kernel_smp_tests
+ *
+ * @details On cache-incoherent multiprocessors with CONFIG_KERNEL_COHERENCE
+ * enabled, shared kernel data must be placed in cache-coherent memory. Verify a
+ * statically defined kernel object resides in coherent memory. The test is
+ * skipped on configurations where kernel coherence is not enabled (e.g.
+ * cache-coherent architectures).
+ *
+ * @see cache_is_mem_coherent()
+ */
+ZTEST(smp, test_smp_kernel_coherence)
+{
+#ifdef CONFIG_KERNEL_COHERENCE
+	/* The coherence-checking API is only available on architectures that
+	 * can report it, which is exactly where KERNEL_COHERENCE applies.
+	 */
+	zassert_true(sys_cache_is_mem_coherent(&coherence_sem),
+		     "shared kernel object is not in coherent memory");
+#else
+	ztest_test_skip();
+#endif
+}
+
 #ifdef CONFIG_TRACE_SCHED_IPI
 /* global variable for testing send IPI */
 static volatile int sched_ipi_has_called;
@@ -1097,6 +1150,13 @@ static int run_concurrency(void *p1, void *p2, void *p3)
  */
 ZTEST(smp, test_inc_concurrency)
 {
+	if (LOOP_COUNT == 0) {
+		/* If LOOP_COUNT is zero, the spawned threads are not looping
+		 * at all. So skip this test.
+		 */
+		ztest_test_skip();
+	}
+
 	/* increasing global var with irq lock */
 	zassert_true(run_concurrency(INT_TO_POINTER(LOCK_IRQ), inc_global_cnt, NULL),
 			"total count %d is wrong(i)", global_cnt);

@@ -1,4 +1,5 @@
 # Copyright (c) 2021-2025 ATL Electronics
+# Copyright (c) 2024-2026 MASSDRIVER EI
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -13,7 +14,7 @@ if(CONFIG_SOC_SERIES_BL60X OR CONFIG_SOC_SERIES_BL70X OR CONFIG_SOC_SERIES_BL70X
   )
 endif()
 
-if(CONFIG_SOC_SERIES_BL61X OR CONFIG_SOC_SERIES_BL808)
+if(CONFIG_SOC_SERIES_BL61X OR CONFIG_SOC_SERIES_BL808 OR CONFIG_SOC_SERIES_BL616CL)
   zephyr_include_directories(thead)
   zephyr_sources(
     thead/sf_offset.S
@@ -32,7 +33,7 @@ zephyr_sources(
 # Cache management defaults to XIP, this is fine but we need to use it in the flash driver
 # Efuses do clock operations, almost all its function would need to be moved, so take the easy way
 # Flash and Clock Control drivers handle relocation on their own
-if(CONFIG_SOC_SERIES_BL61X OR CONFIG_SOC_SERIES_BL808)
+if(CONFIG_SOC_SERIES_BL61X OR CONFIG_SOC_SERIES_BL808 OR CONFIG_SOC_SERIES_BL616CL)
   zephyr_code_relocate(
     FILES ${ZEPHYR_BASE}/arch/riscv/custom/thead/cache_xtheadcmo.c LOCATION RAM NOKEEP
   )
@@ -40,4 +41,19 @@ if(CONFIG_SOC_SERIES_BL61X OR CONFIG_SOC_SERIES_BL808)
 else()
   zephyr_code_relocate_ifdef(CONFIG_CACHE_BFLB_L1C LIBRARY drivers__cache LOCATION ITCM NOKEEP)
   zephyr_code_relocate_ifdef(CONFIG_OTP_BFLB LIBRARY drivers__otp LOCATION ITCM NOKEEP)
+endif()
+
+# RF is harmonizable for the 'Wifi6' version of the IP and blob stack (BL61x, BL616CL, BL618DG)
+if(CONFIG_WIFI_BFLB AND (
+    CONFIG_SOC_SERIES_BL61X OR
+    CONFIG_SOC_SERIES_BL616CL)
+  )
+  add_subdirectory(rf/wifi6)
+endif()
+
+if(CONFIG_BT_BFLB AND (
+    CONFIG_SOC_SERIES_BL61X OR
+    CONFIG_SOC_SERIES_BL616CL)
+  )
+  add_subdirectory(rf/wifi6_ble)
 endif()

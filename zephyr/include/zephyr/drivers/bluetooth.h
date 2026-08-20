@@ -63,6 +63,11 @@ enum {
 	 * >   practical opportunity.
 	 */
 	BT_HCI_QUIRK_NO_AUTO_DLE = BIT(1),
+	/** The controller advertises the controller to host flow control
+	 * commands as supported but does not accept them. The host treats
+	 * the feature as not supported.
+	 */
+	BT_HCI_QUIRK_NO_FLOW_CONTROL = BIT(2),
 };
 
 #define BT_DT_HCI_QUIRK_OR(node_id, prop, idx) \
@@ -108,9 +113,9 @@ struct bt_hci_driver_config {
 
 /**
  * @brief Static initializer for @p bt_hci_driver_config struct from
- * DT_DRV_COMPAT instance.
+ * @c DT_DRV_COMPAT instance.
  *
- * @param inst DT_DRV_COMPAT instance number
+ * @param inst @c DT_DRV_COMPAT instance number
  * @see BT_DT_HCI_DRIVER_CONFIG_GET()
  */
 

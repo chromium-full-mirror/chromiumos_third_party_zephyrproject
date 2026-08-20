@@ -33,6 +33,15 @@ config NET_IF_MCAST_IPV4_ADDR_COUNT
 	default 2 if NET_IPV4_IGMP
 	default 1
 
+config NET_L2_ETHERNET_MCAST_FILTER_ADD_COUNT_IPV4
+	int
+	depends on NET_L2_ETHERNET
+	default NET_IF_MCAST_IPV4_ADDR_COUNT
+	help
+	  Every joined IPv4 multicast address needs a link layer multicast
+	  address on an Ethernet interface. Several IPv4 addresses can map to
+	  the same link layer address, so this is an upper bound.
+
 config NET_IPV4_DEFAULT_NETMASK
 	int "The default netmask length for registered IPv4 addresses"
 	range 1 32
@@ -122,9 +131,8 @@ config NET_IPV4_ACD
 	  The conflict detection is based on ARP probes/announcements.
 
 config NET_IPV4_AUTO
-	bool "IPv4 autoconfiguration [EXPERIMENTAL]"
+	bool "IPv4 autoconfiguration"
 	depends on NET_ARP
-	select EXPERIMENTAL
 	select NET_IPV4_ACD
 	select NET_MGMT
 	select NET_MGMT_EVENT
@@ -188,6 +196,20 @@ config NET_IPV4_PMTU_DESTINATION_CACHE_ENTRIES
 	depends on NET_IPV4_PMTU
 	help
 	  How many PMTU entries we can track for each destination address.
+
+config NET_IPV4_PMTU_PTB
+	bool "IPv4 PMTU Discovery using ICMP messages"
+	default y
+	depends on NET_IPV4_PMTU
+	help
+	  Enables IPv4 Path MTU Discovery (see RFC 1191)
+
+config NET_IPV4_PMTU_DPLPMTUD
+	bool "IPv4 PMTU Discovery using datagram messages"
+	depends on NET_UDP
+	depends on NET_IPV4_PMTU
+	help
+	  Enables IPv4 Datagram Packetization Layer Path MTU Discovery (see RFC 8899)
 
 config NET_IPV4_NBR_CACHE
 	bool "Neighbor cache"

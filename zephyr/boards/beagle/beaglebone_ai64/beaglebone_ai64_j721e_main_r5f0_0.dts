@@ -17,7 +17,7 @@
 	compatible = "beagle,beaglebone-ai64";
 
 	chosen {
-		zephyr,sram = &atcm;
+		zephyr,sram = &ddr1;
 		zephyr,console = &uart2;
 		zephyr,shell-uart = &uart2;
 		zephyr,ipc = &ipc0;
@@ -71,8 +71,4 @@
 	pinctrl-0 = <&uart2_tx_default &uart2_rx_default>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
-};
-
-&systick_timer {
-	status = "okay";
 };

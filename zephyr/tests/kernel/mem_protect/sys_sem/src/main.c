@@ -154,10 +154,21 @@ static void sem_multiple_threads_wait_helper(void *p1, void *p2, void *p3)
  *
  * @see sys_sem_init()
  */
-#ifdef CONFIG_USERSPACE
-ZTEST(sys_sem, test_basic_sem_test)
+ZTEST(sys_sem, test_sys_sem_basic)
 {
 	int32_t ret_value;
+
+	if (!IS_ENABLED(CONFIG_USERSPACE)) {
+		/*
+		 * The argument validation exercised below (returning -EINVAL)
+		 * only exists in the userspace sys_sem_init(). The supervisor
+		 * build is a thin k_sem wrapper that performs no validation, so
+		 * skip rather than compile the case out: keeping it always
+		 * compiled lets twister observe a reported result on
+		 * non-userspace platforms instead of a missing (None) status.
+		 */
+		ztest_test_skip();
+	}
 
 	ret_value = sys_sem_init(NULL, SEM_INIT_VAL, SEM_MAX_VAL);
 	zassert_true(ret_value == -EINVAL,
@@ -179,7 +190,6 @@ ZTEST(sys_sem, test_basic_sem_test)
 	sys_sem_take(&simple_sem, SEM_TIMEOUT);
 	sys_sem_give(&simple_sem);
 }
-#endif
 
 /**
  * @brief Verify sys_sem_give() from an ISR increments the count.
@@ -199,7 +209,7 @@ ZTEST(sys_sem, test_basic_sem_test)
  * @see sys_sem_give()
  * @see sys_sem_count_get()
  */
-ZTEST(sys_sem, test_simple_sem_from_isr)
+ZTEST(sys_sem, test_sys_sem_simple_from_isr)
 {
 	uint32_t signal_count;
 
@@ -234,7 +244,7 @@ ZTEST(sys_sem, test_simple_sem_from_isr)
  * @see sys_sem_give()
  * @see sys_sem_count_get()
  */
-ZTEST_USER(sys_sem, test_simple_sem_from_task)
+ZTEST_USER(sys_sem, test_sys_sem_simple_from_task)
 {
 	uint32_t signal_count;
 
@@ -268,7 +278,7 @@ ZTEST_USER(sys_sem, test_simple_sem_from_task)
  * @see sys_sem_take()
  * @see sys_sem_count_get()
  */
-ZTEST_USER(sys_sem, test_sem_take_no_wait)
+ZTEST_USER(sys_sem, test_sys_sem_take_no_wait)
 {
 	uint32_t signal_count;
 	int32_t ret_value;
@@ -307,7 +317,7 @@ ZTEST_USER(sys_sem, test_sem_take_no_wait)
  *
  * @see sys_sem_take()
  */
-ZTEST_USER(sys_sem, test_sem_take_no_wait_fails)
+ZTEST_USER(sys_sem, test_sys_sem_take_no_wait_fails)
 {
 	uint32_t signal_count;
 	int32_t ret_value;
@@ -343,7 +353,7 @@ ZTEST_USER(sys_sem, test_sem_take_no_wait_fails)
  *
  * @see sys_sem_take()
  */
-ZTEST_USER(sys_sem_1cpu, test_sem_take_timeout_fails)
+ZTEST_USER(sys_sem_1cpu, test_sys_sem_take_timeout_fails)
 {
 	int32_t ret_value;
 
@@ -375,7 +385,7 @@ ZTEST_USER(sys_sem_1cpu, test_sem_take_timeout_fails)
  * @see sys_sem_take()
  * @see sys_sem_give()
  */
-ZTEST_USER(sys_sem, test_sem_take_timeout)
+ZTEST_USER(sys_sem, test_sys_sem_take_timeout)
 {
 	int32_t ret_value;
 #ifdef CONFIG_USERSPACE
@@ -416,7 +426,7 @@ ZTEST_USER(sys_sem, test_sem_take_timeout)
  * @see sys_sem_take()
  * @see sys_sem_give()
  */
-ZTEST_USER(sys_sem_1cpu, test_sem_take_timeout_forever)
+ZTEST_USER(sys_sem_1cpu, test_sys_sem_take_timeout_forever)
 {
 	int32_t ret_value;
 #ifdef CONFIG_USERSPACE
@@ -457,7 +467,7 @@ ZTEST_USER(sys_sem_1cpu, test_sem_take_timeout_forever)
  * @see sys_sem_take()
  * @see sys_sem_give()
  */
-ZTEST(sys_sem_1cpu, test_sem_take_timeout_isr)
+ZTEST(sys_sem_1cpu, test_sys_sem_take_timeout_isr)
 {
 	int32_t ret_value;
 
@@ -504,7 +514,7 @@ static void sem_take_kernel_user(void *p1, void *p2, void *p3)
  * @see sys_sem_take()
  * @see sys_sem_give()
  */
-ZTEST(sys_sem_1cpu, test_sem_take_kernel_user)
+ZTEST(sys_sem_1cpu, test_sys_sem_take_kernel_user)
 {
 #ifdef CONFIG_USERSPACE
 	int thread_flags = K_USER;
@@ -550,7 +560,7 @@ ZTEST(sys_sem_1cpu, test_sem_take_kernel_user)
  * @see sys_sem_take()
  * @see sys_sem_give()
  */
-ZTEST_USER(sys_sem_1cpu, test_sem_take_multiple)
+ZTEST_USER(sys_sem_1cpu, test_sys_sem_take_multiple)
 {
 	uint32_t signal_count;
 #ifdef CONFIG_USERSPACE
@@ -670,7 +680,7 @@ ZTEST_USER(sys_sem_1cpu, test_sem_take_multiple)
  * @see sys_sem_take()
  * @see sys_sem_count_get()
  */
-ZTEST(sys_sem, test_sem_give_take_from_isr)
+ZTEST(sys_sem, test_sys_sem_give_take_from_isr)
 {
 	uint32_t signal_count;
 
@@ -717,7 +727,7 @@ ZTEST(sys_sem, test_sem_give_take_from_isr)
  * @see sys_sem_give()
  * @see sys_sem_count_get()
  */
-ZTEST_USER(sys_sem, test_sem_give_limit)
+ZTEST_USER(sys_sem, test_sys_sem_give_limit)
 {
 	int32_t ret_value;
 	uint32_t signal_count;
@@ -777,7 +787,7 @@ ZTEST_USER(sys_sem, test_sem_give_limit)
  * @see sys_sem_give()
  * @see sys_sem_count_get()
  */
-ZTEST_USER(sys_sem_1cpu, test_sem_multiple_threads_wait)
+ZTEST_USER(sys_sem_1cpu, test_sys_sem_multiple_threads_wait)
 {
 	uint32_t signal_count;
 	int32_t ret_value;

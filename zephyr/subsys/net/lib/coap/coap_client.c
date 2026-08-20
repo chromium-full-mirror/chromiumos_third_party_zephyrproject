@@ -29,13 +29,22 @@ static struct coap_client *clients[CONFIG_COAP_CLIENT_MAX_INSTANCES];
 static int num_clients;
 static K_SEM_DEFINE(coap_client_recv_sem, 0, 1);
 
-/* Wakeup channel for the recv thread's poll(). coap_client_cancel_requests()
- * writes the eventfd to interrupt poll() immediately (instead of waiting up to
- * COAP_PERIODIC_TIMEOUT for the timeout) and waits on the ack sem until the
- * recv thread has cycled past poll(), so no poll() references a cancelled
- * request when cancel returns. The cancel mutex serialises waiters; the tid
- * lets a cancel issued from the recv thread (a response callback) skip the
- * self-wait.
+/* Wakeup channel for the recv thread's poll(). Writing the eventfd interrupts a
+ * blocked poll() immediately (instead of waiting up to COAP_PERIODIC_TIMEOUT for
+ * the timeout) so the recv loop rebuilds fds[] from current client state. Two
+ * callers use it:
+ *   - coap_client_schedule_poll() writes it when a request is submitted, so a
+ *     response on a newly-added or changed (e.g. reconnected) socket is polled
+ *     without waiting for the periodic timeout.
+ *   - coap_client_cancel_requests() writes it and then waits on the ack sem
+ *     until the recv thread has cycled past poll(), so no poll() references a
+ *     cancelled request when cancel returns. The cancel mutex serialises
+ *     waiters; the tid lets a cancel issued from the recv thread (a response
+ *     callback) skip the self-wait.
+ * handle_poll() drains the eventfd on each wakeup and gives the ack sem; a
+ * schedule-driven wakeup therefore also pulses the ack sem, which is harmless
+ * because coap_client_wait_for_recv_cycle() resets it under the cancel mutex
+ * before waiting.
  */
 static int coap_client_recv_fd = -1;
 static k_tid_t coap_client_recv_tid;
@@ -113,6 +122,15 @@ static void coap_client_schedule_poll(struct coap_client *client, int sock,
 	internal_req->request_ongoing = true;
 
 	k_sem_give(&coap_client_recv_sem);
+
+	/* If the recv thread is already in poll() it holds a stale snapshot of
+	 * client->fd. Wake it so it rebuilds fds[] with the (possibly new) fd
+	 * before blocking again. Without this, a response on a new socket after
+	 * reconnect is invisible to poll() until the timeout fires.
+	 */
+	if (coap_client_recv_fd >= 0) {
+		(void)zvfs_eventfd_write(coap_client_recv_fd, 1);
+	}
 }
 
 static bool exchange_lifetime_exceeded(const struct coap_client_internal_request *internal_req)
@@ -1018,6 +1036,31 @@ static bool find_echo_option(const struct coap_packet *response, struct coap_opt
 	return coap_find_options(response, COAP_OPTION_ECHO, option, 1);
 }
 
+/* Resolve the destination for an ACK / RST reply: use the received packet's
+ * source when the transport provided one, otherwise fall back to the request's
+ * address. Returns false if no reply should be sent (multicast group).
+ */
+static bool select_reply_addr(const struct coap_client_internal_request *internal_req,
+			      const struct net_sockaddr *from, net_socklen_t from_len,
+			      const struct net_sockaddr **to, net_socklen_t *to_len)
+{
+	if (from->sa_family != NET_AF_UNSPEC) {
+		*to = from;
+		*to_len = from_len;
+		return true;
+	}
+
+#if defined(CONFIG_COAP_CLIENT_MULTICAST)
+	if (internal_req->is_mcast) {
+		return false;
+	}
+#endif
+
+	*to = net_sad(&internal_req->addr);
+	*to_len = internal_req->addrlen;
+	return true;
+}
+
 static int handle_response(struct coap_client *client, const struct net_sockaddr *addr,
 			   net_socklen_t addrlen, const struct coap_packet *response,
 			   bool response_truncated)
@@ -1076,8 +1119,14 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 	if (!internal_req) {
 		LOG_WRN("No matching request for response");
 		if (response_type != COAP_TYPE_ACK) {
-			/* Ignore errors, unrelated to our queries */
-			(void)send_rst(client->fd, addr, addrlen, response);
+			/* Ignore errors, unrelated to our queries. If no source address
+			 * was provided, assume the socket is connected and use the send()
+			 * path.
+			 */
+			net_socklen_t rst_addrlen =
+				(addr->sa_family != NET_AF_UNSPEC) ? addrlen : 0;
+
+			(void)send_rst(client->fd, addr, rst_addrlen, response);
 		}
 		return 0;
 	}
@@ -1143,6 +1192,9 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 
 	/* Send ack for CON */
 	if (response_type == COAP_TYPE_CON) {
+		const struct net_sockaddr *ack_addr;
+		net_socklen_t ack_addrlen;
+
 #if defined(CONFIG_COAP_CLIENT_MULTICAST)
 		if (internal_req->is_mcast) {
 			/* RFC 7252 Section 8.2: Responses to multicast requests MUST NOT be
@@ -1153,9 +1205,12 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 		}
 #endif
 		/* CON response is always a separate response, respond with empty ACK. */
-		ret = send_ack(client->fd, addr, addrlen, response, COAP_CODE_EMPTY);
-		if (ret < 0) {
-			goto fail;
+		if (select_reply_addr(internal_req, addr, addrlen, &ack_addr, &ack_addrlen)) {
+			ret = send_ack(client->fd, ack_addr, ack_addrlen, response,
+				       COAP_CODE_EMPTY);
+			if (ret < 0) {
+				goto fail;
+			}
 		}
 	}
 
@@ -1170,7 +1225,13 @@ static int handle_response(struct coap_client *client, const struct net_sockaddr
 
 	if (!internal_req->request_ongoing) {
 		if (internal_req->is_observe) {
-			(void)send_rst(client->fd, addr, addrlen, response);
+			const struct net_sockaddr *rst_addr;
+			net_socklen_t rst_addrlen;
+
+			if (select_reply_addr(internal_req, addr, addrlen, &rst_addr,
+					      &rst_addrlen)) {
+				(void)send_rst(client->fd, rst_addr, rst_addrlen, response);
+			}
 			return 0;
 		}
 		LOG_DBG("Drop request, already handled");
@@ -1552,8 +1613,8 @@ void coap_client_recv(void *coap_cl, void *a, void *b)
 	coap_client_recv_tid = k_current_get();
 	coap_client_recv_fd = zvfs_eventfd(0, ZVFS_EFD_NONBLOCK);
 	if (coap_client_recv_fd < 0) {
-		LOG_ERR("Failed to create cancel-wakeup eventfd (%d); "
-			"coap_client_cancel_requests() will fall back to a timeout",
+		LOG_ERR("Failed to create poll-wakeup eventfd (%d); request "
+			"scheduling and cancellation will fall back to a timeout",
 			-errno);
 	}
 
