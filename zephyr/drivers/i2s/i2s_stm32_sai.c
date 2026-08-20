@@ -121,8 +121,11 @@ struct stm32_sai_sub_cfg {
 };
 
 struct stm32_sai_cfg {
-	const struct stm32_pclken *pclken;
-	size_t pclk_len;
+	const struct stm32_pclken sai_ck;
+	const struct stm32_pclken sai_ker_ck;
+	const struct stm32_pclken sai_b_ker_ck; /* Dedicated to SAIn_B, if applicable */
+	bool has_sai_ker_ck: 1;
+	bool has_sai_b_ker_ck: 1;
 };
 
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
@@ -285,16 +288,25 @@ static int stm32_sai_clock_en(const struct device *dev)
 	int ret;
 
 	/* Turn on SAI peripheral clock */
-	ret = clock_control_on(clk, (clock_control_subsys_t)&sai_cfg->pclken[0]);
+	ret = clock_control_on(clk, (clock_control_subsys_t)&sai_cfg->sai_ck);
 	if (ret != 0) {
 		return -EIO;
 	}
 
-	if (sai_cfg->pclk_len > 1) {
-		/* Enable SAI clock source */
-		ret = clock_control_configure(clk, (clock_control_subsys_t)&sai_cfg->pclken[1],
+	/* Configure shared SAIn_A & SAIn_B or dedicated SAIn_A kernel clock */
+	if (sai_cfg->has_sai_ker_ck) {
+		ret = clock_control_configure(clk, (clock_control_subsys_t)&sai_cfg->sai_ker_ck,
 					      NULL);
-		if (ret < 0) {
+		if (ret != 0) {
+			return -EIO;
+		}
+	}
+
+	/* Configure dedicated SAI B kernel clock */
+	if (sai_cfg->has_sai_b_ker_ck) {
+		ret = clock_control_configure(clk, (clock_control_subsys_t)&sai_cfg->sai_b_ker_ck,
+					      NULL);
+		if (ret != 0) {
 			return -EIO;
 		}
 	}
@@ -483,8 +495,8 @@ static int stm32_sai_sub_f4_clk_src_conf(const struct device *dev)
 	SAI_HandleTypeDef *hsai = &sub_data->hsai;
 	uint32_t clock_source = 0U;
 
-	if (sai_cfg->pclk_len > 1) {
-		clock_source = sai_cfg->pclken[1].bus;
+	if (sai_cfg->has_sai_ker_ck) {
+		clock_source = sai_cfg->sai_ker_ck.bus;
 	}
 
 	switch (clock_source) {
@@ -866,7 +878,7 @@ static int stm32_sai_sub_trigger(const struct device *dev, enum i2s_dir dir,
 
 	if (dir == I2S_DIR_BOTH) {
 		LOG_ERR("Unsupported direction: %d", (int)dir);
-		return -ENOSYS;
+		return -ENOTSUP;
 	}
 
 	switch (cmd) {
@@ -969,11 +981,31 @@ static int sai_init(const struct device *dev)
 	return 0;
 }
 
+static const struct i2s_config *stm32_sai_sub_conf_get(const struct device *dev, enum i2s_dir dir)
+{
+	const struct stm32_sai_sub_cfg *const sub_cfg = dev->config;
+	struct stm32_sai_sub_data *sub_data = dev->data;
+	struct stream *stream = &sub_data->stream;
+
+	if (sub_cfg->dir != dir) {
+		LOG_WRN("Direction mismatch: requested %d, sub-block configured as %d", dir,
+			sub_cfg->dir);
+		return NULL;
+	}
+
+	if (stream != NULL && stream->state != I2S_STATE_NOT_READY) {
+		return &stream->i2s_cfg;
+	}
+
+	return NULL;
+}
+
 static DEVICE_API(i2s, i2s_stm32_sai_api) = {
 	.configure = stm32_sai_sub_conf,
 	.trigger = stm32_sai_sub_trigger,
 	.write = stm32_sai_sub_write,
 	.read = stm32_sai_sub_read,
+	.config_get = stm32_sai_sub_conf_get,
 };
 
 #define SAI_FIFO_THRESHOLD(node) sai_fifo_threshold[DT_ENUM_IDX(node, fifo_threshold)]
@@ -1033,17 +1065,27 @@ static DEVICE_API(i2s, i2s_stm32_sai_api) = {
 	};                                                                                         \
 	DEVICE_DT_DEFINE(node, &sai_sub_init, NULL, &sub_data_##node, &sub_cfg_##node,             \
 			 POST_KERNEL, CONFIG_I2S_INIT_PRIORITY, &i2s_stm32_sai_api);               \
-	K_MSGQ_DEFINE(queue_##node, sizeof(struct queue_item), CONFIG_I2S_STM32_SAI_BLOCK_COUNT, 4);
+	K_MSGQ_DEFINE_STATIC_TYPE(queue_##node, struct queue_item,                                 \
+				  CONFIG_I2S_STM32_SAI_BLOCK_COUNT);
+
+#define SAI_KER_CK_FIELD_INIT(inst, n)                                                             \
+	COND_CODE_1(DT_INST_CLOCKS_HAS_NAME(inst, n),                                              \
+		(.n = STM32_DT_INST_CLOCK_INFO_BY_NAME(inst, n), .has_##n = true,),                \
+		(.has_##n = false,))
+
+#define SAI_KER_CK_INIT(inst)                                                                      \
+	SAI_KER_CK_FIELD_INIT(inst, sai_ker_ck)                                                    \
+	SAI_KER_CK_FIELD_INIT(inst, sai_b_ker_ck)
 
 /* Controller Node */
 #define SAI_INIT(inst)                                                                             \
-	static const struct stm32_pclken clk_##inst[] = STM32_DT_INST_CLOCKS(inst);                \
 	static const struct stm32_sai_cfg sai_cfg_##inst = {                                       \
-		.pclken = clk_##inst,                                                              \
-		.pclk_len = DT_INST_NUM_CLOCKS(inst),                                              \
+		.sai_ck = STM32_DT_INST_CLOCK_INFO_BY_NAME(inst, sai_ck),                          \
+		SAI_KER_CK_INIT(inst)                                                              \
 	};                                                                                         \
 	DEVICE_DT_INST_DEFINE(inst, &sai_init, NULL, NULL, &sai_cfg_##inst, POST_KERNEL,           \
 			      CONFIG_I2S_INIT_PRIORITY, NULL);                                     \
+                                                                                                   \
 	DT_INST_FOREACH_CHILD_STATUS_OKAY(inst, SAI_SUB_INIT)
 
 DT_INST_FOREACH_STATUS_OKAY(SAI_INIT)

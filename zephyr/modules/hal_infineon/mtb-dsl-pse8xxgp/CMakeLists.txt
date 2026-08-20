@@ -50,18 +50,31 @@ zephyr_library_sources_ifdef(CONFIG_USE_INFINEON_TIMER ${pdl_drv_dir}/source/cy_
 zephyr_library_sources_ifdef(CONFIG_USE_INFINEON_UART ${pdl_drv_dir}/source/cy_scb_uart.c)
 zephyr_library_sources_ifdef(CONFIG_USE_INFINEON_WDT ${pdl_drv_dir}/source/cy_wdt.c)
 
-if(CONFIG_USE_INFINEON_AUTANALOG_SAR_ADC OR CONFIG_USE_INFINEON_LPCOMP)
+if(CONFIG_USE_INFINEON_AUTANALOG_SAR_ADC OR CONFIG_USE_INFINEON_LPCOMP OR CONFIG_USE_INFINEON_FLASH_RRAM)
 zephyr_library_sources(${pdl_drv_dir}/source/cy_rram.c)
 zephyr_library_sources(${pdl_drv_dir}/source/cy_systrimm.c)
 endif()
 
 zephyr_library_sources_ifdef(CONFIG_USE_INFINEON_LPCOMP ${pdl_drv_dir}/source/cy_lpcomp.c)
 
-if(CONFIG_USE_INFINEON_TRNG)
+if(CONFIG_USE_INFINEON_MXCRYPTO_AES OR CONFIG_USE_INFINEON_MXCRYPTO_SHA OR CONFIG_USE_INFINEON_MXCRYPTO_TRNG)
   zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto.c)
-  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_trng_v1.c)
-  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_trng_v2.c)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_hw.c)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_hw_v1.c)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_utils.c)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_mem_v2.c)
 endif()
+
+if(CONFIG_USE_INFINEON_MXCRYPTO_AES)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_aes_v2.c)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_cmac_v2.c)
+endif()
+
+if(CONFIG_USE_INFINEON_MXCRYPTO_SHA)
+  zephyr_library_sources(${pdl_drv_dir}/source/cy_crypto_core_sha_v2.c)
+endif()
+
+zephyr_library_sources_ifdef(CONFIG_USE_INFINEON_MXCRYPTO_TRNG ${pdl_drv_dir}/source/cy_crypto_core_trng.c)
 
 if(CONFIG_USE_INFINEON_UART OR CONFIG_USE_INFINEON_I2C OR CONFIG_USE_INFINEON_SPI)
   zephyr_library_sources(${pdl_drv_dir}/source/cy_scb_common.c)

@@ -82,8 +82,10 @@ uint8_t aics_client_notify_handler(struct bt_conn *conn, struct bt_gatt_subscrib
 	if (handle == inst->cli.state_handle) {
 		if (length == sizeof(*state)) {
 			state = (const struct bt_aics_state *)data;
-			LOG_DBG("Inst %p: Gain %d, mute %u, gain_mode %u, counter %u", inst,
-				state->gain, state->mute, state->gain_mode, state->change_counter);
+			LOG_DBG("Inst %p: Gain %d, mute %u, gain_mode %s (0x%02X), counter %u",
+				inst, state->gain, state->mute,
+				bt_aics_mode_to_str(state->gain_mode), state->gain_mode,
+				state->change_counter);
 
 			inst->cli.change_counter = state->change_counter;
 
@@ -152,8 +154,9 @@ static uint8_t aics_client_read_state_cb(struct bt_conn *conn, uint8_t err,
 
 	if (data) {
 		if (length == sizeof(*state)) {
-			LOG_DBG("Gain %d, mute %u, gain_mode %u, counter %u", state->gain,
-				state->mute, state->gain_mode, state->change_counter);
+			LOG_DBG("Gain %d, mute %u, gain_mode %s (0x%02X), counter %u", state->gain,
+				state->mute, bt_aics_mode_to_str(state->gain_mode),
+				state->gain_mode, state->change_counter);
 
 			inst->cli.change_counter = state->change_counter;
 		} else {
@@ -371,8 +374,9 @@ static uint8_t internal_read_state_cb(struct bt_conn *conn, uint8_t err,
 		if (length == sizeof(*state)) {
 			int write_err;
 
-			LOG_DBG("Gain %d, mute %u, gain_mode %u, counter %u", state->gain,
-				state->mute, state->gain_mode, state->change_counter);
+			LOG_DBG("Gain %d, mute %u, gain_mode %s (0x%02X), counter %u", state->gain,
+				state->mute, bt_aics_mode_to_str(state->gain_mode),
+				state->gain_mode, state->change_counter);
 			inst->cli.change_counter = state->change_counter;
 
 			/* clear busy flag to reuse function */
@@ -703,6 +707,7 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 int bt_aics_discover(struct bt_conn *conn, struct bt_aics *inst,
 		     const struct bt_aics_discover_param *param)
 {
+	struct bt_conn *ref;
 	int err = 0;
 
 	if (!inst || !conn || !param) {
@@ -728,6 +733,12 @@ int bt_aics_discover(struct bt_conn *conn, struct bt_aics *inst,
 		return -EBUSY;
 	}
 
+	ref = bt_conn_ref(conn);
+	if (ref == NULL) {
+		err = -ENOTCONN;
+		goto cleanup;
+	}
+
 	aics_client_reset(inst);
 
 	(void)memset(&inst->cli.discover_params, 0, sizeof(inst->cli.discover_params));
@@ -737,14 +748,20 @@ int bt_aics_discover(struct bt_conn *conn, struct bt_aics *inst,
 	inst->cli.discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
 	inst->cli.discover_params.func = aics_discover_func;
 
+	inst->cli.conn = ref;
+
 	err = bt_gatt_discover(conn, &inst->cli.discover_params);
 	if (err != 0) {
-		atomic_clear_bit(inst->cli.flags, BT_AICS_CLIENT_FLAG_BUSY);
 		LOG_DBG("Discover failed (err %d)", err);
-	} else {
-		inst->cli.conn = bt_conn_ref(conn);
+		bt_conn_unref(ref);
+		inst->cli.conn = NULL;
+		goto cleanup;
 	}
 
+	return 0;
+
+cleanup:
+	atomic_clear_bit(inst->cli.flags, BT_AICS_CLIENT_FLAG_BUSY);
 	return err;
 }
 

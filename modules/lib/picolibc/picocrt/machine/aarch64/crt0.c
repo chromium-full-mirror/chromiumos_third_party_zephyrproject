@@ -34,6 +34,7 @@
  */
 #include <sys/cdefs.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 /* The size of the thread control block.
  * TLS relocations are generated relative to
@@ -57,15 +58,15 @@ extern char __arm64_tls_tcb_offset;
 static inline void
 _set_tls(void *tls)
 {
-	__asm__ volatile("msr tpidr_el0, %x0" : : "r" (tls - TP_OFFSET));
+    __asm__ volatile("msr tpidr_el0, %x0" : : "r"(tls - TP_OFFSET));
 }
 
 #include "../../crt0.h"
 
 /* Defined in crt0.S */
-#define MMU_BLOCK_COUNT       8
-extern uint64_t __identity_page_table[MMU_BLOCK_COUNT];
-extern void _start(void);
+#define MMU_BLOCK_COUNT 8
+extern uint64_t    __identity_page_table[MMU_BLOCK_COUNT];
+extern void        _start(void);
 extern const void *__vector_table[];
 
 #define SCTLR_MMU       (1 << 0)
@@ -109,85 +110,99 @@ extern const void *__vector_table[];
 #error "Unknown machine type"
 #endif
 
-void _cstart(void)
+#ifdef CRT0_LINUX
+char **environ;
+char **__argv;
+#endif
+
+void
+#ifdef CRT0_LINUX
+_cstart(void *orig_sp)
+#else
+_cstart(void)
+#endif
 {
-        uint64_t        sctlr;
+#ifdef CRT0_LINUX
+    int    argc;
+    char **argv;
 
-        /* Invalidate the cache */
-        __asm__("ic iallu");
-        __asm__("isb\n");
+    argc = *(int *)orig_sp;
+    argv = ((char **)orig_sp) + 1;
+    __argv = argv;
+    environ = argv + argc + 1;
+    __start(argc, argv);
+#else
+    uint64_t sctlr;
 
-        #if __ARM_ARCH_PROFILE != 'R'
-        /*
-         * Set up the TCR register to provide a 33bit VA space using
-         * 4kB pages over 4GB of PA
-         */
-        __asm__("msr    tcr_"BOOT_EL", %x0" ::
-                "r" ((0x1f << TCR_T0SZ_BIT) |
-                     TCR_IRGN0_WB_WA |
-                     TCR_ORGN0_WB_WA |
-                     TCR_SH0_IS |
-                     TCR_TG0_4KB |
-                     TCR_EPD1 |
-                     TCR_IPS_4GB));
+    /* Invalidate the cache */
+    __asm__ volatile("ic iallu");
+    __asm__ volatile("isb\n");
 
-        /* Load the page table base */
-        __asm__("msr    ttbr0_"BOOT_EL", %x0" :: "r" (__identity_page_table));
-        #else
-        /* Enable the 8-R.64 MPU, and configure a single 'normal memory' region
-         * covering the whole address map
-         */
+#if __ARM_ARCH_PROFILE != 'R'
+    /*
+     * Set up the TCR register to provide a 33bit VA space using
+     * 4kB pages over 4GB of PA
+     */
+    __asm__ volatile("msr    tcr_" BOOT_EL
+                     ", %x0" ::"r"((0x1f << TCR_T0SZ_BIT) | TCR_IRGN0_WB_WA | TCR_ORGN0_WB_WA
+                                   | TCR_SH0_IS | TCR_TG0_4KB | TCR_EPD1 | TCR_IPS_4GB));
 
-        /* Select the MPU region */
-        __asm__("msr    PRSELR_"BOOT_EL", %x0" :: "r" (0));
+    /* Load the page table base */
+    __asm__ volatile("msr    ttbr0_" BOOT_EL ", %x0" ::"r"(__identity_page_table));
+#else
+    /* Enable the 8-R.64 MPU, and configure a single 'normal memory' region
+     * covering the whole address map
+     */
 
-        /* Set the base address of memory region
-         *
-         * bits 5,4 are SH = 0b00: we don't care about shareability in  8-R.64 FVPs.
-         * bits 3,2 are AP = 0b01: read and write permissions at all ELs
-         * bits 1,0 are XN = 0b00: don't prohibit execution at any EL
-         */
-        __asm__("msr    PRBAR_"BOOT_EL", %x0\n" :: "r" (4));
+    /* Select the MPU region */
+    __asm__ volatile("msr    PRSELR_" BOOT_EL ", %x0" ::"r"(0));
 
-        /* Set the limit address of memory region
-         * bit 5 is reserved
-         * bit 4 is NS = 1: this is non-secure address space
-         * bits 3,2,1 are AttrIndx = 0b000: this memory region is
-         * controlled by the low byte of MAIR_EL2.
-         * bit 0 is EN = 1: this memory region is enabled at all
-         */
-        __asm__("msr    PRLAR_"BOOT_EL", %x0\n" :: "r" (0x000fffffffffffd1));
-        #endif
+    /* Set the base address of memory region
+     *
+     * bits 5,4 are SH = 0b00: we don't care about shareability in  8-R.64 FVPs.
+     * bits 3,2 are AP = 0b01: read and write permissions at all ELs
+     * bits 1,0 are XN = 0b00: don't prohibit execution at any EL
+     */
+    __asm__ volatile("msr    PRBAR_" BOOT_EL ", %x0\n" ::"r"(4));
 
-        /*
-         * Set the memory attributions in the MAIR register:
-         *
-         * Region 0 is Normal memory
-         * Region 1 is Device memory
-         */
-        __asm__("msr    mair_"BOOT_EL", %x0" ::
-                "r" ((0xffLL << 0) | (0x00LL << 8)));
+    /* Set the limit address of memory region
+     * bit 5 is reserved
+     * bit 4 is NS = 1: this is non-secure address space
+     * bits 3,2,1 are AttrIndx = 0b000: this memory region is
+     * controlled by the low byte of MAIR_EL2.
+     * bit 0 is EN = 1: this memory region is enabled at all
+     */
+    __asm__ volatile("msr    PRLAR_" BOOT_EL ", %x0\n" ::"r"(0x000fffffffffffd1));
+#endif
 
-        /*
-         * Enable caches, and the MMU, disable alignment requirements
-         * and write-implies-XN
-         */
-        __asm__("mrs    %x0, sctlr_"BOOT_EL"" : "=r" (sctlr));
-        sctlr |= SCTLR_ICACHE | SCTLR_C | SCTLR_MMU;
-        #ifdef __ARM_FEATURE_UNALIGNED
-            sctlr &= ~SCTLR_A;
-        #else
-            sctlr |= SCTLR_A;
-        #endif
-        sctlr &= ~SCTLR_WXN;
-        __asm__("msr    sctlr_"BOOT_EL", %x0" :: "r" (sctlr));
-        __asm__("isb\n");
+    /*
+     * Set the memory attributions in the MAIR register:
+     *
+     * Region 0 is Normal memory
+     * Region 1 is Device memory
+     */
+    __asm__ volatile("msr    mair_" BOOT_EL ", %x0" ::"r"((0xffLL << 0) | (0x00LL << 8)));
 
-        /* Set the vector base address register */
-        __asm__("msr    vbar_"BOOT_EL", %x0" :: "r" (__vector_table));
-	__start();
+    /*
+     * Enable caches, and the MMU, disable alignment requirements
+     * and write-implies-XN
+     */
+    __asm__ volatile("mrs    %x0, sctlr_" BOOT_EL "" : "=r"(sctlr));
+    sctlr |= SCTLR_ICACHE | SCTLR_C | SCTLR_MMU;
+#ifdef __ARM_FEATURE_UNALIGNED
+    sctlr &= ~SCTLR_A;
+#else
+    sctlr |= SCTLR_A;
+#endif
+    sctlr &= ~SCTLR_WXN;
+    __asm__ volatile("msr    sctlr_" BOOT_EL ", %x0" ::"r"(sctlr));
+    __asm__ volatile("isb\n");
+
+    /* Set the vector base address register */
+    __asm__ volatile("msr    vbar_" BOOT_EL ", %x0" ::"r"(__vector_table));
+    __start();
+#endif
 }
-
 
 #ifdef CRT0_SEMIHOST
 
@@ -195,20 +210,20 @@ void _cstart(void)
  * Trap faults, print message and exit when running under semihost
  */
 
-#include <semihost.h>
 #include <unistd.h>
 #include <stdio.h>
 
 #define _REASON(r) #r
-#define REASON(r) _REASON(r)
+#define REASON(r)  _REASON(r)
 
-static void aarch64_fault_write_reg(const char *prefix, uint64_t reg)
+static void
+aarch64_fault_write_reg(const char *prefix, uint64_t reg)
 {
     fputs(prefix, stdout);
 
     for (unsigned i = 0; i < 16; i++) {
-        unsigned digitval = 0xF & (reg >> (60 - 4*i));
-        char digitchr = '0' + digitval + (digitval >= 10 ? 'a'-'0'-10 : 0);
+        unsigned digitval = 0xF & (reg >> (60 - 4 * i));
+        char     digitchr = '0' + digitval + (digitval >= 10 ? 'a' - '0' - 10 : 0);
         putchar(digitchr);
     }
 
@@ -216,30 +231,26 @@ static void aarch64_fault_write_reg(const char *prefix, uint64_t reg)
 }
 
 struct fault {
-    uint64_t    x[31];
-    uint64_t    pc;
-    uint64_t    esr;
-    uint64_t    far;
+    uint64_t x[31];
+    uint64_t pc;
+    uint64_t esr;
+    uint64_t far;
 };
 
-static const char *const reasons[] = {
-    "sync\n",
-    "irq\n",
-    "fiq\n",
-    "serror\n"
-};
+static const char * const reasons[] = { "sync\n", "irq\n", "fiq\n", "serror\n" };
 
 /* Called from assembly wrappers in crt0.S, which fills *f with the register
  * values at the point the fault happened. */
-void aarch64_fault(struct fault *f, int reason)
+void
+aarch64_fault(struct fault *f, int reason)
 {
     int r;
     fputs("AARCH64 fault: ", stdout);
     fputs(reasons[reason], stdout);
     char prefix[] = "\tX##:   0x";
     for (r = 0; r <= 30; r++) {
-        prefix[2] = '0' + r / 10;    /* overwrite # with register number */
-        prefix[3] = '0' + r % 10;    /* overwrite # with register number */
+        prefix[2] = '0' + r / 10; /* overwrite # with register number */
+        prefix[3] = '0' + r % 10; /* overwrite # with register number */
         aarch64_fault_write_reg(prefix, f->x[r]);
     }
     aarch64_fault_write_reg("\tPC:    0x", f->pc);

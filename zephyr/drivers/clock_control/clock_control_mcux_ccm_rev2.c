@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/dt-bindings/clock/imx_ccm_rev2.h>
+#include <zephyr/sys/util.h>
 #include <fsl_clock.h>
 #if defined(CONFIG_SOC_MIMX9352)
 #include <soc.h>
@@ -17,23 +18,54 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(clock_control);
 
+#if defined(CONFIG_SOC_SERIES_IMXRT11XX)
+/*
+ * The RT11xx MCUX clock table maps MIC root mux slot 6 to Audio PLL output.
+ * On boards that leave Audio PLL uninitialized, CLOCK_GetRootClockFreq()
+ * asserts instead of reporting that the rate is unavailable.
+ */
+#define RT11XX_MICFIL_NODE            DT_NODELABEL(micfil)
+#define RT11XX_MIC_ROOT_AUDIO_PLL_MUX kCLOCK_MIC_ClockRoot_MuxAudioPllOut
+
+static const uint32_t rt11xx_audio_pll_loop_div =
+	DT_PHA_BY_NAME_OR(RT11XX_MICFIL_NODE, pll_clocks, lp, value, 0U);
+static const uint32_t rt11xx_audio_pll_post_div =
+	DT_PHA_BY_NAME_OR(RT11XX_MICFIL_NODE, pll_clocks, pd, value, 0U);
+static const uint32_t rt11xx_audio_pll_numerator =
+	DT_PHA_BY_NAME_OR(RT11XX_MICFIL_NODE, pll_clocks, num, value, 0U);
+static const uint32_t rt11xx_audio_pll_denominator =
+	DT_PHA_BY_NAME_OR(RT11XX_MICFIL_NODE, pll_clocks, den, value, 0U);
+
+static bool mcux_ccm_rt11xx_audio_pll_ready(void)
+{
+	uint32_t reg = ANADIG_PLL->PLL_AUDIO_CTRL;
+	uint32_t ready_mask = ANADIG_PLL_PLL_AUDIO_CTRL_PLL_AUDIO_STABLE_MASK |
+			      ANADIG_PLL_PLL_AUDIO_CTRL_ENABLE_CLK_MASK;
+
+	return (reg & ready_mask) == ready_mask;
+}
+
+static void mcux_ccm_rt11xx_init_audio_pll(void)
+{
+	static const clock_audio_pll_config_t audio_pll_cfg = {
+		.loopDivider = rt11xx_audio_pll_loop_div,
+		.postDivider = rt11xx_audio_pll_post_div,
+		.numerator = rt11xx_audio_pll_numerator,
+		.denominator = rt11xx_audio_pll_denominator,
+		.ss = NULL,
+		.ssEnable = false,
+	};
+
+	CLOCK_InitAudioPll(&audio_pll_cfg);
+}
+
+#endif
+
 static int mcux_ccm_on(const struct device *dev,
 				  clock_control_subsys_t sub_system)
 {
 	uint32_t clock_name = (uintptr_t)sub_system;
 	uint32_t peripheral, instance;
-
-/*
- * RT11xx MICFIL clocking:
- * - Peripheral gate is kCLOCK_Pdm (LPCG)
- * - Root clock is kCLOCK_Root_Mic (PDM_CLK_ROOT)
- */
-#if defined(CONFIG_SOC_SERIES_IMXRT11XX)
-	if (clock_name == IMX_CCM_PDM_CLK) {
-		CLOCK_EnableClock(kCLOCK_Pdm);
-		return 0;
-	}
-#endif
 
 	peripheral = (clock_name & IMX_CCM_PERIPHERAL_MASK);
 	instance = (clock_name & IMX_CCM_INSTANCE_MASK);
@@ -62,12 +94,37 @@ static int mcux_ccm_on(const struct device *dev,
 		return 0;
 #endif
 #endif
+#if defined(CONFIG_SOC_SERIES_IMXRT11XX)
+	case IMX_CCM_PDM_CLK:
+		CLOCK_EnableClock(kCLOCK_Pdm);
+		return 0;
+#endif
+#if defined(CONFIG_MUX_NXP_XBAR) && defined(CONFIG_SOC_SERIES_IMXRT11XX)
+	case IMX_CCM_XBAR1_CLK:
+	case IMX_CCM_XBAR2_CLK:
+	case IMX_CCM_XBAR3_CLK:
+		CLOCK_EnableClock(kCLOCK_Xbar1 + instance);
+		return 0;
+#endif
+#if defined(CONFIG_EQDC_MCUX) && defined(CONFIG_SOC_SERIES_IMXRT118X)
+	case IMX_CCM_ENC1_CLK:
+	case IMX_CCM_ENC2_CLK:
+	case IMX_CCM_ENC3_CLK:
+	case IMX_CCM_ENC4_CLK:
+		CLOCK_EnableClock(kCLOCK_Enc1 + instance);
+		return 0;
+#endif
 #ifdef CONFIG_MEMC_MCUX_FLEXSPI
 #ifdef CONFIG_SOC_MIMX9352
 	case IMX_CCM_FLEXSPI_CLK:
 		CLOCK_EnableClock(kCLOCK_Flexspi1);
 		return 0;
 #endif
+#endif
+#if defined(CONFIG_COUNTER_MCUX_TSTMR) && defined(CONFIG_SOC_SERIES_IMXRT118X)
+	case IMX_CCM_SYSCTR_BASE_CLK:
+		CLOCK_EnableClock(kCLOCK_Syscount);
+		return 0;
 #endif
 	default:
 		(void)instance;
@@ -87,17 +144,6 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 {
 	uint32_t clock_name = (size_t) sub_system;
 	uint32_t clock_root, peripheral, instance;
-
-/*
- * RT11xx MICFIL clock query:
- * IMX_CCM_PDM_CLK should report the MIC root clock (PDM_CLK_ROOT).
- */
-#if defined(CONFIG_SOC_SERIES_IMXRT11XX)
-	if (clock_name == IMX_CCM_PDM_CLK) {
-		*rate = CLOCK_GetRootClockFreq(kCLOCK_Root_Mic);
-		return 0;
-	}
-#endif
 
 	peripheral = (clock_name & IMX_CCM_PERIPHERAL_MASK);
 	instance = (clock_name & IMX_CCM_INSTANCE_MASK);
@@ -217,6 +263,22 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 		clock_root = kCLOCK_Root_Sai4;
 		break;
 #endif
+#endif
+#if defined(CONFIG_SOC_SERIES_IMXRT11XX)
+	case IMX_CCM_PDM_CLK:
+		if (DT_NODE_HAS_PROP(RT11XX_MICFIL_NODE, pll_clocks) &&
+		    !mcux_ccm_rt11xx_audio_pll_ready()) {
+			mcux_ccm_rt11xx_init_audio_pll();
+		}
+
+		if ((CLOCK_GetRootClockMux(kCLOCK_Root_Mic) == RT11XX_MIC_ROOT_AUDIO_PLL_MUX) &&
+		    !mcux_ccm_rt11xx_audio_pll_ready()) {
+			*rate = 0U;
+			return -ENOTSUP;
+		}
+
+		*rate = CLOCK_GetRootClockFreq(kCLOCK_Root_Mic);
+		return 0;
 #endif
 
 #ifdef CONFIG_ETH_NXP_ENET
@@ -403,15 +465,33 @@ static int mcux_ccm_get_subsys_rate(const struct device *dev,
 		break;
 #endif
 
-#ifdef CONFIG_COUNTER_MCUX_SYSCTR
-#if defined(CONFIG_SOC_SERIES_IMXRT118X)
+#if (defined(CONFIG_COUNTER_MCUX_SYSCTR) || defined(CONFIG_COUNTER_MCUX_TSTMR)) \
+	&& defined(CONFIG_SOC_SERIES_IMXRT118X)
 	case IMX_CCM_SYSCTR_BASE_CLK:
 		*rate = MHZ(24);
 		return 0;
 	case IMX_CCM_SYSCTR_SLOW_CLK:
+#if defined(CONFIG_COUNTER_MCUX_TSTMR_SYSCTR_BACKEND)
+		/*
+		 * RT1180/RT1189 errata: the SYS_CTR alternate-frequency (slow)
+		 * clock path is unreliable for timestamp reads.  Returning an
+		 * error here forces the misconfiguration to surface at init time
+		 * rather than silently producing inaccurate timestamps.
+		 */
+		return -ENOTSUP;
+#else
 		*rate = 32768U;
 		return 0;
 #endif
+#endif /* CONFIG_COUNTER_MCUX_SYSCTR && CONFIG_SOC_SERIES_IMXRT118X */
+
+#if defined(CONFIG_EQDC_MCUX) && defined(CONFIG_SOC_SERIES_IMXRT118X)
+	case IMX_CCM_ENC1_CLK:
+	case IMX_CCM_ENC2_CLK:
+	case IMX_CCM_ENC3_CLK:
+	case IMX_CCM_ENC4_CLK:
+		clock_root = kCLOCK_Root_Bus_Wakeup;
+		break;
 #endif
 
 	default:

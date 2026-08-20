@@ -67,6 +67,14 @@ if(CONFIG_RISCV_ISA_EXT_ZIFENCEI)
   string(APPEND riscv_march "_zifencei")
 endif()
 
+if(CONFIG_RISCV_ISA_EXT_ZK)
+    string(APPEND riscv_march  "_zk")
+endif()
+
+if(CONFIG_RISCV_ISA_EXT_ZKS)
+    string(APPEND riscv_march "_zks")
+endif()
+
 # Check whether we already imply Zaamo/Zalrsc by selecting the A extension; if not - check them
 # individually and enable them as needed
 if(NOT CONFIG_RISCV_ISA_EXT_A)
@@ -121,8 +129,9 @@ if(CONFIG_RISCV_ISA_EXT_ZBC)
   string(APPEND riscv_march "_zbc")
 endif()
 
-if(CONFIG_RISCV_ISA_EXT_ZBKB)
-  string(CONCAT riscv_march ${riscv_march} "_zbkb")
+if(CONFIG_RISCV_ISA_EXT_ZBKB AND
+   NOT (CONFIG_RISCV_ISA_EXT_ZK OR CONFIG_RISCV_ISA_EXT_ZKS))
+  string(APPEND riscv_march "_zbkb")
 endif()
 
 if(CONFIG_RISCV_ISA_EXT_ZBS)
@@ -175,6 +184,13 @@ if(CONFIG_RISCV_ISA_EXT_XTHEAD_SYNC)
 endif()
 if(CONFIG_RISCV_ISA_EXT_XTHEAD_VECTOR)
   string(APPEND riscv_march "_xtheadvector")
+endif()
+
+if(CONFIG_RISCV_ISA_EXT_SMAIA)
+  string(APPEND riscv_march "_smaia")
+endif()
+if(CONFIG_RISCV_ISA_EXT_SSAIA)
+  string(APPEND riscv_march "_ssaia")
 endif()
 
 if(CONFIG_RISCV_USE_MSAVE_RESTORE)

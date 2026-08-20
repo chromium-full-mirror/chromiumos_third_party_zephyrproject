@@ -7,8 +7,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_GMAP_
-#define ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_GMAP_
+#ifndef ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_GMAP_H_
+#define ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_GMAP_H_
 
 /**
  * @brief Bluetooth Gaming Audio Profile (GMAP)
@@ -163,10 +163,10 @@ struct bt_gmap_feat {
 	enum bt_gmap_bgr_feat bgr_feat;
 };
 
-/** @brief Hearing Access Service Client callback structure. */
+/** @brief Gaming Audio Profile callback structure. */
 struct bt_gmap_cb {
 	/**
-	 * @brief Callback function for bt_has_discover.
+	 * @brief Callback function for bt_gmap_discover().
 	 *
 	 * This callback is called when discovery procedure is complete.
 	 *
@@ -201,6 +201,7 @@ int bt_gmap_cb_register(const struct bt_gmap_cb *cb);
  *
  * @retval -EINVAL if @p conn is NULL
  * @retval -EBUSY if discovery is already in progress for @p conn
+ * @retval -ENOTCONN if @p conn is not connected
  * @retval -ENOEXEC if discovery failed to initiate
  * @retval 0 on success
  */
@@ -244,4 +245,4 @@ int bt_gmap_set_role(enum bt_gmap_role role, struct bt_gmap_feat features);
 #endif
 /** @} */ /* end of bt_gmap */
 
-#endif /* ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_GMAP_ */
+#endif /* ZEPHYR_INCLUDE_BLUETOOTH_AUDIO_GMAP_H_ */

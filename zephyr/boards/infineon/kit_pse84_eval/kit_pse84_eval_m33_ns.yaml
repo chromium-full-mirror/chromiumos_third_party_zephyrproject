@@ -17,3 +17,6 @@ supported:
   - pinctrl
   - bluetooth
   - wifi
+  - flash
+  - dma
+  - spi

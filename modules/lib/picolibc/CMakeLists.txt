@@ -35,7 +35,7 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-project(Picolibc VERSION 1.8.10 LANGUAGES C ASM)
+project(Picolibc VERSION 1.8.12 LANGUAGES C ASM)
 
 # Set a default build type if none was specified
 set(default_build_type "MinSizeRel")
@@ -44,12 +44,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES AND NOT DEFINED ZEPHYR
   message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
   set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
       STRING "Choose the type of build." FORCE)
-endif()
-
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-  message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 endif()
 
 if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "arm64")
@@ -106,6 +100,10 @@ if(NOT DEFINED ENABLE_MALLOC)
   option(ENABLE_MALLOC "provide malloc family of functions based on sbrk" ON)
 endif()
 
+if(NOT DEFINED MALLOC_SMALL_BUCKET)
+  option(MALLOC_SMALL_BUCKET "use fixed bucket sizes for allocations no larger than this" 0)
+endif()
+
 option(POSIX_CONSOLE "Use POSIX I/O for stdin/stdout/stderr" OFF)
 
 # Optimize for space over speed
@@ -119,8 +117,7 @@ if(NOT DEFINED __PREFER_SIZE_OVER_SPEED)
   option(__PREFER_SIZE_OVER_SPEED "Prefer smaller code size" ${default_prefer_size})
 endif()
 
-# Use tiny stdio from gcc avr
-option(__TINY_STDIO "Use tiny stdio from avr libc" ON)
+set(__TINY_STDIO 1)
 
 if(NOT TLS_MODEL)
   set(TLS_MODEL "local-exec")
@@ -169,8 +166,6 @@ if(NOT DEFINED __IO_FLOAT_EXACT)
   option(__IO_FLOAT_EXACT "Provide exact binary/decimal conversion for printf/scanf" ON)
 endif()
 
-set(__PICO_EXIT 1)
-
 if(NOT DEFINED __ASSERT_VERBOSE)
   option(__ASSERT_VERBOSE "Assert provides verbose information" ON)
 endif()
@@ -200,8 +195,6 @@ if(NOT DEFINED __MB_EXTENDED_CHARSETS_JIS)
 endif()
 
 set(__NANO_FORMATTED_IO OFF)
-
-option(__NANO_MALLOC "Use smaller malloc implementation" ON)
 
 set(_GLOBAL_ATEXIT OFF)
 
@@ -247,6 +240,15 @@ endif()
 
 if(NOT DEFINED __IO_DEFAULT)
   set(__IO_DEFAULT d)
+endif()
+
+# Directory prefix and buffer size for tmpnam()/tmpfile() names. tmpdir must be
+# empty or already end with a path separator (it is concatenated with the
+# template, no slash added); __L_tmpnam must hold tmpdir + "TXXXXXX" + NUL.
+if(DEFINED tmpdir)
+  set(__P_tmpdir ${tmpdir})
+  string(LENGTH ${tmpdir} tmpdir_len)
+  math(EXPR __L_tmpnam "${tmpdir_len} + 8")
 endif()
 
 # math library sets errno
@@ -361,7 +363,8 @@ define_property(GLOBAL PROPERTY PICOLIBC_HEADERS
   BRIEF_DOCS "Installed header files"
   FULL_DOCS "These are names of header files which are to be installed.")
 
-add_subdirectory(newlib)
+add_subdirectory(libc)
+add_subdirectory(libm)
 
 install(TARGETS c
   LIBRARY DESTINATION lib
@@ -373,7 +376,7 @@ if(TESTS)
   # This could use some generalization, but it's good enough to do
   # semihosting-based tests
 
-  add_subdirectory(semihost)
+  add_subdirectory(libos)
   add_subdirectory(picocrt)
 
   set(PICOCRT_OBJ $<TARGET_OBJECTS:picocrt>)

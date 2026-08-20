@@ -18,7 +18,7 @@
 
 #include <zephyr/sys/barrier.h>
 
-#ifdef KERNEL
+#ifndef ZTEST_UNITTEST
 static struct k_thread ztest_thread;
 #endif
 static bool failed_expectation;
@@ -64,7 +64,7 @@ enum ztest_status {
 /**
  * @brief Tracks the current phase that ztest is operating in.
  */
-ZTEST_DMEM enum ztest_phase cur_phase = TEST_PHASE_FRAMEWORK;
+static ZTEST_DMEM enum ztest_phase cur_phase = TEST_PHASE_FRAMEWORK;
 
 static ZTEST_BMEM enum ztest_status test_status = ZTEST_STATUS_OK;
 
@@ -97,7 +97,7 @@ static void __ztest_show_suite_summary(void);
 static void end_report(void)
 {
 	__ztest_show_suite_summary();
-	if (test_status) {
+	if (test_status != ZTEST_STATUS_OK) {
 		TC_END_REPORT(TC_FAIL);
 	} else {
 		TC_END_REPORT(TC_PASS);
@@ -111,7 +111,7 @@ static int cleanup_test(struct ztest_unit_test *test)
 
 	mock_status = z_cleanup_mock();
 
-#ifdef KERNEL
+#ifndef ZTEST_UNITTEST
 	/* we need to remove the ztest_thread information from the timeout_q.
 	 * Because we reuse the same k_thread structure this would
 	 * causes some problems.
@@ -128,13 +128,13 @@ static int cleanup_test(struct ztest_unit_test *test)
 		PRINT_DATA("Test %s failed: Unused mock return values\n", test->name);
 		ret = TC_FAIL;
 	} else {
-		;
+		/* No mock failures to report. */
 	}
 
 	return ret;
 }
 
-#ifdef KERNEL
+#ifndef ZTEST_UNITTEST
 
 #if defined(CONFIG_SMP) && (CONFIG_MP_MAX_NUM_CPUS > 1)
 #define MAX_NUM_CPUHOLD  (CONFIG_MP_MAX_NUM_CPUS - 1)
@@ -309,7 +309,10 @@ void z_impl_z_test_1cpu_stop(void)
 
 	for (int i = 0; i <= MAX_NUM_CPUHOLD; i++) {
 		if (cpuhold_pool_items[i].used) {
-			k_thread_abort(&cpuhold_pool_items[i].thread);
+			/* Must join the cpuhold threads before z_test_1cpu_start()
+			 * reuses the thread objects.
+			 */
+			k_thread_join(&cpuhold_pool_items[i].thread, K_FOREVER);
 			cpuhold_pool_items[i].used = false;
 		}
 	}
@@ -339,6 +342,8 @@ __maybe_unused static void run_test_rules(bool is_before, struct ztest_unit_test
 			rule->before_each(test, data);
 		} else if (!is_before && rule->after_each) {
 			rule->after_each(test, data);
+		} else {
+			/* No matching rule callback for this phase. */
 		}
 	}
 }
@@ -346,11 +351,12 @@ __maybe_unused static void run_test_rules(bool is_before, struct ztest_unit_test
 static void run_test_functions(struct ztest_suite_node *suite, struct ztest_unit_test *test,
 			       void *data)
 {
+	ARG_UNUSED(suite);
 	__ztest_set_test_phase(TEST_PHASE_TEST);
 	test->test(data);
 }
 
-COND_CODE_1(KERNEL, (ZTEST_BMEM), ()) static enum ztest_result test_result;
+COND_CODE_1(ZTEST_UNITTEST, (), (ZTEST_BMEM)) static enum ztest_result test_result;
 
 static int get_final_test_result(const struct ztest_unit_test *test, int ret)
 {
@@ -421,7 +427,7 @@ void ztest_skip_failed_assumption(void)
 	}
 }
 
-#ifndef KERNEL
+#ifdef ZTEST_UNITTEST
 
 /* Static code analysis tool can raise a violation that the standard header
  * <setjmp.h> shall not be used.
@@ -569,7 +575,7 @@ out:
 	return ret;
 }
 
-#else /* KERNEL */
+#else /* !ZTEST_UNITTEST */
 
 /* Zephyr's probably going to cause all tests to fail if one test fails, so
  * skip the rest of tests if one of them fails
@@ -580,6 +586,11 @@ out:
 #define FAIL_FAST 0
 #endif
 
+/*
+ * Declared with external linkage (see ztest_test.h) so that tests inspecting
+ * the runner thread's stack (e.g. the userspace memory-protection tests) can
+ * reference it.
+ */
 K_THREAD_STACK_DEFINE(ztest_thread_stack, CONFIG_ZTEST_STACK_SIZE + CONFIG_TEST_EXTRA_STACK_SIZE);
 
 static void test_finalize(void)
@@ -711,19 +722,19 @@ static int run_test(struct ztest_suite_node *suite, struct ztest_unit_test *test
 	 */
 	if (IS_ENABLED(CONFIG_MULTITHREADING)) {
 		get_start_time_cyc();
-		k_thread_create(&ztest_thread, ztest_thread_stack,
+		(void)k_thread_create(&ztest_thread, ztest_thread_stack,
 				K_THREAD_STACK_SIZEOF(ztest_thread_stack), test_cb, suite, test,
 				data, CONFIG_ZTEST_THREAD_PRIORITY, K_INHERIT_PERMS, K_FOREVER);
 
 		k_thread_access_grant(&ztest_thread, suite, test, suite->stats);
 		if (test->name != NULL) {
-			k_thread_name_set(&ztest_thread, test->name);
+			(void)k_thread_name_set(&ztest_thread, test->name);
 		}
 		/* Only start the thread if we're not skipping the suite */
 		if (test_result != ZTEST_RESULT_SUITE_SKIP &&
 		    test_result != ZTEST_RESULT_SUITE_FAIL) {
 			k_thread_start(&ztest_thread);
-			k_thread_join(&ztest_thread, K_FOREVER);
+			(void)k_thread_join(&ztest_thread, K_FOREVER);
 		}
 	} else if (test_result != ZTEST_RESULT_SUITE_SKIP &&
 		   test_result != ZTEST_RESULT_SUITE_FAIL) {
@@ -734,6 +745,8 @@ static int run_test(struct ztest_suite_node *suite, struct ztest_unit_test *test
 			suite->before(data);
 		}
 		run_test_functions(suite, test, data);
+	} else {
+		/* Suite was skipped or failed; no tests to run. */
 	}
 
 	__ztest_set_test_phase(TEST_PHASE_AFTER);
@@ -752,7 +765,7 @@ static int run_test(struct ztest_suite_node *suite, struct ztest_unit_test *test
 	/* Flush all logs in case deferred mode and default logging thread are used. */
 	while (IS_ENABLED(CONFIG_TEST_LOGGING_FLUSH_AFTER_TEST) &&
 	       IS_ENABLED(CONFIG_LOG_PROCESS_THREAD) && log_data_pending()) {
-		k_msleep(100);
+		(void)k_msleep(100);
 	}
 
 	if (test_result == ZTEST_RESULT_FAIL || test_result == ZTEST_RESULT_SUITE_FAIL ||
@@ -761,6 +774,8 @@ static int run_test(struct ztest_suite_node *suite, struct ztest_unit_test *test
 		failed_expectation = false;
 	} else if (test_result == ZTEST_RESULT_SKIP || test_result == ZTEST_RESULT_SUITE_SKIP) {
 		ret = TC_SKIP;
+	} else {
+		/* Result already reflected in ret. */
 	}
 
 	if (test_result == ZTEST_RESULT_PASS || !FAIL_FAST) {
@@ -776,7 +791,7 @@ static int run_test(struct ztest_suite_node *suite, struct ztest_unit_test *test
 	return ret;
 }
 
-#endif /* !KERNEL */
+#endif /* ZTEST_UNITTEST */
 
 static struct ztest_suite_node *ztest_find_test_suite(const char *name)
 {
@@ -947,6 +962,11 @@ static int z_ztest_run_test_suite_ptr(struct ztest_suite_node *suite, bool shuff
 	 */
 	ARG_UNUSED(param);
 
+#ifndef CONFIG_ZTEST_SHUFFLE
+	ARG_UNUSED(shuffle);
+	ARG_UNUSED(suite_iter);
+#endif
+
 	if (FAIL_FAST && test_status != ZTEST_STATUS_OK) {
 		return test_status;
 	}
@@ -956,7 +976,7 @@ static int z_ztest_run_test_suite_ptr(struct ztest_suite_node *suite, bool shuff
 		return -1;
 	}
 
-#ifndef KERNEL
+#ifdef ZTEST_UNITTEST
 	if (setjmp(stack_fail)) {
 		PRINT_DATA("TESTSUITE crashed.\n");
 		test_status = ZTEST_STATUS_CRITICAL_ERROR;
@@ -971,7 +991,7 @@ static int z_ztest_run_test_suite_ptr(struct ztest_suite_node *suite, bool shuff
 	current_test_failed_assumption = false;
 	__ztest_set_test_result(ZTEST_RESULT_PENDING);
 	__ztest_set_test_phase(TEST_PHASE_SETUP);
-#ifndef KERNEL
+#ifdef ZTEST_UNITTEST
 	if (setjmp(test_suite_fail)) {
 		__ztest_set_test_result(ZTEST_RESULT_SUITE_FAIL);
 	}
@@ -1003,7 +1023,8 @@ static int z_ztest_run_test_suite_ptr(struct ztest_suite_node *suite, bool shuff
 			}
 		}
 #else
-		while (((test = z_ztest_get_next_test(suite->name, test)) != NULL)) {
+		for (test = z_ztest_get_next_test(suite->name, NULL); test != NULL;
+		     test = z_ztest_get_next_test(suite->name, test)) {
 			if (ztest_api.should_test_run(suite->name, test->name)) {
 				fail += z_ztest_run_test_dispatch(suite, test, data);
 			}
@@ -1052,7 +1073,8 @@ static void __ztest_show_suite_summary_oneline(struct ztest_suite_node *suite)
 	unsigned int suite_duration_worst_ms = 0;
 
 	/** summary of distinct run  */
-	while (((test = z_ztest_get_next_test(suite->name, test)) != NULL)) {
+	for (test = z_ztest_get_next_test(suite->name, NULL); test != NULL;
+	     test = z_ztest_get_next_test(suite->name, test)) {
 		distinct_total++;
 		suite_duration_worst_ms += test->stats->duration_worst_ms;
 		if (test->stats->skip_count == test->stats->run_count) {
@@ -1068,7 +1090,8 @@ static void __ztest_show_suite_summary_oneline(struct ztest_suite_node *suite)
 
 	if (distinct_skip == distinct_total) {
 		suite_result = TC_SKIP;
-		passrate_major = passrate_minor = 0;
+		passrate_minor = 0;
+		passrate_major = 0;
 	} else {
 		suite_result = (distinct_fail > 0) ? TC_FAIL : TC_PASS;
 		effective_total = distinct_total - distinct_skip;
@@ -1100,7 +1123,8 @@ static void __ztest_show_suite_summary_verbose(struct ztest_suite_node *suite)
 		return;
 	}
 
-	while (((test = z_ztest_get_next_test(suite->name, test)) != NULL)) {
+	for (test = z_ztest_get_next_test(suite->name, NULL); test != NULL;
+	     test = z_ztest_get_next_test(suite->name, test)) {
 		if (test->stats->skip_count == test->stats->run_count) {
 			tc_result = TC_SKIP;
 		} else if (test->stats->pass_count + test->stats->skip_count ==
@@ -1326,7 +1350,7 @@ void __weak test_main(void)
 	ztest_verify_all_test_suites_ran();
 }
 
-#ifndef KERNEL
+#ifdef ZTEST_UNITTEST
 int main(void)
 {
 	z_init_mock();
@@ -1368,8 +1392,8 @@ static int cmd_list_cases(const struct shell *sh, size_t argc, char **argv)
 	int test_count = 0;
 
 	for (ptr = _ztest_suite_node_list_start; ptr < _ztest_suite_node_list_end; ++ptr) {
-		test = NULL;
-		while ((test = z_ztest_get_next_test(ptr->name, test)) != NULL) {
+		for (test = z_ztest_get_next_test(ptr->name, NULL); test != NULL;
+		     test = z_ztest_get_next_test(ptr->name, test)) {
 			shell_print(sh, "%s::%s", test->test_suite_name, test->name);
 			test_count++;
 		}
@@ -1605,7 +1629,7 @@ int main(void)
 		state.boots += 1;
 		if (test_status == 0) {
 			PRINT_DATA("Reset board #%u to test again\n", state.boots);
-			k_msleep(10);
+			(void)k_msleep(10);
 			sys_reboot(SYS_REBOOT_COLD);
 		} else {
 			PRINT_DATA("Failed after %u attempts\n", state.boots);

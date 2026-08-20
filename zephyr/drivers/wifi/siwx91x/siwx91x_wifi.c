@@ -265,7 +265,6 @@ static int siwx91x_send(const struct device *dev, struct net_pkt *pkt)
 		return -EIO;
 	}
 
-	net_pkt_unref(pkt);
 	net_buf_unref(buf);
 
 	return 0;
@@ -337,7 +336,7 @@ static int siwx91x_set_config(const struct device *dev,
 			filter_info.command_type = SL_WIFI_MULTICAST_MAC_CLEAR_BIT;
 		}
 
-		status = sl_wifi_configure_multicast_filter(&filter_info);
+		status = sli_wifi_configure_multicast_filter(&filter_info);
 		if (status != SL_STATUS_OK) {
 			LOG_ERR("Failed to %s multicast filter: 0x%x",
 				config->filter.set ? "add" : "remove", status);

@@ -19,14 +19,14 @@
 #include <zephyr/devicetree.h>
 
 #include "siwx91x_nwp.h"
-#include "nwp_fw_version.h"
-#include "sl_wifi_callback_framework.h"
+#include <nwp_fw_version.h>
+#include <sl_wifi_callback_framework.h>
 
-#include "sl_si91x_ble.h"
+#include <sl_si91x_ble.h>
 #ifdef CONFIG_BT_SILABS_SIWX91X
-#include "rsi_ble_common_config.h"
+#include <rsi_ble_common_config.h>
 #endif
-#include "sl_si91x_power_manager.h"
+#include <sl_si91x_power_manager.h>
 
 #define AP_MAX_NUM_STA 4
 #define SL_SI91X_EXT_FEAT_FRONT_END_MSK (BIT(30) | BIT(29))
@@ -535,20 +535,9 @@ static int siwx91x_nwp_init(const struct device *dev)
 		return -EINVAL;
 	}
 
-	/* WORKAROUND:
-	 * Only set the power profile if Bluetooth is not enabled.
-	 *
-	 * If bt is enabled, we need to wait for the bt setup to complete
-	 * before setting the power profile.
-	 *
-	 * Because of that, if CONFIG_BT_SILABS_SIWX91X is enabled and
-	 * bt_enable() is not called, you will never go in sleep.
-	 */
-	if (!IS_ENABLED(CONFIG_BT_SILABS_SIWX91X)) {
-		ret = siwx91x_nwp_apply_power_profile(dev, NULL);
-		if (ret) {
-			return -EINVAL;
-		}
+	ret = siwx91x_nwp_apply_power_profile(dev, NULL);
+	if (ret) {
+		return -EINVAL;
 	}
 
 	config->config_irq(dev);

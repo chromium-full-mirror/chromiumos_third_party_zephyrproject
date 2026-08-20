@@ -32,7 +32,6 @@
 /* Optimize for space over speed */
 #cmakedefine __PREFER_SIZE_OVER_SPEED
 
-/* Use tiny stdio from gcc avr */
 #cmakedefine __TINY_STDIO
 
 #cmakedefine _ATEXIT_DYNAMIC_ALLOC
@@ -84,6 +83,8 @@
 
 #cmakedefine _LITE_EXIT
 
+#cmakedefine __MALLOC_SMALL_BUCKET
+
 #cmakedefine __MB_CAPABLE
 
 #cmakedefine __MB_EXTENDED_CHARSETS_ALL
@@ -102,8 +103,6 @@
 
 /* The newlib version in string format. */
 #define _NEWLIB_VERSION "@NEWLIB_VERSION@"
-
-#cmakedefine __PICO_EXIT
 
 /* The Picolibc minor version number. */
 #define _PICOLIBC_MINOR__ @PROJECT_VERSION_MINOR@
@@ -131,6 +130,12 @@
 #cmakedefine __IO_POS_ARGS
 
 #define __IO_DEFAULT '@__IO_DEFAULT@'
+
+/* Size of the tmpnam() buffer (L_tmpnam) */
+#cmakedefine __L_tmpnam @__L_tmpnam@
+
+/* Directory prefix for tmpnam()/tmpfile() names (P_tmpdir) */
+#cmakedefine __P_tmpdir "@__P_tmpdir@"
 
 /* math library sets errno */
 #cmakedefine __MATH_ERRNO

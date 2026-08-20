@@ -32,7 +32,7 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/sys/util_macro.h>
 #include <zephyr/sys/util_utf8.h>
-#include <zephyr/sys_clock.h>
+#include <zephyr/sys/clock.h>
 #include <zephyr/toolchain.h>
 
 #include "../bluetooth/host/settings.h"
@@ -373,6 +373,10 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 	client = client_alloc(conn);
 	if (unlikely(!client)) {
 		LOG_ERR("Failed to allocate client");
+		return;
+	}
+
+	if (!has.registered) {
 		return;
 	}
 

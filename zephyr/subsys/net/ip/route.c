@@ -44,6 +44,8 @@ LOG_MODULE_DECLARE(net_route, ROUTE_LOG_LEVEL);
 #include <zephyr/net/virtual.h>
 
 #include "route.h"
+#include "route_ipv4.h"
+#include "route_ipv6.h"
 
 static size_t route_addr_len(net_sa_family_t family)
 {
@@ -595,12 +597,31 @@ int net_route_packet_if(struct net_pkt *pkt, struct net_if *iface)
 
 	net_pkt_set_forwarding(pkt, forwarding);
 
+	if (forwarding) {
+		int ret = 0;
+
+		if (IS_ENABLED(CONFIG_NET_IPV4_FORWARDING) &&
+		    net_pkt_family(pkt) == NET_PF_INET) {
+			ret = net_route_ipv4_decrement_ttl(pkt);
+		} else if (IS_ENABLED(CONFIG_NET_IPV6_FORWARDING) &&
+			   net_pkt_family(pkt) == NET_PF_INET6) {
+			ret = net_route_ipv6_decrement_hop_limit(pkt);
+		}
+
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
 	if (net_route_ll_addr_supported(iface)) {
-		memcpy(net_pkt_lladdr_src(pkt)->addr,
-		       net_pkt_lladdr_if(pkt)->addr,
-		       net_pkt_lladdr_if(pkt)->len);
-		net_pkt_lladdr_src(pkt)->type = net_pkt_lladdr_if(pkt)->type;
-		net_pkt_lladdr_src(pkt)->len = net_pkt_lladdr_if(pkt)->len;
+		struct net_linkaddr *lladdr_if = net_pkt_lladdr_if(pkt);
+
+		NET_ASSERT(lladdr_if != NULL);
+
+		memcpy(net_pkt_lladdr_src(pkt)->addr, lladdr_if->addr,
+		       lladdr_if->len);
+		net_pkt_lladdr_src(pkt)->type = lladdr_if->type;
+		net_pkt_lladdr_src(pkt)->len = lladdr_if->len;
 	}
 
 	return net_send_data(pkt);

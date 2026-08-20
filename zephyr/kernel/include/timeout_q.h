@@ -22,11 +22,57 @@ extern "C" {
 
 #ifdef CONFIG_SYS_CLOCK_EXISTS
 
+/*
+ * Per-node timeout helpers (Kconfig choice TIMEOUT_BACKEND).
+ *
+ * z_init_timeout() and z_is_inactive_timeout() operate on a single
+ * struct _timeout and are needed tree-wide (timer.c, work.c, poll.c, ...),
+ * so they live here and depend only on the chosen backend's struct _timeout
+ * fields (see kernel_structs.h). The queue itself (the z_timeout_q_*()
+ * operations and the backend instance) is private to kernel/timeout.c, which
+ * includes the matching backend implementation header directly.
+ */
+#if defined(CONFIG_TIMEOUT_BACKEND_MINHEAP)
+
+static inline void z_init_timeout(struct _timeout *to)
+{
+	to->heap_handle.idx = 0U;
+	to->abs_ticks = 0;
+}
+
+static inline bool z_is_inactive_timeout(const struct _timeout *to)
+{
+	return to->heap_handle.idx == 0U;
+}
+
+#elif defined(CONFIG_TIMEOUT_BACKEND_WHEEL)
+
+static inline void z_init_timeout(struct _timeout *to)
+{
+	sys_dnode_init(&to->node);
+	to->flags = 0U;
+	to->dticks = 0;
+}
+
+static inline bool z_is_inactive_timeout(const struct _timeout *to)
+{
+	return !sys_dnode_is_linked(&to->node);
+}
+
+#else /* CONFIG_TIMEOUT_BACKEND_DLIST or _BUCKET */
+
 static inline void z_init_timeout(struct _timeout *to)
 {
 	sys_dnode_init(&to->node);
 	to->dticks = 0;
 }
+
+static inline bool z_is_inactive_timeout(const struct _timeout *to)
+{
+	return !sys_dnode_is_linked(&to->node);
+}
+
+#endif
 
 /* Adds the timeout to the queue.
  *
@@ -62,11 +108,6 @@ int z_try_abort_timeout(struct _timeout *to);
  */
 bool z_timeout_inflight_superseded(const struct _timeout *to);
 
-static inline bool z_is_inactive_timeout(const struct _timeout *to)
-{
-	return !sys_dnode_is_linked(&to->node);
-}
-
 static inline void z_init_thread_timeout(struct _thread_base *thread_base)
 {
 	z_init_timeout(&thread_base->timeout);
@@ -84,7 +125,7 @@ static inline int z_try_abort_thread_timeout(struct k_thread *thread)
 	return z_try_abort_timeout(&thread->base.timeout);
 }
 
-int32_t z_get_next_timeout_expiry(void);
+uint32_t z_get_next_timeout_expiry(void);
 
 k_ticks_t z_timeout_remaining(const struct _timeout *timeout);
 
@@ -94,7 +135,7 @@ k_ticks_t z_timeout_remaining(const struct _timeout *timeout);
 #define z_init_thread_timeout(thread_base) do {} while (false)
 #define z_try_abort_thread_timeout(to) 0
 #define z_is_inactive_timeout(to) 1
-#define z_get_next_timeout_expiry() ((int32_t) K_TICKS_FOREVER)
+#define z_get_next_timeout_expiry() ((uint32_t) K_TICKS_FOREVER)
 #define z_set_timeout_expiry(ticks, is_idle) do {} while (false)
 
 static inline k_ticks_t z_add_thread_timeout(struct k_thread *thread, k_timeout_t ticks)

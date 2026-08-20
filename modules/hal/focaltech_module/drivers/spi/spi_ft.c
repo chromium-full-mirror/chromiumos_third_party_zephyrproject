@@ -48,7 +48,7 @@ static void spi_ft_complete(const struct device *dev, int status);
 
 static int spi_ft_init(const struct device *dev)
 {
-	const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(rcc));
+	const struct device *clk = DEVICE_DT_GET(DT_NODELABEL(cpm));
 	const struct spi_ft_config *cfg = dev->config;
 	struct spi_ft_data *data = dev->data;
 	//struct pinctrl_dev_config *pcfg;

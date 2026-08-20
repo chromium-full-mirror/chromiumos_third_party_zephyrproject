@@ -20,6 +20,10 @@ wheel: <
   version: "version:0.4.1"
 >
 wheel: <
+  name: "infra/python/wheels/colorlog-py2_py3"
+  version: "version:6.10.1"
+>
+wheel: <
   name: "infra/python/wheels/docopt-py2_py3"
   version: "version:0.6.2"
 >
@@ -126,4 +130,12 @@ wheel: <
 wheel: <
   name: "infra/python/wheels/west-py3"
   version: "version:1.1.0"
+>
+wheel: <
+  name: "infra/python/wheels/protobuf-py3"
+  version: "version:4.21.9"
+>
+wheel: <
+  name: "infra/python/wheels/pyusb-py3"
+  version: "version:1.2.1"
 >

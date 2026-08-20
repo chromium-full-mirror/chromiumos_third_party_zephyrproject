@@ -6,11 +6,8 @@
 
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
-#include <zephyr/init.h>
-#include <string.h>
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/pm/device.h>
-#include <zephyr/pm/device_runtime.h>
 #include <zephyr/pm/pm.h>
 #include <zephyr/pm/state.h>
 #include <zephyr/pm/policy.h>
@@ -204,20 +201,20 @@ bool pm_system_suspend(int32_t kernel_ticks)
 #endif
 
 	exit_latency_ticks = EXIT_LATENCY_US_TO_TICKS(z_cpus_pm_state[id]->exit_latency_us);
-	if ((exit_latency_ticks > 0) && (ticks != K_TICKS_FOREVER)) {
-		/*
-		 * We need to set the timer to interrupt a little bit early to
-		 * accommodate the time required by the CPU to fully wake up.
-		 *
-		 * Since K_TICKS_FOREVER is defined as -1, ensure that -1
-		 * is not passed as the next timeout.
-		 *
-		 */
-		k_spinlock_key_t key = sys_clock_lock();
 
-		sys_clock_set_timeout(MAX(0, (int64_t)ticks - (int64_t)exit_latency_ticks), true);
-		sys_clock_unlock(key);
-	}
+	/*
+	 * Nothing to wake up for is handed over as SYS_CLOCK_IDLE_FOREVER, so a
+	 * driver able to stop its clock outright can do so; recovery is
+	 * sys_clock_idle_exit(). A real deadline is brought forward to
+	 * accommodate the time the CPU needs to fully wake up.
+	 */
+	uint32_t idle_ticks = (ticks == K_TICKS_FOREVER)
+		? SYS_CLOCK_IDLE_FOREVER
+		: (uint32_t)MAX(0, (int64_t)ticks - (int64_t)exit_latency_ticks);
+
+	key = sys_clock_lock();
+	sys_clock_idle_enter(idle_ticks);
+	sys_clock_unlock(key);
 
 	/*
 	 * This function runs with interrupts locked. If a power state is
@@ -237,7 +234,7 @@ bool pm_system_suspend(int32_t kernel_ticks)
 	pm_state_notify(true);
 	atomic_set_bit(z_post_ops_required, id);
 	/* IRQ-locked PM resume is owned by this PM core path, not by wake ISRs. */
-	if (IS_ENABLED(CONFIG_PM_STATE_SET_IRQ_LOCKED)) {
+	if (!IS_ENABLED(CONFIG_PM_STATE_SET_IRQ_UNLOCKED)) {
 		_kernel.idle = 0;
 	}
 	pm_state_set(z_cpus_pm_state[id]->state, z_cpus_pm_state[id]->substate_id);
