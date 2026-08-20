@@ -88,9 +88,19 @@ Removed APIs and options
       those work items now run in the Bluetooth RX thread. See the migration
       guide for affected callback families.
 
+    * The ``CONFIG_BT_HCI_RAW_H4`` and ``CONFIG_BT_HCI_RAW_H4_ENABLE`` Kconfig
+      options have been removed. They have had no effect since Zephyr 4.2,
+      where the HCI raw layer switched to using H:4 packet encoding for all
+      buffers unconditionally. Applications still setting these options can
+      simply drop them.
+
 * Counter
 
     * ``CONFIG_COUNTER_MAXIM_DS3231``
+
+* LLEXT
+
+    * ``llext_get_fn_table``, replaced by ``llext_get_fn_table_entry``
 
 * Networking
 
@@ -209,6 +219,17 @@ New APIs and options
 
 .. zephyr-keep-sorted-start re(^\* \w) ignorecase
 
+* ADC
+
+  * Optional :c:member:`adc_driver_api.ref_get` callback and
+    :c:func:`adc_ref_get` so applications and
+    :c:func:`adc_raw_to_millivolts_dt` can use a driver-owned runtime
+    millivolt scale for any :c:enum:`adc_reference`. Static
+    :c:member:`adc_driver_api.ref_internal` remains the fallback for
+    :c:enumerator:`ADC_REF_INTERNAL` when the callback is NULL.
+    :c:func:`adc_raw_to_millivolts_dt` falls back to channel DT
+    ``zephyr,vref-mv`` when :c:func:`adc_ref_get` fails.
+
 * Architectures
 
   * :kconfig:option:`CONFIG_ARM_MPU_CM7_UNMAPPED_REGION` (Arm Cortex-M7 catch-all MPU region
@@ -238,12 +259,15 @@ New APIs and options
     * :c:member:`bt_le_adv_param.tx_power` and :c:enumerator:`BT_LE_ADV_OPT_TX_POWER`
       to request a specific TX power level per extended advertising set.
     * :c:member:`bt_conn_cb.le_param_update_rejected`
+    * ``BT_HCI_QUIRK_NO_FLOW_CONTROL`` HCI device quirk for controllers that
+      advertise but reject the controller to host flow control commands.
 
   * Mesh
 
     * :c:struct:`bt_mesh_lpn_timing`
     * :c:func:`bt_mesh_stat_lpn_timing_get`
     * :c:func:`bt_mesh_stat_lpn_timing_reset`
+    * :kconfig:option:`CONFIG_BT_MESH_LPN_OFFER_WAIT_TIMEOUT`
 
 * Crypto
 
@@ -301,6 +325,16 @@ New APIs and options
     * Added support for SPI MCUmgr SMP transport, which can be enabled with
       :kconfig:option:`CONFIG_MCUMGR_TRANSPORT_SPI`.
 
+    * Added experimental :ref:`transport management group<mcumgr_smp_group_11>`:
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT`,
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_LOCKING`,
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_MAX_BRIDGES`,
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_GROUP_ID_DEFAULT`,
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_GROUP_ID_CUSTOM_VALUE`,
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_GROUP_ID_CUSTOM_VALUE_GROUP_ID`,
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_GROUP_ID_CUSTOM_FUNCTION` and
+      :kconfig:option:`CONFIG_MCUMGR_GRP_TRANSPORT_INFO_FUNCTIONS`.
+
 * Network
 
   * Add :c:func:`net_eth_set_if_type_wifi` to set the ethernet interface type to Wi-Fi.
@@ -326,6 +360,41 @@ New APIs and options
   * Add requesting router support to the DHCPv6 client, a delegated prefix can
     be sub-delegated onto downstream links via
     :c:member:`net_dhcpv6_params.downstream_ifaces`.
+  * Add :c:func:`net_eth_mcast_addr_add`, :c:func:`net_eth_mcast_addr_rm` and
+    :c:func:`net_eth_mcast_addr_foreach`. The Ethernet L2 now keeps track of the
+    link layer multicast addresses that an interface listens to, so an Ethernet
+    driver is asked to change its receive filter only when a group is joined by
+    its first user or left by its last one. Previously the IP level joins and
+    the packet socket memberships were forwarded to the driver separately, and
+    leaving one group could stop the device from listening to another group that
+    needs the same link layer address. This happens easily as IPv4 multicast
+    addresses map 32:1 to link layer addresses. A driver can also treat
+    ``ETHERNET_CONFIG_TYPE_FILTER`` as a hint that the addresses changed and
+    reprogram its filter by iterating them with
+    :c:func:`net_eth_mcast_addr_foreach`, which suits devices that filter by a
+    hash of the address. How many addresses an interface can track is the sum
+    of what the enabled subsystems ask for, and
+    :kconfig:option:`CONFIG_NET_L2_ETHERNET_MCAST_FILTER_COUNT` can raise it if
+    an application needs more. A multicast destination
+    address given to :c:func:`net_eth_mac_filter` or to
+    ``NET_REQUEST_ETHERNET_SET_MAC_FILTER`` is counted the same way, so each
+    such filter that an application sets must now also be unset by it, and
+    unsetting one that was never set fails with ``-ENOENT``.
+  * Add ``ZSOCK_PACKET_ADD_MEMBERSHIP`` and ``ZSOCK_PACKET_DROP_MEMBERSHIP``
+    socket options at the ``ZSOCK_SOL_PACKET`` level
+    (:kconfig:option:`CONFIG_NET_SOCKETS_PACKET_MCAST_MEMBERSHIP`), so that a
+    packet socket can ask the network interface to start or stop listening to
+    an extra L2 multicast address. On Ethernet the address is programmed to the
+    receive filter of the device if it supports filtering, and a device that
+    does not filter passes the group up anyway. A join that the interface
+    cannot serve is reported to the application, ``ENOMEM`` if the interface
+    cannot track another address and ``ENOTSUP`` if it is not an Ethernet
+    interface. The membership changes are reported by the
+    :c:macro:`NET_EVENT_PACKET_MCAST_MEMBERSHIP_ADD` and
+    :c:macro:`NET_EVENT_PACKET_MCAST_MEMBERSHIP_DROP` network management events.
+    Memberships still held when the socket is closed are dropped automatically,
+    and :kconfig:option:`CONFIG_NET_SOCKETS_PACKET_MCAST_MEMBERSHIP_COUNT` sets
+    how many memberships can be active at the same time.
 
 * Power Management
 
@@ -453,6 +522,10 @@ Libraries / Subsystems
   * TF-PSA-Crypto was updated to version 1.1.1. Release notes can be found
     `here <https://github.com/Mbed-TLS/TF-PSA-Crypto/releases/tag/tf-psa-crypto-1.1.1>`_.
 
+  * Added :kconfig:option:`CONFIG_TF_PSA_CRYPTO_DISPATCH_DIR`, which enables TF-PSA-Crypto to use
+    custom implementations of crypto operation dispatch. This makes hardware acceleration of
+    cryptographic operations possible by using an accelerator-aware dispatch implementation.
+
 * TF-M
 
   * TF-M was updated from version 2.2.2 to version 2.3.0. Release notes can be
@@ -566,6 +639,26 @@ Other notable changes
     (``lpc11u6x/``, ``lpc51u68/``, ``lpc54xxx/``, ``lpc55xxx/``, ``lpc84x/``).
     See the :ref:`migration guide <migration_4.5>` for how to update out-of-tree
     board includes.
+
+  * The NXP Kinetis DTSI files have been reorganized from the flat
+    ``dts/arm/nxp/kinetis/`` directory into per-series subdirectories
+    (``k2x/``, ``k32lx/``, ``k6x/``, ``k8x/``, ``ke1xf/``, ``ke1xz/``,
+    ``kl2x/``, ``kv5x/``, ``kwx/``).
+    See the :ref:`migration guide <migration_4.5>` for how to update
+    out-of-tree board includes.
+
+  * The NXP MCX DTSI files have been reorganized from the flat
+    ``dts/arm/nxp/mcx/`` directory into per-series subdirectories
+    (``mcxa/``, ``mcxc/``, ``mcxe/``, ``mcxl/``, ``mcxn/``, ``mcxw/``).
+    See the :ref:`migration guide <migration_4.5>` for how to update
+    out-of-tree board includes.
+
+  * The NXP i.MX RT DTSI files have been reorganized from the flat
+    ``dts/arm/nxp/imxrt/`` directory into per-series subdirectories
+    (``imxrt10xx/``, ``imxrt11xx/``, ``imxrt5xx/``, ``imxrt6xx/``,
+    ``imxrt7xx/``, ``imxrt118x/``).
+    See the :ref:`migration guide <migration_4.5>` for how to update
+    out-of-tree board includes.
 
 * Arm
 

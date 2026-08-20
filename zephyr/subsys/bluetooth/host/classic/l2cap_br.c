@@ -788,7 +788,9 @@ static void l2cap_br_ret_timeout(struct k_work *work)
 	uint16_t expected_ack_seq;
 
 	if (!br_chan->chan.conn || br_chan->chan.conn->state != BT_CONN_CONNECTED) {
-		/* ACL connection is broken. */
+		/* The ACL connection may have been disconnected while this
+		 * work item was pending. Nothing to do in that case.
+		 */
 		return;
 	}
 
@@ -852,7 +854,9 @@ static void l2cap_br_monitor_timeout(struct k_work *work)
 	struct bt_l2cap_br_chan *br_chan = BR_CHAN_MONITOR(work);
 
 	if (!br_chan->chan.conn || br_chan->chan.conn->state != BT_CONN_CONNECTED) {
-		/* ACL connection is broken. */
+		/* The ACL connection may have been disconnected while this
+		 * work item was pending. Nothing to do in that case.
+		 */
 		return;
 	}
 
@@ -2856,7 +2860,16 @@ static void l2cap_br_conn_req(struct bt_l2cap_br *l2cap, uint8_t ident,
 	br_chan->required_sec_level = server->sec_level;
 	br_chan->psm = psm;
 
-	l2cap_br_chan_add(conn, chan, l2cap_br_chan_destroy);
+	if (!l2cap_br_chan_add(conn, chan, l2cap_br_chan_destroy)) {
+		/* Give the channel the server just accepted back to it,
+		 * following the normal channel lifecycle so that the server
+		 * knows the channel object is no longer in use.
+		 */
+		bt_l2cap_br_chan_del(chan);
+		result = BT_L2CAP_BR_ERR_NO_RESOURCES;
+		goto no_chan;
+	}
+
 	BR_CHAN(chan)->tx.cid = scid;
 	br_chan->ident = ident;
 	bt_l2cap_br_chan_set_state(chan, BT_L2CAP_CONNECTING);

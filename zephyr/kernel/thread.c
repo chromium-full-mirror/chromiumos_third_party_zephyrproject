@@ -898,6 +898,12 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 	z_init_thread_base(&new_thread->base, prio, _THREAD_SLEEPING, options);
 	stack_ptr = setup_thread_stack(new_thread, stack, stack_size);
 
+#if Z_MUTEX_PI_ENABLED
+	sys_slist_init(&new_thread->held_mutexes);
+	new_thread->mutex_pended_on = NULL;
+	new_thread->orig_prio = new_thread->base.prio;
+#endif /* Z_MUTEX_PI_ENABLED */
+
 	setup_shadow_stack(new_thread, stack);
 	assert_thread_coherence(new_thread, stack);
 
@@ -1004,9 +1010,7 @@ k_tid_t z_impl_k_thread_create(struct k_thread *new_thread,
 	z_setup_new_thread(new_thread, stack, stack_size, entry, p1, p2, p3,
 			  prio, options, NULL);
 
-	if (!K_TIMEOUT_EQ(delay, K_FOREVER)) {
-		thread_schedule_new(new_thread, delay);
-	}
+	thread_schedule_new(new_thread, delay);
 
 	return new_thread;
 }
@@ -1075,9 +1079,7 @@ k_tid_t z_vrfy_k_thread_create(struct k_thread *new_thread,
 	z_setup_new_thread(new_thread, stack, stack_size,
 			   entry, p1, p2, p3, prio, options, NULL);
 
-	if (!K_TIMEOUT_EQ(delay, K_FOREVER)) {
-		thread_schedule_new(new_thread, delay);
-	}
+	thread_schedule_new(new_thread, delay);
 
 	return new_thread;
 }
@@ -1431,13 +1433,13 @@ int k_thread_runtime_stats_cpu_get(int cpu, k_thread_runtime_stats_t *stats)
 	*stats = (k_thread_runtime_stats_t) {};
 
 #ifdef CONFIG_SCHED_THREAD_USAGE_ALL
-#ifdef CONFIG_SMP
+	CHECKIF((cpu < 0) || ((unsigned int)cpu >= arch_num_cpus())) {
+		return -EINVAL;
+	}
+
 	z_sched_cpu_usage(cpu, stats);
 #else
-	__ASSERT(cpu == 0, "cpu filter out of bounds");
 	ARG_UNUSED(cpu);
-	z_sched_cpu_usage(0, stats);
-#endif
 #endif
 
 	return 0;
@@ -1560,6 +1562,11 @@ void z_dummy_thread_init(struct k_thread *dummy_thread)
 	dummy_thread->base.cpu_mask = -1;
 #endif /* CONFIG_SCHED_CPU_MASK */
 	dummy_thread->base.user_options = K_ESSENTIAL;
+#if Z_MUTEX_PI_ENABLED
+	sys_slist_init(&dummy_thread->held_mutexes);
+	dummy_thread->mutex_pended_on = NULL;
+	dummy_thread->orig_prio = dummy_thread->base.prio;
+#endif /* Z_MUTEX_PI_ENABLED */
 #ifdef CONFIG_THREAD_STACK_INFO
 	dummy_thread->stack_info.start = 0U;
 	dummy_thread->stack_info.size = 0U;

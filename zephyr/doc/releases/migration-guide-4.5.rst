@@ -104,6 +104,8 @@ Boards
     :kconfig:option:`CONFIG_SOC_SERIES_NRF54L` or
     :kconfig:option:`CONFIG_SOC_SERIES_NRF71`.
 
+* Aesc Silicon ``elemrv`` board is renamed to ``elemrv_flask_n``.
+
 * The Nordic sysbuild Kconfig option ``SB_CONFIG_NRF_HALTIUM_GENERATE_UICR``
   has been renamed to :kconfig:option:`SB_CONFIG_NRF_GENERATE_UICR`.
   Update sysbuild configurations to use the new name.
@@ -166,6 +168,13 @@ Boards
 
 * Boards must now select :kconfig:option:`CONFIG_TFM_PARTITION_FIRMWARE_UPDATE_SUPPORTED` if they
   support firmware update via TF-M.
+
+* :kconfig:option:`CONFIG_SPI_STM32_INTERRUPT` default activation is removed from STM32 based boards
+  that used to do it.
+  Choosing interrupt-driven vs polling SPI transfers is an application concern, not a board one.
+  Applications that rely on interrupt-driven SPI (for example to use :c:func:`spi_transceive_signal`
+  or :c:func:`spi_transceive_cb` without DMA) on an affected board must now explicitly enable
+  :kconfig:option:`CONFIG_SPI_STM32_INTERRUPT` in their own configuration. (:github:`116218`)
 
 Device Drivers and Devicetree
 *****************************
@@ -290,6 +299,11 @@ Display
   range 0-255, instead of 0-63. The driver now scales the value to the 6-bit range expected by the
   controller. The ``CONFIG_ST7567_DEFAULT_CONTRAST`` Kconfig option has been updated to reflect the
   new range. (:github:`112528`)
+
+* :dtcompatible:`raspberrypi,bcm2711-framebuffer` now requires a ``pixel-format``
+  property and gains an optional ``red-blue-swap`` boolean to indicate the panel expects
+  BGR channel order. Boards relying on firmware-negotiated pixel order to correct swapped
+  channels must also set ``red-blue-swap``. (:github:`115633`)
 
 DMA
 ===
@@ -416,6 +430,20 @@ Ethernet
 * The compatibles ``espressif,esp32-mdio``, ``infineon,xmc4xxx-mdio``, ``nxp,enet-qos-mdio``,
   ``nxp,s32-gmac-mdio``, ``st,stm32-mdio`` and ``wch,mdio`` have been replaced by
   :dtcompatible:`snps,dwmac-mdio`. (:github:`114899`)
+
+* The NXP ENET-QOS Ethernet controller (:dtcompatible:`nxp,enet-qos`) devicetree structure has been
+  flattened to match other similar controllers. The clocks, interrupts, ``pinctrl-0``,
+  ``pinctrl-names``, ``phy-handle`` and MAC address properties now live directly on the parent
+  ``nxp,enet-qos`` node instead of a separate child MAC node. The ``nxp,enet-qos-mac`` compatible
+  and its ``enet_mac`` node have been removed and the :dtcompatible:`nxp,enet-qos-mdio` and
+  :dtcompatible:`nxp,enet-qos-ptp-clock` nodes are now direct children of the controller node. The
+  PTP reference clock has moved onto the parent node's ``clocks`` property using the ``ptp``
+  ``clock-names`` entry. Out-of-tree boards using this controller must move the properties from the
+  old ``enet_mac`` node up to the ``enet`` node. (:github:`115952`)
+
+* The Kconfig option ``CONFIG_ETH_NXP_ENET_QOS_MAC_UNIQUE_MAC_ADDRESS`` has been renamed to
+  :kconfig:option:`CONFIG_ETH_NXP_ENET_QOS_UNIQUE_MAC_ADDRESS`. Configurations setting the old
+  name must be updated to use the new one. (:github:`115952`)
 
 Flash
 =====
@@ -608,34 +636,6 @@ NXP
   ``zephyr,system-timer`` chosen property, so boards that added the overlay
   described in the Zephyr 4.4 migration guide can remove it.
 
-* The i.MX RT118x series DTSI files were moved from ``dts/arm/nxp/imxrt/`` into
-  the series-specific subdirectory ``dts/arm/nxp/imxrt/rt118x/``, and boards now
-  include a single part-core composer file ``nxp_rt118<part>_cm<core>.dtsi``
-  instead of the series-core file plus a separate part overlay. Out-of-tree
-  boards must update their devicetree includes accordingly (:github:`110228`).
-
-  Example for a part that previously needed the series file plus a part
-  overlay:
-
-  .. code-block:: dts
-
-    /* Before */
-    #include <nxp/imxrt/nxp_rt118x_cm7.dtsi>
-    #include <nxp/imxrt/nxp_rt1186.dtsi>
-
-    /* After */
-    #include <nxp/imxrt/rt118x/nxp_rt1186_cm7.dtsi>
-
-  Example for a part that previously used the series file directly:
-
-  .. code-block:: dts
-
-    /* Before */
-    #include <nxp/imxrt/nxp_rt118x_cm33.dtsi>
-
-    /* After */
-    #include <nxp/imxrt/rt118x/nxp_rt1189_cm33.dtsi>
-
 * The NXP LPC DTSI files were reorganized from the flat directory
   ``dts/arm/nxp/lpc/`` into per-series subdirectories. Out-of-tree boards that
   include these files directly must update their includes.
@@ -661,6 +661,107 @@ NXP
 
     /* After */
     #include <nxp/lpc/lpc55xxx/nxp_lpc55S6x.dtsi>
+
+* The NXP Kinetis DTSI files were reorganized from the flat directory
+  ``dts/arm/nxp/kinetis/`` into per-series subdirectories. Out-of-tree
+  boards that include these files directly must update their includes.
+
+  The new subdirectory layout is:
+
+  ========================  ========================================
+  Kinetis series            New location
+  ========================  ========================================
+  K2X                       ``dts/arm/nxp/kinetis/k2x/``
+  K32Lx                     ``dts/arm/nxp/kinetis/k32lx/``
+  K6X                       ``dts/arm/nxp/kinetis/k6x/``
+  K8X                       ``dts/arm/nxp/kinetis/k8x/``
+  KE1xF                     ``dts/arm/nxp/kinetis/ke1xf/``
+  KE1xZ                     ``dts/arm/nxp/kinetis/ke1xz/``
+  KL2X                      ``dts/arm/nxp/kinetis/kl2x/``
+  KV5X                      ``dts/arm/nxp/kinetis/kv5x/``
+  KWX                       ``dts/arm/nxp/kinetis/kwx/``
+  ========================  ========================================
+
+  Example:
+
+  .. code-block:: dts
+
+    /* Before */
+    #include <nxp/kinetis/nxp_k66.dtsi>
+
+    /* After */
+    #include <nxp/kinetis/k6x/nxp_k66.dtsi>
+
+* The NXP MCX DTSI files were reorganized from the flat directory
+  ``dts/arm/nxp/mcx/`` into per-series subdirectories. Out-of-tree boards
+  that include these files directly must update their includes.
+
+  The new subdirectory layout is:
+
+  ========================  ========================================
+  MCX series                New location
+  ========================  ========================================
+  MCXA                      ``dts/arm/nxp/mcx/mcxa/``
+  MCXC                      ``dts/arm/nxp/mcx/mcxc/``
+  MCXE                      ``dts/arm/nxp/mcx/mcxe/``
+  MCXL                      ``dts/arm/nxp/mcx/mcxl/``
+  MCXN                      ``dts/arm/nxp/mcx/mcxn/``
+  MCXW                      ``dts/arm/nxp/mcx/mcxw/``
+  ========================  ========================================
+
+  Example:
+
+  .. code-block:: dts
+
+    /* Before */
+    #include <nxp/mcx/nxp_mcxc242.dtsi>
+
+    /* After */
+    #include <nxp/mcx/mcxc/nxp_mcxc242.dtsi>
+
+* The NXP i.MX RT DTSI files were reorganized from the flat directory
+  ``dts/arm/nxp/imxrt/`` into per-series subdirectories, Out-of-tree
+  boards that include these files directly must update their includes.
+
+  The new subdirectory layout is:
+
+  ========================  ========================================
+  i.MX RT series            New location
+  ========================  ========================================
+  RT10xx                    ``dts/arm/nxp/imxrt/imxrt10xx/``
+  RT11xx                    ``dts/arm/nxp/imxrt/imxrt11xx/``
+  RT5xx                     ``dts/arm/nxp/imxrt/imxrt5xx/``
+  RT6xx                     ``dts/arm/nxp/imxrt/imxrt6xx/``
+  RT7xx                     ``dts/arm/nxp/imxrt/imxrt7xx/``
+  RT118x                    ``dts/arm/nxp/imxrt/imxrt118x/``
+  ========================  ========================================
+
+  Example:
+
+  .. code-block:: dts
+
+    /* Before */
+    #include <nxp/imxrt/nxp_rt1060.dtsi>
+
+    /* After */
+    #include <nxp/imxrt/imxrt10xx/nxp_rt1060.dtsi>
+
+* The i.MX RT118x boards now include a single part-core composer file
+  ``nxp_rt118<part>_cm<core>.dtsi`` instead of the series-core file plus
+  a separate part overlay. Out-of-tree boards must update their devicetree
+  includes accordingly (:github:`110228`).
+
+  Example for a part that previously needed the series file plus a part
+  overlay:
+
+  .. code-block:: dts
+
+    /* Before */
+    #include <nxp/imxrt/nxp_rt118x_cm7.dtsi>
+    #include <nxp/imxrt/nxp_rt1186.dtsi>
+
+    /* After */
+    #include <nxp/imxrt/imxrt118x/nxp_rt1186_cm7.dtsi>
 
 PWM
 ===
@@ -892,6 +993,16 @@ Syscon
   larger register offsets. Code that explicitly declares ``uint16_t`` variables for the
   register parameter or implements the syscon driver API functions may need to be updated.
 
+Texas Instruments
+=================
+
+* Using a :dtcompatible:`ti,am654-timer` instance as system timer now requires
+  the explicit selection via the :ref:`generic chosen
+  <devicetree-zephyr-chosen-nodes>` ``zephyr,system-timer`` node, which is
+  provided for all SoCs that are using it. Downstream boards and applications
+  that want to use another instance than the SoC default one need to overwrite
+  this. (:github:`115068`)
+
 Timer
 =====
 
@@ -1099,6 +1210,9 @@ Bluetooth Audio
     :zephyr:code-sample:`bluetooth_cap_handover` and
     :zephyr:code-sample:`bluetooth_cap_initiator` have been moved from
     ``samples/bluetooth/`` to ``samples/bluetooth/audio``.
+  * :c:func:`bt_cap_initiator_unicast_audio_update` now rejects the API call if it would result in
+    no changed states (i.e. the metadata in the parameters are identical to the metadata the server
+    have reported to us), and will return ``-EALREADY``.
 
 * CCP
 
@@ -1151,7 +1265,7 @@ Bluetooth Audio
 * VOCS
 
   * The VOCS client now requires automatic CCC (Client Characteristic Configuration) discovery.
-    :kconfig:option:`BT_VOCS_CLIENT` now depends on :kconfig:option:`BT_GATT_AUTO_DISCOVER_CCC`.
+    :kconfig:option:`CONFIG_BT_VOCS_CLIENT` now depends on :kconfig:option:`CONFIG_BT_GATT_AUTO_DISCOVER_CCC`.
     Applications using VOCS client must ensure that CCC auto-discovery support is enabled. (:github:`110607`)
 
 .. zephyr-keep-sorted-stop
@@ -1169,7 +1283,8 @@ Bluetooth Classic
 
   (:github:`108022`)
 
-* Renamed ``BT_DEVICE_VEDNOR_ID`` to :kconfig:option:`BT_DEVICE_VENDOR_ID` to fix a typo.
+* Renamed ``CONFIG_BT_DEVICE_VEDNOR_ID`` to :kconfig:option:`CONFIG_BT_DEVICE_VENDOR_ID`
+  to fix a typo.
 
 Bluetooth HCI
 =============
@@ -1232,6 +1347,13 @@ Bluetooth Services
 
 Networking
 **********
+
+* The ``struct dns_server`` type nested in :c:struct:`dns_resolve_context` has been
+  renamed to ``struct dns_server_info``. A C++ class member cannot share the name of
+  its enclosing class, so the old tag made ``<zephyr/net/dns_resolve.h>`` impossible to
+  include from C++. No field was renamed, so accesses such as
+  ``ctx->servers[i].dns_server_addr`` are unaffected; only code that names the type
+  itself, for example in a ``CONTAINER_OF()`` call, needs updating.
 
 * Various IP routing related Kconfig options will have now ``IPV6`` prefix added to
   them. This is done so that we can have IPv4 routing symbols that provide same
@@ -1305,7 +1427,7 @@ Networking
 
 * The default WPA supplicant network selection criterion has changed from
   throughput-based to reliability-based (SNR), switching the
-  :kconfig:option:`WIFI_NM_WPA_SUPPLICANT_NW_SEL` Kconfig default from
+  :kconfig:option:`CONFIG_WIFI_NM_WPA_SUPPLICANT_NW_SEL` Kconfig default from
   :kconfig:option:`CONFIG_WIFI_NM_WPA_SUPPLICANT_NW_SEL_THROUGHPUT` to
   :kconfig:option:`CONFIG_WIFI_NM_WPA_SUPPLICANT_NW_SEL_RELIABILITY`.
   Previously, SNR above 25 dBm was considered sufficient and largely excluded
@@ -1533,15 +1655,20 @@ Mbed TLS
 * TF-PSA-Crypto was updated to version 1.1.1. Release notes can be found
   `here <https://github.com/Mbed-TLS/TF-PSA-Crypto/releases/tag/tf-psa-crypto-1.1.1>`_.
 
-Trusted Firmware-M
-==================
+Trusted Firmware-M (TF-M)
+=========================
 
-* :kconfig:option:`TFM_ZEPHYR_4_0_TO_4_2_COMPATIBILITY` has been deprecated in favor of
-  :kconfig:option:`TFM_ZEPHYR_4_2_COMPATIBILITY`, which more accurately describes when the symbol
+* :kconfig:option:`CONFIG_TFM_ZEPHYR_4_0_TO_4_2_COMPATIBILITY` has been deprecated in favor of
+  :kconfig:option:`CONFIG_TFM_ZEPHYR_4_2_COMPATIBILITY`, which more accurately describes when the symbol
   needs to be set.
 
 * :kconfig:option:`CONFIG_BUILD_WITH_TFM` does not enable :kconfig:option:`CONFIG_MBEDTLS` /
-  :kconfig:option:`CONFIG_PSA_CRYPTO` anymore. Make sure to enable them explicitly in your build as needed. (:github:`114762#`)
+  :kconfig:option:`CONFIG_PSA_CRYPTO` anymore. Make sure to enable them explicitly in your build as needed. (:github:`114762`)
+
+* :kconfig:option:`CONFIG_TFM_PARTITION_CRYPTO` now depends on
+  :kconfig:option:`CONFIG_PSA_CRYPTO_PROVIDER_TFM`, meaning you need to enable
+  :kconfig:option:`CONFIG_PSA_CRYPTO` for the TF-M Crypto partition to get enabled.
+  (:github:`116318`)
 
 Snippets
 ********

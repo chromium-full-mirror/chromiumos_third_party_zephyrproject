@@ -306,10 +306,6 @@
 	status = "okay";
 	pinctrl-0 = <&pinmux_enet_qos>;
 	pinctrl-names = "default";
-};
-
-&enet_mac {
-	status = "okay";
 	phy-connection-type = "rmii";
 	zephyr,random-mac-address;
 	phy-handle = <&phy>;
@@ -378,6 +374,18 @@
 
 &flexio0 {
 	status = "okay";
+};
+
+&tsi0 {
+	status = "okay";
+	pinctrl-0 = <&pinmux_tsi>;
+	pinctrl-names = "default";
+	/* On-board electrode E2 is wired to TSI0_CH0 (P5_3). */
+	channel-mask = <0x1>;
+	input-codes = <INPUT_KEY_A>;
+	touch-threshold = <100>;
+	release-threshold = <50>;
+	scan-period-ms = <50>;
 };
 
 nxp_8080_touch_panel_i2c: &lpi2c3 {};
