@@ -593,7 +593,11 @@ static __ramfunc int write_status_register(const struct device *dev, uint8_t sr,
 	}
 	sr_new = (sr_curr & ~mask) | sr;
 	if (sr_new != sr_curr) {
-		ret = write_protection_set(dev, false);
+		if (volatile_write) {
+			ret = flash_andes_qspi_xip_cmd_write(dev, FLASH_ANDES_CMD_VOL_SR);
+		} else {
+			ret = write_protection_set(dev, false);
+		}
 		if (ret != 0) {
 			return ret;
 		}
