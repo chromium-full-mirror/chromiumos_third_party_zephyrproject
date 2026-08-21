@@ -68,6 +68,27 @@ Kernel
   keeping ``SCHED_SIMPLE`` for affinity purposes can now use their preferred
   backend directly.
 
+* :c:func:`k_sleep` and :c:func:`k_usleep` are no longer system calls of their
+  own.  They are now inline wrappers around the new :c:func:`k_sleep_ticks`
+  system call, so that the compiler can fold or discard their unit conversions.
+  Their prototypes, semantics and return values are unchanged, and they have
+  moved from :file:`include/zephyr/kernel.h` to a new
+  :file:`include/zephyr/sleep.h` which :file:`kernel.h` includes.  Code calling
+  them needs no change.  Out of tree code taking their address, or relying on
+  ``K_SYSCALL_K_SLEEP`` or ``K_SYSCALL_K_USLEEP``, must be updated to use
+  :c:func:`k_sleep_ticks` instead.  Note that it reports an early wakeup from
+  ``K_FOREVER`` as ``K_TICKS_FOREVER``, where :c:func:`k_sleep` returns ``-1``.
+
+* The ``sys_port_trace_k_thread_sleep_*()``, ``sys_port_trace_k_thread_msleep_*()``
+  and ``sys_port_trace_k_thread_usleep_*()`` hooks are replaced by
+  ``sys_port_trace_k_thread_sleep_ticks_enter()`` and
+  ``sys_port_trace_k_thread_sleep_ticks_exit()``, since :c:func:`k_sleep_ticks`
+  is now the only one of the four that is not inline.  The exit hook reports
+  the time left to sleep in ticks, so a backend that presented it as
+  milliseconds should convert, for instance with
+  :c:func:`k_ticks_to_ms_ceil64`.  Out of tree tracing backends defining any of
+  the retired hooks must be updated.
+
 Boards
 ******
 
@@ -430,6 +451,20 @@ Ethernet
 * The compatibles ``espressif,esp32-mdio``, ``infineon,xmc4xxx-mdio``, ``nxp,enet-qos-mdio``,
   ``nxp,s32-gmac-mdio``, ``st,stm32-mdio`` and ``wch,mdio`` have been replaced by
   :dtcompatible:`snps,dwmac-mdio`. (:github:`114899`)
+
+* The NXP ENET-QOS Ethernet controller (:dtcompatible:`nxp,enet-qos`) devicetree structure has been
+  flattened to match other similar controllers. The clocks, interrupts, ``pinctrl-0``,
+  ``pinctrl-names``, ``phy-handle`` and MAC address properties now live directly on the parent
+  ``nxp,enet-qos`` node instead of a separate child MAC node. The ``nxp,enet-qos-mac`` compatible
+  and its ``enet_mac`` node have been removed and the :dtcompatible:`nxp,enet-qos-mdio` and
+  :dtcompatible:`nxp,enet-qos-ptp-clock` nodes are now direct children of the controller node. The
+  PTP reference clock has moved onto the parent node's ``clocks`` property using the ``ptp``
+  ``clock-names`` entry. Out-of-tree boards using this controller must move the properties from the
+  old ``enet_mac`` node up to the ``enet`` node. (:github:`115952`)
+
+* The Kconfig option ``CONFIG_ETH_NXP_ENET_QOS_MAC_UNIQUE_MAC_ADDRESS`` has been renamed to
+  :kconfig:option:`CONFIG_ETH_NXP_ENET_QOS_UNIQUE_MAC_ADDRESS`. Configurations setting the old
+  name must be updated to use the new one. (:github:`115952`)
 
 Flash
 =====
@@ -1650,6 +1685,11 @@ Trusted Firmware-M (TF-M)
 
 * :kconfig:option:`CONFIG_BUILD_WITH_TFM` does not enable :kconfig:option:`CONFIG_MBEDTLS` /
   :kconfig:option:`CONFIG_PSA_CRYPTO` anymore. Make sure to enable them explicitly in your build as needed. (:github:`114762`)
+
+* :kconfig:option:`CONFIG_TFM_PARTITION_CRYPTO` now depends on
+  :kconfig:option:`CONFIG_PSA_CRYPTO_PROVIDER_TFM`, meaning you need to enable
+  :kconfig:option:`CONFIG_PSA_CRYPTO` for the TF-M Crypto partition to get enabled.
+  (:github:`116318`)
 
 Snippets
 ********
