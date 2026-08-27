@@ -18,7 +18,6 @@
 #define AON_IDT_ENTRY_VEC_FIRST		SEDI_VEC_RESET_PREP
 #define AON_IDT_ENTRY_VEC_LAST		SEDI_VEC_PMU2IOAPIC
 
-#define PMU_RST_AP_REBOOT 0x40
 static void handle_reset(enum ish_pm_state pm_state);
 
 /* ISR for PMU wakeup interrupt */
@@ -706,8 +705,7 @@ static void handle_d0i2(void)
 #endif
 
 	reg_val = read32(PMU_RST_PREP);
-	if ((reg_val & PMU_RST_PREP_AVAIL) ||
-		((reg_val & PMU_RST_PREP_RESET_TYPE) == PMU_RST_AP_REBOOT)) {
+	if (reg_val & PMU_RST_PREP_AVAIL) {
 		handle_reset(ISH_PM_STATE_RESET_PREP);
 	}
 
@@ -754,8 +752,7 @@ static void handle_d0i3(void)
 	clear_vnnred_aoncg();
 
 	reg_val = read32(PMU_RST_PREP);
-	if ((reg_val & PMU_RST_PREP_AVAIL) ||
-		((reg_val & PMU_RST_PREP_RESET_TYPE) == PMU_RST_AP_REBOOT)) {
+	if (reg_val & PMU_RST_PREP_AVAIL) {
 		handle_reset(ISH_PM_STATE_RESET_PREP);
 	}
 
