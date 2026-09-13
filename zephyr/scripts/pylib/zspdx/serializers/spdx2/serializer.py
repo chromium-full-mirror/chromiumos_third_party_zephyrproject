@@ -7,6 +7,7 @@ import logging
 import os
 from datetime import UTC, datetime
 
+from zspdx.licenses import get_license_ids
 from zspdx.model import (
     ComponentPurpose,
     ExternalReferenceType,
@@ -16,8 +17,8 @@ from zspdx.model import (
     SBOMFile,
 )
 from zspdx.serializers.helpers import (
+    format_blob_comment,
     generate_download_url,
-    get_standard_licenses,
     normalize_spdx_name,
 )
 from zspdx.util import get_hashes
@@ -367,7 +368,13 @@ FileChecksum: SHA1: {file_obj.hashes.get('SHA1', '')}
             for lic in file_obj.license_info_in_file:
                 f.write(f"LicenseInfoInFile: {lic}\n")
 
-        f.write(f"FileCopyrightText: {file_obj.copyright_text}\n\n")
+        f.write(f"FileCopyrightText: {file_obj.copyright_text}\n")
+
+        blob = file_obj.metadata.get("blob")
+        if blob:
+            f.write(f"FileComment: <text>{format_blob_comment(blob)}</text>\n")
+
+        f.write("\n")
 
         # File relationships
         for rel in file_obj.relationships:
@@ -404,7 +411,7 @@ FileChecksum: SHA1: {file_obj.hashes.get('SHA1', '')}
         """Write custom license declarations."""
         # Get custom licenses from components in this document
         custom_licenses = set()
-        standard_licenses = get_standard_licenses()
+        standard_licenses = get_license_ids()
         for component in doc.components.values():
             for file_obj in component.files.values():
                 for lic in file_obj.license_info_in_file:
