@@ -652,8 +652,6 @@ static void sram_exit_sleep_mode(void)
 
 static void handle_d0i2(void)
 {
-	uint32_t reg_val;
-
 	ish_pg_exit_save_ctx();
 	aon_share.pg_exit = 0;
 
@@ -700,8 +698,7 @@ static void handle_d0i2(void)
 		continue;
 #endif
 
-	reg_val = read32(PMU_RST_PREP);
-	if (reg_val & PMU_RST_PREP_AVAIL) {
+	if (read32(PMU_RST_PREP) & PMU_RST_PREP_AVAIL) {
 		handle_reset(ISH_PM_STATE_RESET_PREP);
 	}
 
@@ -713,7 +710,6 @@ static void handle_d0i2(void)
 static void handle_d0i3(void)
 {
 	int ret;
-	uint32_t reg_val;
 
 	ish_pg_exit_save_ctx();
 	aon_share.pg_exit = 0;
@@ -747,8 +743,7 @@ static void handle_d0i3(void)
 
 	clear_vnnred_aoncg();
 
-	reg_val = read32(PMU_RST_PREP);
-	if (reg_val & PMU_RST_PREP_AVAIL) {
+	if (read32(PMU_RST_PREP) & PMU_RST_PREP_AVAIL) {
 		handle_reset(ISH_PM_STATE_RESET_PREP);
 	}
 

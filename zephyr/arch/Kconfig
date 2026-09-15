@@ -930,6 +930,14 @@ config ARCH_SUPPORTS_COREDUMP
 config ARCH_SUPPORTS_COREDUMP_THREADS
 	bool
 
+config ARCH_SUPPORTS_COREDUMP_SMP_FREEZE
+	bool
+	help
+	  Architecture can freeze other CPUs during a coredump and capture
+	  their live register state (not just each thread's last-swapped-out
+	  callee-saved context), for accurate backtraces of threads that were
+	  actively running elsewhere at panic time.
+
 config ARCH_SUPPORTS_COREDUMP_PRIV_STACKS
 	bool
 
@@ -1324,7 +1332,7 @@ config CACHE_HAS_MIRRORED_MEMORY_REGIONS
 	  sense when MP_MAX_NUM_CPUS > 1.
 
 config CACHE_DOUBLEMAP
-	bool "Cache double-mapping support"
+	bool "Cache double-mapping support [DEPRECATED]"
 	select CACHE_HAS_MIRRORED_MEMORY_REGIONS
 	select DEPRECATED
 	help

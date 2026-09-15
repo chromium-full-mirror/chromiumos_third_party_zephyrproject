@@ -472,6 +472,8 @@ Arduino Platforms:
     - boards/shields/arduino_*/
     - drivers/*/*modulino*
     - dts/vendor/arduino/
+  labels:
+    - "platform: Arduino"
 
 Authentication:
   status: maintained
@@ -645,8 +647,8 @@ Bluetooth Audio:
     - "area: Bluetooth"
   tests:
     - bluetooth.audio
+    - bluetooth.audio_samples
     - sample.bluetooth.audio
-    - tests.bsim.bluetooth.audio
 
 Bluetooth Classic:
   status: maintained
@@ -884,7 +886,7 @@ Bluetooth Qualification:
   tests:
     - bluetooth
     - bluetooth.general
-    - bluetooth.tester_bsim
+    - bluetooth.tester
 
 Board/SoC configuration:
   status: maintained
@@ -1258,8 +1260,9 @@ DAP:
 DFU:
   status: maintained
   maintainers:
-    - de-nordic
     - nordicjm
+  collaborators:
+    - de-nordic
   files:
     - include/zephyr/dfu/
     - subsys/dfu/
@@ -1558,6 +1561,7 @@ Documentation Infrastructure:
     - kv2019i
     - TomasBarakNXP
     - Peterson-Brett
+    - rgallaispou
   files:
     - drivers/audio/
     - include/zephyr/audio/
@@ -3254,6 +3258,8 @@ Espressif Platforms:
   files:
     - drivers/*/*esp32*.c
     - boards/espressif/
+    - cmake/emu/espressif_qemu.cmake
+    - cmake/emu/espressif_qemu/
     - soc/espressif/
     - dts/*/espressif/
     - dts/bindings/*/*esp32*
@@ -6418,6 +6424,7 @@ Tracing:
   files:
     - subsys/tracing/
     - scripts/tracing/
+    - scripts/tests/tracing/
     - include/zephyr/tracing/
     - subsys/timing/
     - samples/subsys/tracing/
@@ -7661,8 +7668,8 @@ West:
     - libraries.uoscore.oscore_tests
 
 "West project: zcbor":
-  status: maintained
-  maintainers:
+  status: odd fixes
+  collaborators:
     - de-nordic
   files:
     - modules/zcbor/

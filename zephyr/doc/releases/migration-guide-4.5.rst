@@ -72,11 +72,20 @@ Build System
 
 * The ``WEST_DIR`` build system variable is no longer used.
 
+* :kconfig:option:`CONFIG_DEPRECATION_TEST` has been deprecated, this is because
+  :kconfig:option:`CONFIG_WARN_DEPRECATED` can be used instead, simply replace lines with
+  ``CONFIG_DEPRECATION_TEST=y`` with ``CONFIG_WARN_DEPRECATED=n``.
+
 Kernel
 ******
 
 * ``_k_neg_eagain`` has been renamed to ``_errno_neg_egain`` as ``errno`` has been migrated out of
   kernel into ``lib/libc/common``.
+
+* :c:func:`k_sem_reset` no longer wakes poll waiters waiting on the semaphore. Poll waiters
+  remain pending until the semaphore becomes available or the poll operation times out.
+  Applications that rely on reset to wake poll waiters must use an explicit synchronization
+  mechanism instead.
 
 * The ``CONFIG_SMP_BOOT_DELAY`` Kconfig option has been removed. Deferring the start of secondary
   CPUs to run time is now expressed per CPU in the devicetree: add the ``zephyr,deferred-start``
@@ -119,8 +128,21 @@ Kernel
   :c:func:`k_ticks_to_ms_ceil64`.  Out of tree tracing backends defining any of
   the retired hooks must be updated.
 
+* :c:struct:`k_futex` is no longer a kernel object and the corresponding type
+  :c:enumerator:`K_OBJ_FUTEX` has been removed. Any user-accessible memory can
+  be used as futex address. The error -EINVAL can no longer happen on futex
+  operations.
+
 Boards
 ******
+
+* On NXP LPC54xxx, ``CONFIG_LPC54XXX_SRAM2_CLOCK`` has been replaced by
+  ``CONFIG_SOC_SERIES_LPC54XXX_SRAM_CLOCKS``. The old name fitted while the
+  LPC54114 was the only SoC in the series, where CMSIS ``SystemInit()`` enables
+  just SRAM2. On the LPC546xx it enables SRAM2 and SRAM3, so the option now
+  covers more than the one bank it was named after. Both default to ``y``. A
+  configuration that assigned the old symbol has to be updated, and fails to
+  build until it is.
 
 * On RP2040 and RP2350, the ``vreg`` node (:dtcompatible:`raspberrypi,core-supply-regulator`) is
   now ``disabled`` by default instead of ``okay``. Out-of-tree boards that need this regulator
@@ -266,6 +288,29 @@ Boards
   them have to reference the SoC nodes (``&spi2``, ``&i2c0``, ``&gpio0``,
   ``&gpio1``) directly. (:github:`116956`)
 
+* The STM32MP15 Cortex-M4 SoC Kconfig symbol ``SOC_STM32MP15_M4`` has been renamed to
+  :kconfig:option:`CONFIG_SOC_STM32MP157CXX_M4`. Out-of-tree STM32MP15 boards that selected
+  ``SOC_STM32MP15_M4`` must select :kconfig:option:`CONFIG_SOC_STM32MP157CXX_M4` instead.
+  (:github:`118151`)
+
+* On the Arduino UNO R4 WiFi, ``zephyr,console`` and ``zephyr,shell-uart`` now
+  default to SCI9, which the on-board ESP32-S3 bridges to the USB-C connector as
+  a USB CDC ACM port, instead of SCI2 on the D0/D1 header pins. Console output is
+  now visible on the same port used to flash the board, with no external
+  USB-serial adapter. Applications that relied on the console being on D0/D1 can
+  select it again in an application overlay:
+
+  .. code-block:: devicetree
+
+     / {
+         chosen {
+             zephyr,console = &uart2;
+             zephyr,shell-uart = &uart2;
+         };
+     };
+
+  The Arduino UNO R4 Minima is unaffected. (:github:`118433`)
+
 Device Drivers and Devicetree
 *****************************
 
@@ -344,6 +389,130 @@ Clock Control
   RT11xx overlays should be updated using the mapping
   ``loop-div = clock-mult * 2`` and ``post-div = clock-div``.
 
+Clock control nrf deprecation
+-----------------------------
+
+.. toggle::
+
+   The :ref:`clock_control_api` driver has been updated for the following clocks on nRF52, nRF53, nRF91, and nRF54L Series devices:
+
+   * HFCLK
+   * LFCLK
+   * XO
+   * XO24M
+   * HFCLK192M
+   * HFCLKAUDIO
+
+   To restore the legacy driver implementation, set :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF` to ``y``.
+
+   To migrate your code from zephyr v4.4.0 to zephyr v4.5.0, complete the following steps:
+
+   1. Enable each application-controlled clock in the application-specific or board-specific devicetree overlay file.
+
+      This enables the corresponding clock driver.
+      For example:
+
+      .. code-block:: dts
+
+          /* if nRF54L XO is to be controlled */
+          &xo {
+              status = "okay";
+          };
+
+          /* if nRF52, nRF53 HFCLK is to be controlled */
+          &hfclk {
+              status = "okay";
+          };
+
+          /* if nRF52, nRF53, nRF91 or nRF54L LFCLK is to be controlled */
+          &lfclk {
+              status = "okay";
+          };
+
+          /* if HFCLK192M is to be controlled */
+          &hfclk192m {
+              status = "okay";
+          };
+
+          /* if XO24M is to be controlled */
+          &xo24m {
+              status = "okay";
+          };
+
+          /* if HFCLKAUDIO is to be controlled */
+          &hfclkaudio {
+              status = "okay";
+          };
+
+   #. Rename the following Kconfig options:
+
+      * Replace :kconfig:option:`CONFIG_NRFX_CLOCK_USE_LFRC_CALIBRATION` with :kconfig:option:`CONFIG_NRFX_CLOCK_LFCLK_USE_LFRC_CALIBRATION`.
+      * Replace :kconfig:option:`CONFIG_NRFX_CLOCK_LF_CAL_ENABLED` with :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_RC_CALIBRATION`.
+
+   #. Move the following Kconfig options to the ``nordic,nrf-clock-lfclk`` devicetree node:
+
+      * Replace :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_K32SRC_FREQUENCY` with the ``k32src-frequency`` property.
+      * Replace :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_SOURCE` choice with the ``k32src`` enum property.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_RC` and :kconfig:option:`NRFX_CLOCK_LF_SRC_RC` with the ``k32src = "rc"``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_XTAL` and :kconfig:option:`NRFX_CLOCK_LF_SRC_XTAL` with the ``k32src = "xtal"``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_SYNTH` and :kconfig:option:`NRFX_CLOCK_LF_SRC_SYNTH` with the ``k32src = "synth"``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_EXT_LOW_SWING` and :kconfig:option:`NRFX_CLOCK_LF_SRC_LOW_SWING` with the ``k32src = "ext_low_swing"``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_EXT_FULL_SWING` and :kconfig:option:`NRFX_CLOCK_LF_SRC_FULL_SWING` with the ``k32src = "ext_full_swing"``.
+      * Replace :kconfig:option:`CONFIG_CLOCK_CONTROL_NRF_ACCURACY_PPM` choice with the ``k32src-accuracy-ppm`` enum property.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_500PPM` with the ``k32src-accuracy-ppm = <500>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_250PPM` with the ``k32src-accuracy-ppm = <250>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_150PPM` with the ``k32src-accuracy-ppm = <150>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_100PPM` with the ``k32src-accuracy-ppm = <100>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_75PPM` with the ``k32src-accuracy-ppm = <75>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_50PPM` with the ``k32src-accuracy-ppm = <50>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_30PPM` with the ``k32src-accuracy-ppm = <30>``.
+      * Replace :kconfig:option:`CLOCK_CONTROL_NRF_K32SRC_20PPM` with the ``k32src-accuracy-ppm = <20>``.
+      * Replace :kconfig:option:`CONFIG_NRFX_CLOCK_LFXO_TWO_STAGE_ENABLED` with ``k32src = "xtal"`` or ``k32src = "ext_low_swing"`` or ``k32src = "ext_full_swing"``.
+
+   #. Update your application to use the new clock control API.
+
+      Use the following mapping when you update the API calls:
+
+      * ``mgr`` is the on-off manager created for ``nordic,nrf-clock`` and obtained using ``z_nrf_clock_control_get_onoff``.
+      * ``dev`` is the device compatible with ``nordic,nrf-clock``.
+      * ``sys`` is the subsystem for ``nordic,nrf-clock``.
+         The new clocks implementation does not use it.
+      * ``new_dev`` is the device that corresponds to the previously used ``sys`` value.
+        It must be compatible with one of the following nodes:
+
+        * ``nordic,nrf-clock-lfclk``
+        * ``nordic,nrf-clock-hfclk``
+        * ``nordic,nrf-clock-xo``
+        * ``nordic,nrf-clock-hfclk192m``
+        * ``nordic,nrf-clock-xo24m``
+        * ``nordic,nrf-clock-hfclkaudio``
+
+      The following example shows the deprecated API usage and the corresponding new API usage:
+
+      .. code-block:: c
+
+         // Old API usage (deprecated)
+         z_nrf_clock_calibration_init(&mgrs);    //1
+         onoff_release(mgr)                      //2
+         onoff_request(mgr, &cli);               //3
+         onoff_cancel_or_release(mgr, &cli);     //4
+         clock_control_on(dev,sys)               //5
+         clock_control_off(dev,sys)              //6
+         clock_control_async_on(dev,sys)         //7
+         clock_control_get_status(dev,sys)       //8
+         z_nrf_clock_control_get_onoff(sys)      //9
+
+         // New API usage
+         z_nrf_clock_calibration_init();                             //1
+         nrf_clock_control_release(new_dev, NULL);                   //2
+         nrf_clock_control_request(new_dev, NULL, &cli);             //3
+         nrf_clock_control_cancel_or_release(new_dev, NULL, &cli);   //4
+         clock_control_on(new_dev, NULL)                             //5
+         clock_control_off(new_dev, NULL)                            //6
+         clock_control_async_on(new_dev, NULL)                       //7
+         clock_control_get_status(new_dev, NULL)                     //8
+         // Remove all uses of z_nrf_clock_control_get_onoff         //9
+
 Comparator
 ==========
 
@@ -378,6 +547,11 @@ Counter
 * The ``prescaler`` property of :dtcompatible:`nxp,lptmr` has been removed. Use
   ``prescale-glitch-filter`` and ``prescale-glitch-filter-bypass`` instead. The new property is
   an exponent, not a divisor: the prescaler divides by ``2^(prescale-glitch-filter + 1)``.
+
+* :dtcompatible:`adi,max32-rtc-counter` and :dtcompatible:`adi,max32-wut` now use the shared
+  ``clk_32k`` node for 32 kHz clock source selection. The clock source is now configured through the
+  ``clocks`` property of the ``clk_32k`` node, instead of ``clock-source`` property in each
+  peripheral node (:github:`117709`).
 
 Devicetree
 ==========
@@ -612,6 +786,10 @@ Flash
   of each plane in the flash device. For devices with a single plane, this should be set to the
   same value as ``size-bytes``.
 
+* The :dtcompatible:`st,stm32-nv-flash` property ``bank2-flash-size`` has been deprecated in favor
+  of determining flash bank sizes using ``reg`` size cells. No changes need be made to the
+  devicetree save for removing the aforementioned property. (:github:`114971`)
+
 Fuel Gauge
 ==========
 
@@ -648,6 +826,10 @@ Haptics
   :dtcompatible:`cirrus,cs40l50`, :dtcompatible:`cirrus,cs40l51`, :dtcompatible:`cirrus,cs40l52`,
   and :dtcompatible:`cirrus,cs40l53`. Applications using the old compatible must update their
   devicetree nodes accordingly.
+
+* The ``vib-rated-mv`` and ``vib-overdrive-mv`` properties of :dtcompatible:`ti,drv2605` now
+  default to the device reset values, 1362 mV and 3075 mV, instead of 3200 mV. Boards that need
+  the previous drive level must set them explicitly.
 
 HWSPINLOCK
 ==========
@@ -693,6 +875,16 @@ I2S
   on the unbounded wait can set ``timeout`` to ``SYS_FOREVER_MS``, but the same field also
   bounds the driver's enqueue wait, so no single value reproduces the old combination of an
   unbounded allocation and a bounded enqueue.
+
+IEEE 802.15.4
+=============
+
+* The ``IEEE802154_HW_SLEEP_TO_TX`` radio capability, deprecated since Zephyr 3.6, has been
+  removed and the capability bits above it renumbered. Every in-tree driver supports
+  transmitting directly from a low-power state, so the capability conveyed no information;
+  the OpenThread platform now always advertises ``OT_RADIO_CAPS_SLEEP_TO_TX`` and allows
+  transmission from the sleep state. Out-of-tree drivers advertising the capability simply
+  drop it.
 
 Input
 =====
@@ -747,6 +939,55 @@ Interrupt Controllers
 
 * Deprecate ``GIC_NUM_CPU_IF`` from GIC header file :file:`gic.h`. One shall use
   instead.:kconfig:option:`CONFIG_MP_MAX_NUM_CPUS` instead.
+
+MBOX
+====
+
+* The :dtcompatible:`renesas,rz-mhu-mbox` driver was reworked so that a single MHU unit
+  serves both TX and RX on one MBOX channel, instead of dedicating each channel to one
+  direction. A single driver instance can now own several channels. Devicetree nodes using
+  this compatible must be updated:
+
+  * ``channel`` was renamed to ``unit``, because it indexes the underlying MHU hardware unit
+    and not the MBOX channel. The two numbering schemes are independent.
+  * ``tx-mask`` and ``rx-mask`` were replaced by a single ``channel-mask``, a bitmask of the
+    valid MBOX channels where bit ``n`` enables channel ``n``.
+  * ``channels-count`` must match the number of ``interrupt-names`` entries on the node.
+    This is now enforced at build time.
+  * ``shared-memory`` is now optional and should be left unset in most cases. The shared
+    memory is instead provided by a single ``zephyr,memory-region`` node named ``mhu_shmem``,
+    which replaces the per-unit ``mmio-sram`` nodes and makes the linker emit
+    ``__mhu_shmem_start`` for the FSP MHU driver. Boards without this memory region fail to
+    link with an undefined reference to that symbol.
+
+  For example:
+
+  .. code-block:: devicetree
+
+     /* Before */
+     mhu3_shm: memory@62f01018 {
+             compatible = "mmio-sram";
+             reg = <0x62f01018 0x8>;
+     };
+
+     mbox3: mhu@40400060 {
+             channel = <3>;
+             tx-mask = <0x00000002>;
+             rx-mask = <0x00000001>;
+             shared-memory = <&mhu3_shm>;
+     };
+
+     /* After */
+     mhu_shmem: memory-region@62f01000 {
+             compatible = "zephyr,memory-region";
+             reg = <0x62f01000 0x1000>;
+             zephyr,memory-region = "mhu_shmem";
+     };
+
+     mbox3: mhu@40400060 {
+             unit = <3>;
+             channel-mask = <0x1>;
+     };
 
 MSPI
 ====
@@ -942,6 +1183,20 @@ NXP
 
     /* After */
     #include <nxp/imxrt/imxrt118x/nxp_rt1186_cm7.dtsi>
+
+* The i.MX RT7xx boards now include a single part-core composer file
+  ``nxp_<part>_<core>.dtsi`` instead of the series-core file. Out-of-tree
+  boards must update their devicetree includes accordingly.
+
+  Example for a part that previously needed the series file:
+
+  .. code-block:: dts
+
+    /* Before */
+    #include <nxp/imxrt/imxrt7xx/nxp_rt7xx_cm33_cpu0.dtsi>
+
+    /* After */
+    #include <nxp/imxrt/imxrt7xx/nxp_rt798s_cm33_cpu0.dtsi>
 
 * The NXP SoC pin control headers under the ``hal_nxp`` ``dts/nxp/`` tree were
   reorganized to mirror the ``dts/arm/nxp/<family>/<series>/`` layout: every
@@ -1230,6 +1485,79 @@ STM32
   property has been removed. This should have no impact since the property was not used except for the
   wake-up pins feature, which is now handled by :dtcompatible:`st,stm32-pwr-wkupctrl`. (:github:`114092`)
 
+* All Ethernet pinctrl nodes for STM32H5 series except :samp:`eth_mdc_{px0}`, :samp:`eth_mdio_{px0}`
+  and :samp:`eth_pps_out_{px0}` have been renamed to match the Data Sheet names (:github:`118318`).
+
+  The following table indicates the mapping between old and new names and can be used to migrate:
+
+  .. list-table::
+     :header-rows: 1
+     :widths: 30 35 35
+
+     * - Old name
+       - New name (``mii`` PHY)
+       - New name (``rmii`` PHY)
+     * - :samp:`eth_crs_dv_{px0}`
+       - *N/A for MII*
+       - :samp:`eth_rmii_crs_dv_{px0}`
+     * - :samp:`eth_ref_clk_{px0}`
+       - *N/A for MII*
+       - :samp:`eth_rmii_ref_clk_{px0}`
+     * - :samp:`eth_col_{px0}`
+       - :samp:`eth_mii_col_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_crs_{px0}`
+       - :samp:`eth_mii_crs_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_rx_clk_{px0}`
+       - :samp:`eth_mii_rx_clk_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_rx_dv_{px0}`
+       - :samp:`eth_mii_rx_dv_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_rx_er_{px0}`
+       - :samp:`eth_mii_rx_er_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_rxd0_{px0}`
+       - :samp:`eth_mii_rxd0_{px0}`
+       - :samp:`eth_rmii_rxd0_{px0}`
+     * - :samp:`eth_rxd1_{px0}`
+       - :samp:`eth_mii_rxd1_{px0}`
+       - :samp:`eth_rmii_rxd1_{px0}`
+     * - :samp:`eth_rxd2_{px0}`
+       - :samp:`eth_mii_rxd2_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_rxd3_{px0}`
+       - :samp:`eth_mii_rxd3_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_tx_clk_{px0}`
+       - :samp:`eth_mii_tx_clk_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_tx_en_{px0}`
+       - :samp:`eth_mii_tx_en_{px0}`
+       - :samp:`eth_rmii_tx_en_{px0}`
+     * - :samp:`eth_txd0_{px0}`
+       - :samp:`eth_mii_txd0_{px0}`
+       - :samp:`eth_rmii_txd0_{px0}`
+     * - :samp:`eth_txd1_{px0}`
+       - :samp:`eth_mii_txd1_{px0}`
+       - :samp:`eth_rmii_txd1_{px0}`
+     * - :samp:`eth_txd2_{px0}`
+       - :samp:`eth_mii_txd2_{px0}`
+       - *N/A for RMII*
+     * - :samp:`eth_txd3_{px0}`
+       - :samp:`eth_mii_txd3_{px0}`
+       - *N/A for RMII*
+
+  .. note::
+    Pin names now vary depending on whether an MII PHY or an RMII PHY is used; this is indicated
+    by property ``phy-connection-type`` (``mii`` or ``rmii``) on the Ethernet node in Devicetree.
+
+    :samp:`{px0}` is a placeholder and should be replaced with actual pin names (e.g., ``pa1``).
+
+    SoCs of the STM32H5Ex/STM32H5Fx line are not affected by this change as they have always used
+    the new names since their introduction in Zephyr.
+
 Syscon
 ======
 
@@ -1330,6 +1658,14 @@ USB
   their API struct definitions and switch their API instances to ``DEVICE_API(uhc, ...)``.
   (:github:`108414`)
 
+* The ``clock-reference`` property of :dtcompatible:`st,stm32u5-otghs-phy` is now deprecated
+  and should be removed from DTS files; the underlying driver will compute the correct value
+  automatically if the property doesn't exist (and honor it otherwise). (:github:`117882`)
+
+* The ``get_desc`` callback in :c:struct:`usbd_class_api` now returns ``const void *`` instead of
+  ``void *``, so that a class can keep its array of descriptor pointers in ROM. Out-of-tree
+  classes must update the return type of their handler. (:github:`118251`)
+
 Video
 =====
 
@@ -1356,6 +1692,23 @@ WiFi
   removed in favor of the generic :kconfig:option:`CONFIG_WIFI_STA_AUTO_DHCPV4`. Applications
   that previously disabled the Espressif-specific option must now disable the generic option
   to retain manual DHCPv4 or static IP behavior after STA connection.
+
+* :c:struct:`wifi_status` gained ``status_code`` and ``reason_code`` members carrying the raw
+  IEEE 802.11 codes, so the struct is larger than the ``int`` it used to be. Code that raises
+  or receives :c:enumerator:`NET_EVENT_WIFI_SCAN_DONE`,
+  :c:enumerator:`NET_EVENT_WIFI_CONNECT_RESULT`,
+  :c:enumerator:`NET_EVENT_WIFI_DISCONNECT_RESULT`,
+  :c:enumerator:`NET_EVENT_WIFI_DISCONNECT_COMPLETE`,
+  :c:enumerator:`NET_EVENT_WIFI_AP_ENABLE_RESULT` or
+  :c:enumerator:`NET_EVENT_WIFI_AP_DISABLE_RESULT` must use ``sizeof(struct wifi_status)``
+  rather than ``sizeof(int)`` for the event payload length. Event handlers that only read the
+  status value are unaffected, as it remains the first member. (:github:`116704`)
+
+* A Wi-Fi connect request that runs past its timeout now reports
+  :c:enumerator:`WIFI_STATUS_CONN_TIMEOUT` in :c:enumerator:`NET_EVENT_WIFI_CONNECT_RESULT`
+  instead of a raw ``-ETIMEDOUT``. This only concerns the connections handled by the
+  supplicant. Applications that matched on the errno value have to match on the status
+  value instead. (:github:`116704`)
 
 Xen
 ===
@@ -1614,6 +1967,11 @@ Bluetooth Services
 
 Networking
 **********
+
+* The HTTP client response callback (:c:type:`http_response_cb_t`) may now be
+  invoked more than once for a single received buffer, once per body fragment,
+  for example once per chunk of a chunked response. Applications that assumed a
+  single callback per receive must append every fragment they are handed.
 
 * The ``struct dns_server`` type nested in :c:struct:`dns_resolve_context` has been
   renamed to ``struct dns_server_info``. A C++ class member cannot share the name of
@@ -1893,12 +2251,33 @@ MCUboot
 * ``CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_WITHOUT_SCRATCH`` has been removed. Use
   :kconfig:option:`CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_USING_MOVE` instead.
 
+* Sysbuild no longer forces the MCUboot overwrite-only mode and unsigned images on Espressif
+  SoCs. Boards using them now get the generic defaults: swap using offset, which keeps the
+  previous image for a revert, and RSA-2048 signatures with the MCUboot development key.
+  Projects with their own key must set :kconfig:option:`SB_CONFIG_BOOT_SIGNATURE_KEY_FILE`,
+  and projects that relied on the previous behavior can select
+  :kconfig:option:`SB_CONFIG_MCUBOOT_MODE_OVERWRITE_ONLY` and
+  :kconfig:option:`SB_CONFIG_BOOT_SIGNATURE_TYPE_NONE` explicitly. A bootloader built after
+  this change rejects unsigned images, so the bootloader and the application must be
+  reflashed together when a device is moved to the new defaults.
+
+* The shared Espressif partition tables no longer define a ``scratch_partition``, so
+  :kconfig:option:`SB_CONFIG_MCUBOOT_MODE_SWAP_SCRATCH` is no longer available on boards using
+  them. The other partitions keep their offsets. Projects that need it can add the partition
+  back in a board overlay.
+
 MCUmgr
 ======
 
 * ``CONFIG_MCUMGR_GRP_OS_INFO_HARDWARE_INFO_SHORT_HARDWARE_PLATFORM`` has been removed. The
   :ref:`mcumgr_os_application_info` command now always reports the board target as hardware
   platform; the pre-4.3 board and board revision output is no longer available.
+
+POSIX
+=====
+
+* ``CONFIG_POSIX_READER_WRITER_LOCKS`` has been removed. Use
+  :kconfig:option:`CONFIG_POSIX_RW_LOCKS` instead.
 
 Random
 ======
@@ -1907,6 +2286,16 @@ Random
   Use :kconfig:option:`CONFIG_PSA_CSPRNG_GENERATOR` instead.
 
 * ``CONFIG_CS_CTR_DRBG_PERSONALIZATION`` has been removed. It did not have any effect.
+
+Secure Storage
+==============
+
+* The following files were renamed:
+
+  * ``zephyr/secure_storage/its/store/settings_get.h`` ->
+    ``zephyr/secure_storage/its/store/settings.h``
+  * ``zephyr/secure_storage/its/transform/aead_get.h`` ->
+    ``zephyr/secure_storage/its/transform/aead.h``
 
 Shell
 =====
@@ -2085,6 +2474,11 @@ Architectures
 
 * The RISC-V specific ``CONFIG_EXTRA_EXCEPTION_INFO`` has been removed. Use
   :kconfig:option:`CONFIG_EXCEPTION_DEBUG` instead. The option is unchanged on Arm and SPARC.
+
+* Both :c:func:`arch_mem_map` and :c:func:`arch_mem_unmap` have changed from
+  returning ``void`` to ``int`` so that the caller can react to error code when
+  assertion is disabled. If assertion is enabled, it currently retains mostly
+  the previous behavior of halting the system.
 
 Video
 =====
