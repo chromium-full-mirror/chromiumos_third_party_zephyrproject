@@ -20,17 +20,11 @@ LOG_MODULE_REGISTER(soc_power, CONFIG_SOC_LOG_LEVEL);
 
 static void ft_enter_sleep_prepare();
 
-static void ft_enable_wakeup_irq_source()
-{
-    //EPORT_ITConfig((EPORT_TypeDef*)DT_REG_ADDR(DT_NODELABEL(eport5)),0,1);
-}
-
-void ft_pm_enter_deep_sleep(bool enable)
+static void ft_pm_enter_deep_sleep_inner(bool enable)
 {
 
 #ifdef CONFIG_CROS_EC_RW   
     if(enable){
-        ft_enable_wakeup_irq_source();
         SCB->SCR |= (SCB_SCR_SLEEPDEEP_Msk);
         ft_enter_sleep_prepare();
 
@@ -38,7 +32,6 @@ void ft_pm_enter_deep_sleep(bool enable)
         LP_LowpowerOut();
     }
 #endif
-
 }
 
 typedef void(*SSID_FUNC)(char);
@@ -92,7 +85,7 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
     {
 
     case PM_STATE_SUSPEND_TO_IDLE:
-
+        ft_pm_enter_deep_sleep_inner(true);
         break;
     case PM_STATE_STANDBY:
 
@@ -101,7 +94,6 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 
         break;
     default:
-        //k_cpu_idle();
         //LOG_DBG("Unsupported power state %u", state);
         break;
     }
@@ -116,9 +108,7 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
     switch (state)
     {
     case PM_STATE_SUSPEND_TO_IDLE:
-
-        //LP_LowpowerOut();
-        //printk("suspend exit\n");
+        ft_pm_enter_deep_sleep_inner(false);
 
         break;
     default:

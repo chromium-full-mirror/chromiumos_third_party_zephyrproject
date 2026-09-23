@@ -18,4 +18,7 @@ supported:
   - rtc
   - crc
   - watchdog
+  - mbox
+  - input
+  - wuc
 vendor: nxp

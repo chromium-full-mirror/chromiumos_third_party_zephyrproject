@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   lit:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     env:
       ARM_UBL_ACTIVATION_CODE: ${{ secrets.ARM_UBL_ACTIVATION_CODE }}
@@ -26,23 +26,29 @@ jobs:
       CLANG_TI_SHA256: "c758668b78c080be5ec75393cdd09d077742fd1183aa0c181318a0119d58c4d0"
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.10'    
+          python-version: '3.14'
           cache: 'pip'
 
       - name: Python requirements
         run: |
           pip install -r ./CMSIS/Core/Test/requirements.txt
 
+      - name: Inspect Python libraries
+        run: |
+          echo "pythonLocation=$pythonLocation"
+          find "$pythonLocation/lib" -maxdepth 1 -name 'libpython*' -ls
+          python3-config --embed --ldflags
+
       - name: Install LLVM dependencies and tools
         working-directory: /home/runner
         run: |
           sudo apt-get update
-          sudo apt-get install libtinfo5 llvm-15-tools
-          sudo ln -s /usr/bin/FileCheck-15 /usr/bin/FileCheck
+          sudo apt-get install libtinfo6 llvm-18-tools
+          sudo ln -s /usr/bin/FileCheck-18 /usr/bin/FileCheck
     
       - name: Activate vcpkg environment
         uses: ARM-software/cmsis-actions/vcpkg@v1
@@ -63,7 +69,7 @@ jobs:
 
       - name: Cache TI ARM CLANG
         id: cache-ti-arm-clang
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.CLANG_TI_PATH }}
           key: ${{ runner.os }}-ti-arm-clang-${{ env.CLANG_TI_VERSION }}

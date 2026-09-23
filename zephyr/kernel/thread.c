@@ -873,6 +873,30 @@ static inline void init_thread_usage(struct k_thread *thread)
 #endif /* CONFIG_SCHED_THREAD_USAGE */
 }
 
+/* Assert the thread wasn't already linked into the monitor list. */
+static inline void assert_thread_not_reused(struct k_thread *new_thread)
+{
+#ifdef CONFIG_THREAD_MONITOR
+#ifdef CONFIG_ASSERT
+	k_spinlock_key_t key = k_spin_lock(&z_thread_monitor_lock);
+	bool reused = false;
+
+	/* Check if the thread is already in the list */
+	for (struct k_thread *t = _kernel.threads; t; t = t->next_thread) {
+		if (t == new_thread) {
+			reused = true;
+			break;
+		}
+	}
+
+	k_spin_unlock(&z_thread_monitor_lock, key);
+
+	__ASSERT(!reused, "thread %p is already in the running list", new_thread);
+#endif /* CONFIG_ASSERT */
+#endif /* CONFIG_THREAD_MONITOR */
+	ARG_UNUSED(new_thread);
+}
+
 /*
  * The provided stack_size value is presumed to be either the result of
  * K_THREAD_STACK_SIZEOF(stack), or the size value passed to the instance
@@ -887,6 +911,8 @@ char *z_setup_new_thread(struct k_thread *new_thread,
 	char *stack_ptr;
 
 	Z_ASSERT_VALID_PRIO(prio, entry);
+
+	assert_thread_not_reused(new_thread);
 
 	thread_abort_cleanup_check_reuse(new_thread);
 	init_thread_obj_core(new_thread);
@@ -1455,6 +1481,13 @@ static struct k_spinlock thread_cleanup_lock;
 #ifdef CONFIG_THREAD_STACK_MEM_MAPPED
 static void *thread_cleanup_stack_addr;
 static size_t thread_cleanup_stack_sz;
+
+static void unmap_thread_stack(void *addr, size_t sz)
+{
+	if (addr != NULL) {
+		k_mem_unmap_phys_guard(addr, sz, false);
+	}
+}
 #endif /* CONFIG_THREAD_STACK_MEM_MAPPED */
 
 void defer_thread_cleanup(struct k_thread *thread)
@@ -1489,21 +1522,42 @@ void defer_thread_cleanup(struct k_thread *thread)
 #endif /* CONFIG_THREAD_STACK_MEM_MAPPED */
 }
 
-void do_thread_cleanup(struct k_thread *thread)
+void do_deferred_thread_cleanup(void)
 {
 	/* Note when adding new actual cleanup steps:
 	 * - The thread object may have been overwritten when this is
-	 *   called. So avoid using any data from the thread object.
+	 *   called. So only data stashed by defer_thread_cleanup() can
+	 *   be used here, never anything from the thread object.
 	 */
-	ARG_UNUSED(thread);
 
 #ifdef CONFIG_THREAD_STACK_MEM_MAPPED
-	if (thread_cleanup_stack_addr != NULL) {
-		k_mem_unmap_phys_guard(thread_cleanup_stack_addr,
-				       thread_cleanup_stack_sz, false);
+	unmap_thread_stack(thread_cleanup_stack_addr, thread_cleanup_stack_sz);
 
-		thread_cleanup_stack_addr = NULL;
-	}
+	thread_cleanup_stack_addr = NULL;
+	thread_cleanup_stack_sz = 0;
+#endif /* CONFIG_THREAD_STACK_MEM_MAPPED */
+}
+
+void do_thread_cleanup(struct k_thread *thread)
+{
+	/* This is only for threads which are no longer running and are not
+	 * the current thread, so the thread object is still valid here and
+	 * the cleanup can be driven from it directly.
+	 */
+
+#ifdef CONFIG_THREAD_STACK_MEM_MAPPED
+	unmap_thread_stack(thread->stack_info.mapped.addr,
+			   thread->stack_info.mapped.sz);
+
+	/* The stack is now unmapped and thus un-usable. Clear the mapping
+	 * info so nothing looks into the stack afterwards, and so that
+	 * a repeated cleanup of the same thread object is a no-op,
+	 * e.g., z_stack_space_get().
+	 */
+	thread->stack_info.mapped.addr = NULL;
+	thread->stack_info.mapped.sz = 0;
+#else /* CONFIG_THREAD_STACK_MEM_MAPPED */
+	ARG_UNUSED(thread);
 #endif /* CONFIG_THREAD_STACK_MEM_MAPPED */
 }
 
@@ -1512,7 +1566,7 @@ void k_thread_abort_cleanup(struct k_thread *thread)
 	K_SPINLOCK(&thread_cleanup_lock) {
 		if (thread_to_cleanup != NULL) {
 			/* Finish the pending one first. */
-			do_thread_cleanup(thread_to_cleanup);
+			do_deferred_thread_cleanup();
 			thread_to_cleanup = NULL;
 		}
 
@@ -1547,7 +1601,7 @@ void k_thread_abort_cleanup_check_reuse(struct k_thread *thread)
 		 * object can be reused.
 		 */
 		if (thread_to_cleanup == thread) {
-			do_thread_cleanup(thread_to_cleanup);
+			do_deferred_thread_cleanup();
 			thread_to_cleanup = NULL;
 		}
 	}
@@ -1643,13 +1697,13 @@ void z_impl_k_thread_suspend(k_tid_t thread)
 		return;
 	}
 
-	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
+	k_spinlock_key_t key = z_sched_spinlock_lock();
 
 	if (unlikely(z_is_thread_suspended(thread))) {
 
 		/* The target thread is already suspended. Nothing to do. */
 
-		k_spin_unlock(&_sched_spinlock, key);
+		z_sched_spinlock_unlock(key);
 		return;
 	}
 
@@ -1671,18 +1725,18 @@ void z_impl_k_thread_resume(k_tid_t thread)
 {
 	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_thread, resume, thread);
 
-	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
+	k_spinlock_key_t key = z_sched_spinlock_lock();
 
 	/* Do not try to resume a thread that was not suspended */
 	if (unlikely(!z_is_thread_suspended(thread))) {
-		k_spin_unlock(&_sched_spinlock, key);
+		z_sched_spinlock_unlock(key);
 		return;
 	}
 
 	z_mark_thread_as_not_suspended(thread);
 	z_sched_ready_locked(thread);
 
-	z_reschedule(&_sched_spinlock, key);
+	z_reschedule_locked(key);
 
 	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_thread, resume, thread);
 }
@@ -1700,15 +1754,15 @@ void z_impl_k_wakeup(k_tid_t thread)
 {
 	SYS_PORT_TRACING_OBJ_FUNC(k_thread, wakeup, thread);
 
-	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
+	k_spinlock_key_t key = z_sched_spinlock_lock();
 
 	if (z_is_thread_sleeping(thread)) {
 		(void)z_try_abort_thread_timeout(thread);
 		z_mark_thread_as_not_sleeping(thread);
 		z_sched_ready_locked(thread);
-		z_reschedule(&_sched_spinlock, key);
+		z_reschedule_locked(key);
 	} else {
-		k_spin_unlock(&_sched_spinlock, key);
+		z_sched_spinlock_unlock(key);
 	}
 }
 
@@ -1724,10 +1778,10 @@ static inline void z_vrfy_k_wakeup(k_tid_t thread)
 void z_thread_abort(struct k_thread *thread)
 {
 	bool essential = z_is_thread_essential(thread);
-	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
+	k_spinlock_key_t key = z_sched_spinlock_lock();
 
 	if (z_is_thread_dead(thread)) {
-		k_spin_unlock(&_sched_spinlock, key);
+		z_sched_spinlock_unlock(key);
 		return;
 	}
 
@@ -1754,7 +1808,7 @@ void z_impl_k_thread_abort(k_tid_t thread)
 
 int z_impl_k_thread_join(struct k_thread *thread, k_timeout_t timeout)
 {
-	k_spinlock_key_t key = k_spin_lock(&_sched_spinlock);
+	k_spinlock_key_t key = z_sched_spinlock_lock();
 	int ret;
 
 	SYS_PORT_TRACING_OBJ_FUNC_ENTER(k_thread, join, thread, timeout);
@@ -1773,7 +1827,7 @@ int z_impl_k_thread_join(struct k_thread *thread, k_timeout_t timeout)
 		z_add_thread_timeout(_current, timeout);
 
 		SYS_PORT_TRACING_OBJ_FUNC_BLOCKING(k_thread, join, thread, timeout);
-		ret = z_swap(&_sched_spinlock, key);
+		ret = z_swap_locked(key);
 		SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_thread, join, thread, timeout, ret);
 
 		return ret;
@@ -1781,7 +1835,7 @@ int z_impl_k_thread_join(struct k_thread *thread, k_timeout_t timeout)
 
 	SYS_PORT_TRACING_OBJ_FUNC_EXIT(k_thread, join, thread, timeout, ret);
 
-	k_spin_unlock(&_sched_spinlock, key);
+	z_sched_spinlock_unlock(key);
 	return ret;
 }
 

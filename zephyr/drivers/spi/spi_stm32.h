@@ -37,6 +37,7 @@ struct spi_stm32_config {
 	int mssi_clocks;
 	uint32_t fifo_max_transfer_size;
 	uint8_t fifo_size;
+	bool gpio_control: 1;
 #endif
 	bool ioswp: 1;
 	bool soft_nss: 1;
@@ -265,7 +266,7 @@ static inline void ll_disable_spi(SPI_TypeDef *spi)
 }
 
 #if defined(SPI_CFG2_IOSWP)
-static inline void ll_spi_swap_mosi_miso(SPI_TypeDef *spi)
+static inline void ll_spi_swap_sdo_sdi(SPI_TypeDef *spi)
 {
 #if defined(CONFIG_STM32_HAL2)
 	LL_SPI_EnableMosiMisoSwap(spi);
