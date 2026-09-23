@@ -454,27 +454,13 @@ static struct bt_le_per_adv_sync_cb bap_pa_sync_cb = {
 	.term = bap_pa_sync_terminated_cb,
 };
 
-static void started_cb(struct bt_bap_stream *stream)
-{
-	struct audio_test_stream *test_stream = audio_test_stream_from_bap_stream(stream);
-
-	memset(&test_stream->last_info, 0, sizeof(test_stream->last_info));
-	test_stream->rx_cnt = 0U;
-	test_stream->valid_rx_cnt = 0U;
-	test_stream->seq_num = 0U;
-	test_stream->tx_cnt = 0U;
-	UNSET_FLAG(test_stream->flag_audio_received);
-
-	LOG_INF("Stream %p started", stream);
-}
-
 static void stopped_cb(struct bt_bap_stream *stream, uint8_t reason)
 {
 	LOG_INF("Stream %p stopped with reason 0x%02X", stream, reason);
 }
 
 static struct bt_bap_stream_ops broadcast_stream_ops = {
-	.started = started_cb,
+	.started = bap_common_stream_started_cb,
 	.stopped = stopped_cb,
 	.recv = bap_stream_rx_recv_cb,
 };
@@ -506,26 +492,9 @@ static void unicast_stream_enabled_cb(struct bt_bap_stream *stream)
 
 static void unicast_stream_started(struct bt_bap_stream *stream)
 {
-	struct audio_test_stream *test_stream = audio_test_stream_from_bap_stream(stream);
+	bap_common_stream_started_cb(stream);
 
-	memset(&test_stream->last_info, 0, sizeof(test_stream->last_info));
-	test_stream->rx_cnt = 0U;
-	test_stream->valid_rx_cnt = 0U;
-	test_stream->seq_num = 0U;
-	test_stream->tx_cnt = 0U;
-	UNSET_FLAG(test_stream->flag_audio_received);
-
-	LOG_INF("Started stream %p", stream);
-
-	if (bap_stream_tx_can_send(stream)) {
-		int err;
-
-		err = bap_stream_tx_register(stream);
-		if (err != 0) {
-			FAIL("Failed to register stream %p for TX: %d\n", stream, err);
-			return;
-		}
-	} else if (bap_stream_rx_can_recv(stream)) {
+	if (bap_stream_rx_can_recv(stream)) {
 		expect_rx = true;
 	}
 }
@@ -1261,6 +1230,31 @@ static void test_cap_acceptor_unicast_disconnect(void)
 	PASS("CAP acceptor unicast disconnect passed\n");
 }
 
+static void test_cap_acceptor_unicast_cancel_in_subproc(void)
+{
+	init();
+
+	test_start_adv();
+
+	auto_start_sink_streams = true;
+
+	WAIT_FOR_FLAG(flag_connected);
+
+	/* Wait until initiator is done starting streams */
+	backchannel_sync_wait(CAP_INITIATOR_DEV_ID);
+
+	if (expect_rx) {
+		wait_for_data();
+	}
+
+	/* let initiator know we have received what we wanted */
+	backchannel_sync_send(CAP_INITIATOR_DEV_ID);
+
+	WAIT_FOR_UNSET_FLAG(flag_connected);
+
+	PASS("CAP acceptor unicast cancel in subproc passed\n");
+}
+
 static void pa_sync_to_broadcaster(void)
 {
 	int err;
@@ -1442,6 +1436,12 @@ static const struct bst_test_instance test_cap_acceptor[] = {
 		.test_pre_init_f = test_init,
 		.test_tick_f = test_tick,
 		.test_main_f = test_cap_acceptor_unicast_disconnect,
+	},
+	{
+		.test_id = "cap_acceptor_unicast_cancel_in_subproc",
+		.test_pre_init_f = test_init,
+		.test_tick_f = test_tick,
+		.test_main_f = test_cap_acceptor_unicast_cancel_in_subproc,
 	},
 	{
 		.test_id = "cap_acceptor_broadcast",

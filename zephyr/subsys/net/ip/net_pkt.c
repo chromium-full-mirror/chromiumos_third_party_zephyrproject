@@ -317,7 +317,8 @@ void net_pkt_print_frags(struct net_pkt *pkt)
 {
 	struct net_buf *frag;
 	size_t total = 0;
-	int count = 0, frag_size = 0;
+	size_t occupied = 0;
+	int count = 0;
 
 	if (!pkt) {
 		NET_INFO("pkt %p", pkt);
@@ -331,21 +332,19 @@ void net_pkt_print_frags(struct net_pkt *pkt)
 	frag = pkt->frags;
 	while (frag) {
 		total += frag->len;
+		occupied += frag->size;
 
-		frag_size = net_buf_max_len(frag);
-
-		NET_INFO("[%d] frag %p len %d max len %u size %d pool %p",
-			 count, frag, frag->len, frag->size,
-			 frag_size, net_buf_pool_get(frag->pool_id));
+		NET_INFO("[%d] frag %p len %d tailroom %zu size %d pool %p",
+			 count, frag, frag->len, net_buf_tailroom(frag),
+			 frag->size, net_buf_pool_get(frag->pool_id));
 
 		count++;
 
 		frag = frag->frags;
 	}
 
-	NET_INFO("Total data size %zu, occupied %d bytes, utilization %zu%%",
-		 total, count * frag_size,
-		 count ? (total * 100) / (count * frag_size) : 0);
+	NET_INFO("Total data size %zu, occupied %zu bytes, utilization %zu%%",
+		 total, occupied, occupied ? (total * 100) / occupied : 0);
 }
 #endif
 
@@ -533,9 +532,6 @@ void net_pkt_unref(struct net_pkt *pkt)
 	atomic_val_t ref;
 
 	if (!pkt) {
-#if NET_LOG_LEVEL >= LOG_LEVEL_DBG
-		NET_ERR("*** ERROR *** pkt %p (%s():%d)", pkt, caller, line);
-#endif
 		return;
 	}
 
@@ -1015,9 +1011,24 @@ static struct net_buf *pkt_alloc_buffer(struct net_pkt *pkt,
 	do {
 		struct net_buf *new;
 
-		new = net_buf_alloc_fixed(pool, timeout);
-		if (!new) {
-			goto error;
+		/* An allocation that does not block cannot have consumed any
+		 * of the caller's timeout, so only work out how much of it is
+		 * left when the pool was empty and we actually have to wait.
+		 * That keeps the clock out of the common path: with K_NO_WAIT
+		 * the deadline handling in net_buf_alloc_len() short circuits
+		 * too, so nothing below here reads it either.
+		 */
+		new = net_buf_alloc_fixed(pool, K_NO_WAIT);
+		if (new == NULL) {
+			if (K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+				goto error;
+			}
+
+			new = net_buf_alloc_fixed(pool,
+						  sys_timepoint_timeout(end));
+			if (new == NULL) {
+				goto error;
+			}
 		}
 
 		if (!first && !current) {
@@ -1046,8 +1057,6 @@ static struct net_buf *pkt_alloc_buffer(struct net_pkt *pkt,
 
 			size -= current->size;
 		}
-
-		timeout = sys_timepoint_timeout(end);
 
 #if NET_LOG_LEVEL >= LOG_LEVEL_DBG
 		NET_FRAG_CHECK_IF_NOT_IN_USE(new, new->ref + 1);
@@ -1222,17 +1231,17 @@ static size_t pkt_estimate_headers_length(struct net_pkt *pkt,
 	return hdr_len;
 }
 
-static size_t pkt_get_max_len(struct net_pkt *pkt)
+static size_t pkt_get_tailroom(struct net_pkt *pkt)
 {
 	struct net_buf *buf = pkt->buffer;
-	size_t size = 0;
+	size_t tailroom = 0;
 
 	while (buf) {
-		size += net_buf_max_len(buf);
+		tailroom += net_buf_tailroom(buf);
 		buf = buf->frags;
 	}
 
-	return size;
+	return tailroom;
 }
 
 size_t net_pkt_available_buffer(struct net_pkt *pkt)
@@ -1241,7 +1250,7 @@ size_t net_pkt_available_buffer(struct net_pkt *pkt)
 		return 0;
 	}
 
-	return pkt_get_max_len(pkt) - net_pkt_get_len(pkt);
+	return pkt_get_tailroom(pkt);
 }
 
 size_t net_pkt_available_payload_buffer(struct net_pkt *pkt,
@@ -1732,7 +1741,6 @@ pkt_alloc_with_buffer(struct k_mem_slab *slab,
 		      k_timeout_t timeout)
 #endif
 {
-	k_timepoint_t end = sys_timepoint_calc(timeout);
 	struct net_pkt *pkt;
 	int ret;
 
@@ -1743,19 +1751,40 @@ pkt_alloc_with_buffer(struct k_mem_slab *slab,
 	NET_DBG("On iface %d (%p) size %zu", net_if_get_by_iface(iface), iface, size);
 #endif /* CONFIG_NET_RAW_MODE */
 
+	/* As in pkt_alloc_buffer(), take the slab without waiting first. When
+	 * that works none of the caller's timeout has gone, so it can be
+	 * handed to the buffer allocation untouched and the clock stays out
+	 * of the common path entirely.
+	 */
 #if NET_LOG_LEVEL >= LOG_LEVEL_DBG
-	pkt = pkt_alloc_on_iface(slab, iface, timeout, caller, line);
+	pkt = pkt_alloc_on_iface(slab, iface, K_NO_WAIT, caller, line);
 #else
-	pkt = pkt_alloc_on_iface(slab, iface, timeout);
+	pkt = pkt_alloc_on_iface(slab, iface, K_NO_WAIT);
 #endif
 
-	if (!pkt) {
-		return NULL;
+	if (pkt == NULL) {
+		k_timepoint_t end;
+
+		if (K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+			return NULL;
+		}
+
+		end = sys_timepoint_calc(timeout);
+
+#if NET_LOG_LEVEL >= LOG_LEVEL_DBG
+		pkt = pkt_alloc_on_iface(slab, iface, timeout, caller, line);
+#else
+		pkt = pkt_alloc_on_iface(slab, iface, timeout);
+#endif
+		if (pkt == NULL) {
+			return NULL;
+		}
+
+		/* Waiting for the slab used up part of the caller's budget. */
+		timeout = sys_timepoint_timeout(end);
 	}
 
 	net_pkt_set_family(pkt, family);
-
-	timeout = sys_timepoint_timeout(end);
 #if NET_LOG_LEVEL >= LOG_LEVEL_DBG
 	ret = net_pkt_alloc_buffer_debug(pkt, size, proto, timeout,
 					 caller, line);
@@ -1841,6 +1870,14 @@ void net_pkt_cursor_init(struct net_pkt *pkt)
 	}
 }
 
+/* Offset from buf->data past which nothing can be appended: the current
+ * payload plus the tailroom behind it.
+ */
+static size_t pkt_buf_write_limit(struct net_buf *buf)
+{
+	return buf->len + net_buf_tailroom(buf);
+}
+
 static void pkt_cursor_jump(struct net_pkt *pkt, bool write)
 {
 	struct net_pkt_cursor *cursor = &pkt->cursor;
@@ -1848,7 +1885,7 @@ static void pkt_cursor_jump(struct net_pkt *pkt, bool write)
 	cursor->buf = cursor->buf->frags;
 	while (cursor->buf) {
 		const size_t len =
-			write ? net_buf_max_len(cursor->buf) : cursor->buf->len;
+			write ? pkt_buf_write_limit(cursor->buf) : cursor->buf->len;
 
 		if (!len) {
 			cursor->buf = cursor->buf->frags;
@@ -1873,7 +1910,7 @@ static void pkt_cursor_advance(struct net_pkt *pkt, bool write)
 		return;
 	}
 
-	len = write ? net_buf_max_len(cursor->buf) : cursor->buf->len;
+	len = write ? pkt_buf_write_limit(cursor->buf) : cursor->buf->len;
 	if ((cursor->pos - cursor->buf->data) == len) {
 		pkt_cursor_jump(pkt, write);
 	}
@@ -1889,10 +1926,10 @@ static void pkt_cursor_update(struct net_pkt *pkt,
 		write = false;
 	}
 
-	len = write ? net_buf_max_len(cursor->buf) : cursor->buf->len;
+	len = write ? pkt_buf_write_limit(cursor->buf) : cursor->buf->len;
 	if (length + (cursor->pos - cursor->buf->data) == len &&
 	    !(net_pkt_is_being_overwritten(pkt) &&
-	      len < net_buf_max_len(cursor->buf))) {
+	      net_buf_tailroom(cursor->buf) > 0U)) {
 		pkt_cursor_jump(pkt, write);
 	} else {
 		cursor->pos += length;
@@ -1913,7 +1950,7 @@ static int net_pkt_cursor_operate(struct net_pkt *pkt,
 		size_t limit, d_len, len;
 
 		/* Compute the fragment limit only once per fragment */
-		limit = append ? net_buf_max_len(c_op->buf) : c_op->buf->len;
+		limit = append ? pkt_buf_write_limit(c_op->buf) : c_op->buf->len;
 		d_len = limit - (c_op->pos - c_op->buf->data);
 
 		if (d_len == 0U) {
@@ -1946,7 +1983,7 @@ static int net_pkt_cursor_operate(struct net_pkt *pkt,
 		 * subsequent appends.
 		 */
 		if (len == d_len &&
-		    !(ow && c_op->buf->len < net_buf_max_len(c_op->buf))) {
+		    !(ow && net_buf_tailroom(c_op->buf) > 0U)) {
 			pkt_cursor_jump(pkt, append);
 		} else {
 			c_op->pos += len;
@@ -2089,7 +2126,7 @@ int net_pkt_copy(struct net_pkt *pkt_dst,
 		}
 
 		s_len = c_src->buf->len - (c_src->pos - c_src->buf->data);
-		d_len = net_buf_max_len(c_dst->buf) - (c_dst->pos - c_dst->buf->data);
+		d_len = pkt_buf_write_limit(c_dst->buf) - (c_dst->pos - c_dst->buf->data);
 		if (length < s_len && length < d_len) {
 			len = length;
 		} else {
@@ -2424,7 +2461,7 @@ size_t net_pkt_get_contiguous_len(struct net_pkt *pkt)
 		size_t len;
 
 		len = net_pkt_is_being_overwritten(pkt) ?
-			pkt->cursor.buf->len : net_buf_max_len(pkt->cursor.buf);
+			pkt->cursor.buf->len : pkt_buf_write_limit(pkt->cursor.buf);
 		len -= pkt->cursor.pos - pkt->cursor.buf->data;
 
 		return len;

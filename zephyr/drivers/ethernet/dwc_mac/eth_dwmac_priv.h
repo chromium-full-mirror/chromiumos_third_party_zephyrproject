@@ -14,8 +14,10 @@
 #ifndef ZEPHYR_DRIVERS_ETHERNET_ETH_DWMAC_PRIV_H_
 #define ZEPHYR_DRIVERS_ETHERNET_ETH_DWMAC_PRIV_H_
 
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/clock_control.h>
 #include <zephyr/net/ethernet.h>
+#include <zephyr/net/phy.h>
 #include <zephyr/sys/device_mmio.h>
 
 /*
@@ -73,6 +75,22 @@
 /* number of hardware descriptors in uncached memory */
 #define NB_TX_DESCS		CONFIG_DWMAC_NB_TX_DESCS
 #define NB_RX_DESCS		CONFIG_DWMAC_NB_RX_DESCS
+
+/*
+ * The devicetree node of the first MAC instance. The snps,dwmac properties
+ * are assumed to be the same for all instances.
+ */
+
+BUILD_ASSERT(DT_HAS_COMPAT_STATUS_OKAY(snps_dwmac),
+	     "No device tree node with compatible \"snps,dwmac\" found");
+
+#define DWMAC_DT_NODE DT_INST(0, snps_dwmac)
+
+/* multicast filter capabilities of the hardware */
+#define DWMAC_MULTICAST_FILTER_BINS	DT_PROP_OR(DWMAC_DT_NODE, snps_multicast_filter_bins, 0)
+#define DWMAC_PERFECT_FILTER_ENTRIES	DT_PROP(DWMAC_DT_NODE, snps_perfect_filter_entries)
+/* MAC address entry 0 holds the station address */
+#define DWMAC_MULTICAST_PERFECT_SLOTS	(DWMAC_PERFECT_FILTER_ENTRIES - 1)
 
 /* stack size for RX refill thread */
 #define RX_REFILL_STACK_SIZE	1024
@@ -144,6 +162,11 @@ struct dwmac_priv {
 	struct k_thread rx_refill_thread;
 
 	struct k_spinlock spinlock;
+
+#ifdef CONFIG_ETH_DWC_ETHER_QOS_CORE
+	/* given by the MAC interrupt when an MDIO transaction completes */
+	struct k_sem mdio_done;
+#endif
 };
 
 /*
@@ -211,7 +234,15 @@ struct dwmac_priv {
 int dwmac_probe(const struct device *dev);
 int dwmac_bus_init(const struct device *dev);
 int dwmac_platform_init(const struct device *dev);
+void dwmac_setup_multicast_filter(const struct device *dev, const struct ethernet_filter *filter);
 void dwmac_isr(const struct device *ddev);
+/*
+ * Called by the QoS core whenever the PHY reports a link at a new speed, after
+ * MAC_CONF has been updated. Platforms feeding the MAC from a speed-dependent
+ * clock, as RGMII ones typically do, override this to retune that clock. The
+ * default implementation does nothing.
+ */
+void dwmac_platform_link_speed_changed(const struct device *dev, enum phy_link_speed speed);
 #if defined(CONFIG_PTP_CLOCK_DWC_MAC)
 const struct device *dwmac_get_ptp_clock(const struct device *dev, struct net_if *iface);
 #endif
@@ -1394,9 +1425,16 @@ extern const struct ethernet_api dwmac_api;
 /* GMAC register map */
 #define DWMAC_MACCR      (DWMAC_MAC_OFFSET + 0x0000)
 #define DWMAC_MACFFR     (DWMAC_MAC_OFFSET + 0x0004)
+#define DWMAC_MACHTHR    (DWMAC_MAC_OFFSET + 0x0008)
+#define DWMAC_MACHTLR    (DWMAC_MAC_OFFSET + 0x000C)
 #define DWMAC_MACVERR    (DWMAC_MAC_OFFSET + 0x0020)
-#define DWMAC_MACA0HR    (DWMAC_MAC_OFFSET + 0x0040)
-#define DWMAC_MACA0LR    (DWMAC_MAC_OFFSET + 0x0044)
+#define DWMAC_MACAHR(n)  (DWMAC_MAC_OFFSET + 0x0040 + 8 * (n))
+#define DWMAC_MACALR(n)  (DWMAC_MAC_OFFSET + 0x0044 + 8 * (n))
+#define DWMAC_MACA0HR    DWMAC_MACAHR(0)
+#define DWMAC_MACA0LR    DWMAC_MACALR(0)
+
+/* MAC address high register bits (entries 1 and up) */
+#define DWMAC_MACAHR_AE  BIT(31)
 
 #define DWMAC_DMABMR       (DWMAC_DMA_OFFSET + 0x0000)
 #define DWMAC_DMATPDR      (DWMAC_DMA_OFFSET + 0x0004)
@@ -1420,6 +1458,7 @@ extern const struct ethernet_api dwmac_api;
 
 /* MAC frame filter bits */
 #define DWMAC_MACFFR_PM    BIT(0)
+#define DWMAC_MACFFR_HM    BIT(2)
 #define DWMAC_MACFFR_PAM   BIT(4)
 
 /* DMA status bits */
@@ -1440,7 +1479,17 @@ extern const struct ethernet_api dwmac_api;
 
 /* DMA bus mode bits */
 #define DWMAC_DMABMR_SR    BIT(0)
+#define DWMAC_DMABMR_DA    BIT(1)
+#define DWMAC_DMABMR_DSL   GENMASK(6, 2)
 #define DWMAC_DMABMR_EDFE  BIT(7)
+#define DWMAC_DMABMR_PBL   GENMASK(13, 8)
+#define DWMAC_DMABMR_PR    GENMASK(15, 14)
+#define DWMAC_DMABMR_FB    BIT(16)
+#define DWMAC_DMABMR_RPBL  GENMASK(22, 17)
+#define DWMAC_DMABMR_USP   BIT(23)
+#define DWMAC_DMABMR_PBLx8 BIT(24)
+#define DWMAC_DMABMR_AAL   BIT(25)
+#define DWMAC_DMABMR_MB    BIT(26)
 
 /* DMA interrupt enable bits */
 #define DWMAC_DMAIER_TIE   BIT(0)

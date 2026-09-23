@@ -16,16 +16,6 @@
  * supported by nrfx (see the corresponding nrfx_config_*.h files).
  */
 
-#if defined(CONFIG_SOC_COMPATIBLE_NRF7120_ENGA) && !defined(NRF7120_ENGA_XXAA)
-#define NRF7120_ENGA_XXAA
-#endif
-#if defined(CONFIG_SOC_COMPATIBLE_NRF7120_ENGA_CPUAPP) && !defined(NRF_APPLICATION)
-#define NRF_APPLICATION
-#endif
-#if defined(CONFIG_SOC_NRF7120_ENGA_CPUFLPR) && !defined(NRF_FLPR)
-#define NRF_FLPR
-#endif
-
 #ifdef CONFIG_NRFX_ADC
 #define NRFX_ADC_ENABLED 1
 #endif
@@ -40,10 +30,6 @@
 #endif
 #ifdef CONFIG_NRFX_CLOCK_LOG
 #define NRFX_CLOCK_CONFIG_LOG_ENABLED 1
-#endif
-#if defined(CONFIG_NRFX_CLOCK_USE_LFRC_CALIBRATION) || \
-	defined(CONFIG_NRFX_CLOCK_LFCLK_USE_LFRC_CALIBRATION)
-#define NRFX_CLOCK_CONFIG_USE_LFRC_CALIBRATION 1
 #endif
 
 #if (defined(CONFIG_NRFX_CLOCK_LF_SRC_RC) && defined(CONFIG_CLOCK_CONTROL_NRF)) ||                 \
