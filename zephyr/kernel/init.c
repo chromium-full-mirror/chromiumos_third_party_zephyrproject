@@ -90,23 +90,17 @@ static void z_init_static_threads(void)
 #endif /* CONFIG_USERSPACE */
 
 	/*
-	 * Non-legacy static threads may be started immediately or
+	 * Static threads may be started immediately or
 	 * after a previously specified delay. Even though the
 	 * scheduler is locked, ticks can still be delivered and
 	 * processed. Take a sched lock to prevent them from running
 	 * until they are all started.
-	 *
-	 * Note that static threads defined using the legacy API have a
-	 * delay of K_FOREVER.
 	 */
 	k_sched_lock();
 	STRUCT_SECTION_FOREACH(_static_thread_data, thread_data) {
 		k_timeout_t init_delay = Z_THREAD_INIT_DELAY(thread_data);
 
-		if (!K_TIMEOUT_EQ(init_delay, K_FOREVER)) {
-			thread_schedule_new(thread_data->init_thread,
-					    init_delay);
-		}
+		thread_schedule_new(thread_data->init_thread, init_delay);
 	}
 	k_sched_unlock();
 }
@@ -337,7 +331,7 @@ static void bg_thread_main(void *unused1, void *unused2, void *unused3)
 #endif /* CONFIG_MMU */
 
 #ifdef CONFIG_BOOTARGS
-	extern int main(int, char **);
+	extern int main(int argc, char **argv);
 	extern char **sys_boot_prepare_main_args(int *argc);
 
 	int argc = 0;

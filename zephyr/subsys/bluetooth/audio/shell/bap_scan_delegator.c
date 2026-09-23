@@ -246,12 +246,23 @@ static int pa_sync_no_past(struct scan_delegator_sync_state *state, uint16_t pa_
 {
 	const struct bt_bap_scan_delegator_recv_state *recv_state;
 	struct bt_le_per_adv_sync_param param = { 0 };
+	struct bt_le_local_features feature;
 	int err;
+
+	err = bt_le_get_local_features(&feature);
+	if (err != 0) {
+		bt_shell_info("Failed to get local features: %d", err);
+		return err;
+	}
 
 	recv_state = state->recv_state;
 
 	bt_addr_le_copy(&param.addr, &recv_state->addr);
-	param.options = BT_LE_PER_ADV_SYNC_OPT_FILTER_DUPLICATE;
+	if (BT_FEAT_LE_PER_ADV_ADI_SUPP(feature.features)) {
+		param.options = BT_LE_PER_ADV_SYNC_OPT_FILTER_DUPLICATE;
+	} else {
+		param.options = BT_LE_PER_ADV_SYNC_OPT_NONE;
+	}
 	param.sid = recv_state->adv_sid;
 	param.skip = PA_SYNC_SKIP;
 	param.timeout = interval_to_sync_timeout(pa_interval);
@@ -517,6 +528,10 @@ static struct bt_le_per_adv_sync_cb pa_sync_cb = {
 
 static void disconnected_cb(struct bt_conn *conn, uint8_t reason)
 {
+	if (!bt_conn_is_type(conn, BT_CONN_TYPE_LE)) {
+		return;
+	}
+
 	ARRAY_FOR_EACH_PTR(scan_delegator_sync_states, sync_state) {
 		if (sync_state->conn == conn) {
 			bt_conn_drop(&sync_state->conn);

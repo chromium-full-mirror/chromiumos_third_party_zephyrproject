@@ -741,6 +741,10 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
 	ARG_UNUSED(reason);
 
+	if (!bt_conn_is_type(conn, BT_CONN_TYPE_LE)) {
+		return;
+	}
+
 	if (mprx.remote_player.conn == conn) {
 		bt_conn_drop(&mprx.remote_player.conn);
 	}
@@ -890,6 +894,29 @@ int media_proxy_ctrl_get_player_name(struct media_player *player)
 		return bt_mcc_read_player_name(mprx.remote_player.conn);
 	}
 #endif /* CONFIG_MCTL_REMOTE_PLAYER_CONTROL */
+
+	return -EINVAL;
+}
+
+int media_proxy_ctrl_set_player_name(struct media_player *player, const char *name)
+{
+	CHECKIF(player == NULL || name == NULL) {
+		LOG_DBG("player or name is NULL");
+		return -EINVAL;
+	}
+
+#if defined(CONFIG_MCTL_LOCAL_PLAYER_LOCAL_CONTROL)
+	if (mprx.local_player.registered && player == &mprx.local_player) {
+		if (mprx.local_player.calls->set_player_name != NULL) {
+			mprx.local_player.calls->set_player_name(name);
+
+			return 0;
+		}
+
+		LOG_DBG("No call");
+		return -EOPNOTSUPP;
+	}
+#endif /* CONFIG_MCTL_LOCAL_PLAYER_LOCAL_CONTROL */
 
 	return -EINVAL;
 }

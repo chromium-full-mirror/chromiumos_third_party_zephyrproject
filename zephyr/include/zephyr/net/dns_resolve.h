@@ -57,13 +57,13 @@ enum dns_query_type {
 };
 
 
-/** Private RR type range start (RFC 6895) */
+/** Private RR type range start (@rfc{6895}) */
 #define DNS_RR_TYPE_PRIVATE_START_VALUE 65280
-/** Private RR type range end (RFC 6895) */
+/** Private RR type range end (@rfc{6895}) */
 #define DNS_RR_TYPE_PRIVATE_END_VALUE 65534
 
 /**
- * @brief Check if query type is a private RR (RFC 6895: 65280-65534)
+ * @brief Check if query type is a private RR (@rfc{6895}: 65280-65534)
  *
  * @param type Query type to check
  * @return true if type is in private RR range, false otherwise
@@ -503,8 +503,8 @@ enum dns_resolve_context_state {
  * DNS resolve context structure.
  */
 struct dns_resolve_context {
-	/** List of configured DNS servers */
-	struct dns_server {
+	/** Information about one configured DNS server */
+	struct dns_server_info {
 		/** DNS server address storage */
 		union {
 			/** DNS server information */
@@ -535,7 +535,7 @@ struct dns_resolve_context {
 		/** Dispatch DNS data between resolver and responder */
 		struct dns_socket_dispatcher dispatcher;
 /** @endcond */
-	} servers[DNS_RESOLVER_MAX_POLL];
+	} servers[DNS_RESOLVER_MAX_POLL]; /**< List of configured DNS servers */
 
 /** @cond INTERNAL_HIDDEN */
 	/** Socket polling for each server connection */

@@ -1036,7 +1036,7 @@ static int lwm2m_write_handler_opaque(struct lwm2m_engine_obj_inst *obj_inst,
 					       last_pkt_block && last_block, opaque_ctx.len,
 					       opaque_ctx.offset);
 			if (ret < 0) {
-				/* -EEXIST will generate Bad Request LWM2M response. */
+				/* -EEXIST will generate Bad Request LwM2M response. */
 				return -EEXIST;
 			}
 
@@ -1103,6 +1103,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 		/* Get block_ctx for total_size (might be zero) */
 		total_size = msg->in.block_ctx->ctx.total_size;
 		offset = msg->in.block_ctx->opaque.offset;
+		last_block = msg->in.block_ctx->last_block;
 
 		LOG_DBG("BLOCK1: total:%zu current:%zu"
 			" last:%u",
@@ -1268,7 +1269,7 @@ int lwm2m_write_handler(struct lwm2m_engine_obj_inst *obj_inst, struct lwm2m_eng
 					       res_inst->res_inst_id, write_buf, len, last_block,
 					       total_size, offset);
 			if (ret < 0) {
-				/* -EEXIST will generate Bad Request LWM2M response. */
+				/* -EEXIST will generate Bad Request LwM2M response. */
 				return -EEXIST;
 			}
 
@@ -1400,7 +1401,7 @@ static int lwm2m_read_cached_data(struct lwm2m_message *msg,
 		read_info = &msg->cache_info->read_info[msg->cache_info->entry_size];
 		/* Store original timeseries ring buffer get states for failure handling */
 		read_info->cache_data = cached_data;
-		read_info->original_rb_get = cached_data->fifo.rb.get;
+		read_info->cached_rb_read_idx = cached_data->fifo.rb.read_idx;
 		msg->cache_info->entry_size++;
 		if (msg->cache_info->entry_limit) {
 			length = MIN(length, msg->cache_info->entry_limit);
@@ -3093,8 +3094,8 @@ static bool lwm2m_timeseries_data_rebuild(struct lwm2m_message *msg, int error_c
 
 	/* Put Ring buffer back to original */
 	for (int i = 0; i < cache_temp->entry_size; i++) {
-		cache_temp->read_info[i].cache_data->fifo.rb.get =
-			cache_temp->read_info[i].original_rb_get;
+		cache_temp->read_info[i].cache_data->fifo.rb.read_idx =
+			cache_temp->read_info[i].cached_rb_read_idx;
 	}
 
 	if (cache_temp->entry_limit) {
