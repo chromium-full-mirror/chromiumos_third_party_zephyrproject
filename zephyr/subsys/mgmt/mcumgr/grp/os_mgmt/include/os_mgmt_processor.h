@@ -115,6 +115,8 @@ extern "C" {
 #else
 #define PROCESSOR_NAME "cortex-r52"
 #endif
+#elif defined(CONFIG_CPU_CORTEX_A5)
+#define PROCESSOR_NAME "cortex-a5"
 #elif defined(CONFIG_CPU_CORTEX_A7)
 #define PROCESSOR_NAME "cortex-a7"
 #elif defined(CONFIG_CPU_CORTEX_A9)
@@ -190,6 +192,8 @@ extern "C" {
 #define PROCESSOR_NAME "sparc"
 #elif defined(CONFIG_OPENRISC)
 #define PROCESSOR_NAME "openrisc"
+#elif defined(CONFIG_TRICORE)
+#define PROCESSOR_NAME "tricore"
 #endif
 
 #if defined(CONFIG_ARCH_POSIX)

@@ -48,8 +48,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 #define TX_AVAIL_WAIT K_MSEC(1)
 
 /* descriptor index iterators */
-#define INC_WRAP(idx, size) ({ idx = (idx + 1) % size; })
-#define DEC_WRAP(idx, size) ({ idx = (idx + size - 1) % size; })
+#define INC_WRAP(idx, size) ((idx) = ((idx) + 1) % (size))
 
 /*
  * Descriptor physical location .
@@ -109,6 +108,9 @@ static enum ethernet_hw_caps dwmac_caps(const struct device *dev, struct net_if 
 
 #ifdef CONFIG_NET_VLAN
 	caps |= ETHERNET_HW_VLAN;
+#endif
+#ifdef CONFIG_ETH_DWC_ETHER_MULTICAST_FILTER
+	caps |= ETHERNET_HW_FILTERING;
 #endif
 
 #ifdef CONFIG_ETH_DWC_ETHER_RX_HW_CHECKSUM_EN
@@ -434,7 +436,8 @@ static void dwmac_rx_refill_desc(const struct device *dev, struct net_buf *frag)
 	barrier_dmem_fence_full();
 
 	/* advance to the next descriptor */
-	p->rx_desc_head = INC_WRAP(d_idx, NB_RX_DESCS);
+	INC_WRAP(d_idx, NB_RX_DESCS);
+	p->rx_desc_head = d_idx;
 
 	/* lastly notify the hardware */
 	DWMAC_REG_WRITE(DMA_CHn_RXDESC_TAIL_PTR(0), RXDESC_PHYS_L(d_idx));
@@ -499,11 +502,16 @@ static void dwmac_dma_irq(const struct device *dev, unsigned int ch)
 
 static void dwmac_mac_irq(const struct device *dev)
 {
+	struct dwmac_priv *p = dev->data;
 	uint32_t status;
 
+	/* reading clears the status bits */
 	status = DWMAC_REG_READ(MAC_IRQ_STATUS);
 	LOG_DBG("MAC_IRQ_STATUS = 0x%08x", status);
-	__ASSERT(false, "unimplemented");
+
+	if ((status & MAC_IRQ_STATUS_MDIOIS) != 0U) {
+		k_sem_give(&p->mdio_done);
+	}
 }
 
 static void dwmac_mtl_irq(const struct device *dev)
@@ -579,13 +587,23 @@ static int dwmac_set_config(const struct device *dev,
 		}
 		break;
 #endif
-
+#if defined(CONFIG_ETH_DWC_ETHER_MULTICAST_FILTER)
+	case ETHERNET_CONFIG_TYPE_FILTER:
+		dwmac_setup_multicast_filter(dev, &config->filter);
+		break;
+#endif
 	default:
 		ret = -ENOTSUP;
 		break;
 	}
 
 	return ret;
+}
+
+__weak void dwmac_platform_link_speed_changed(const struct device *dev, enum phy_link_speed speed)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(speed);
 }
 
 static void phy_link_state_changed(const struct device *phy_dev,
@@ -632,6 +650,7 @@ static void phy_link_state_changed(const struct device *phy_dev,
 		}
 
 		DWMAC_REG_WRITE(MAC_CONF, reg_val);
+		dwmac_platform_link_speed_changed(dev, state->speed);
 	}
 
 	net_eth_carrier_set(p->iface, state->is_up);
@@ -663,10 +682,18 @@ static void dwmac_iface_init(struct net_if *iface)
 	/*
 	 * Configure MAC address filter to
 	 *   - pass unicast packets with our MAC address
-	 *   - pass multicast packets
+	 *   - pass multicast packets matching the multicast filter,
+	 *     or all multicast packets if there is no filter
 	 *   - pass broadcast packets
 	 */
-	DWMAC_REG_WRITE(MAC_PKT_FILTER, MAC_PKT_FILTER_PM);
+	if (!IS_ENABLED(CONFIG_ETH_DWC_ETHER_MULTICAST_FILTER)) {
+		DWMAC_REG_WRITE(MAC_PKT_FILTER, MAC_PKT_FILTER_PM);
+	} else if (IS_ENABLED(CONFIG_ETH_DWC_ETHER_MULTICAST_FILTER_HASH)) {
+		DWMAC_REG_WRITE(MAC_PKT_FILTER, MAC_PKT_FILTER_HMC);
+	} else {
+		/* multicast is perfect filtered against the MAC address entries */
+		DWMAC_REG_WRITE(MAC_PKT_FILTER, 0);
+	}
 
 	if (cfg->phy_dev != NULL) {
 		/* Do not start the interface until PHY link is up */
@@ -757,6 +784,9 @@ int dwmac_probe(const struct device *dev)
 	p->feature3 = DWMAC_REG_READ(MAC_HW_FEATURE3);
 	LOG_DBG("hw_feature: 0x%08x 0x%08x 0x%08x 0x%08x",
 		p->feature0, p->feature1, p->feature2, p->feature3);
+
+	/* the MDIO driver enables the MDIO interrupt if the IP has it */
+	k_sem_init(&p->mdio_done, 0, 1);
 
 	ret = dwmac_platform_init(dev);
 	if (ret != 0) {

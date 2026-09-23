@@ -227,6 +227,10 @@ static int iwdg_stm32_install_timeout(const struct device *dev,
 			return -ENOTSUP;
 		}
 	}
+	if (data->reload) {
+		/* Timeout has already been configured */
+		return -ENOMEM;
+	}
 
 	/* Calculating parameters to be applied later, on setup */
 	iwdg_stm32_convert_timeout(timeout, &prescaler, &reload);

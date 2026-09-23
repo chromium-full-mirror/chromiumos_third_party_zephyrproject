@@ -3,10 +3,10 @@ STM32CubeWB0
 
 Origin:
    STMicroelectronics
-   http://www.st.com/en/embedded-software/stm32cubewb0.html
+   https://www.st.com/en/embedded-software/stm32cubewb0.html
 
 Status:
-   version v1.5.0
+   version 1.5.0
 
 Purpose:
    STMicroelectronics official MCU package for STM32WB0 series.
@@ -35,7 +35,6 @@ License Link:
    https://opensource.org/licenses/BSD-3-Clause
 
 Patch List:
-
    *Changes from official delivery:
     -dos2unix applied
     -trailing white spaces removed
@@ -54,9 +53,6 @@ Patch List:
       . Remove declaration of associated datatypes 'intfunc' / 'intvec_elem'
     -in stm32cube/stm32wb0x/drivers/include/Legacy/stm32_hal_legacy.h
       . Remove PAGESIZE definition which conflicts with POSIX
-    -in stm32cube/stm32wb0x/drivers/include/stm32wb0x_hal_conf.h
-      . Change USE_RADIO_PROPRIETARY_DRIVER from 1U to 0U
-         . Required for BLE stack compatibility
     -in stm32cube/stm32wb0x/drivers/src/stm32wb0x_hal_radio.c
       . Remove definition of __blue_RAM variable
         . Moved to 'zephyr/soc/st/stm32/stm32wb0xx/soc.c'
