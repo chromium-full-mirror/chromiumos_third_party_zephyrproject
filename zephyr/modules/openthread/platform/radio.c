@@ -230,6 +230,14 @@ void handle_radio_event(const struct device *dev, enum ieee802154_event evt,
 				rx_result = OT_ERROR_DESTINATION_ADDRESS_FILTERED;
 				break;
 
+			case IEEE802154_RX_FAIL_NO_BUFS:
+				rx_result = OT_ERROR_NO_BUFS;
+				break;
+
+			case IEEE802154_RX_FAIL_ABORT:
+				rx_result = OT_ERROR_ABORT;
+				break;
+
 			case IEEE802154_RX_FAIL_OTHER:
 			default:
 				rx_result = OT_ERROR_FAILED;
@@ -363,7 +371,7 @@ void platformRadioInit(void)
 	k_work_queue_start(&ot_work_q, ot_task_stack,
 			   K_KERNEL_STACK_SIZEOF(ot_task_stack),
 			   OT_WORKER_PRIORITY, NULL);
-	k_thread_name_set(&ot_work_q.thread, "ot_radio_workq");
+	k_thread_name_set(ot_work_q.thread_id, "ot_radio_workq");
 
 	if ((radio_api->get_capabilities(radio_dev) &
 	     IEEE802154_HW_TX_RX_ACK) != IEEE802154_HW_TX_RX_ACK) {
@@ -438,6 +446,11 @@ void transmit_message(struct k_work *tx_job_item)
 	} else if (sTransmitFrame.mInfo.mTxInfo.mCsmaCaEnabled) {
 		radio_set_channel(sTransmitFrame.mChannel);
 		if (radio_caps & IEEE802154_HW_CSMA) {
+			struct ieee802154_config config = {
+				.csma_ca_backoffs = sTransmitFrame.mInfo.mTxInfo.mMaxCsmaBackoffs};
+
+			(void)radio_api->configure(radio_dev, IEEE802154_CONFIG_CSMA_CA_BACKOFFS,
+						   &config);
 			tx_err = radio_api->tx(radio_dev, IEEE802154_TX_MODE_CSMA_CA, tx_pkt,
 					       tx_payload);
 		} else {
@@ -678,12 +691,8 @@ void platformRadioProcess(otInstance *aInstance)
 
 	if (is_pending_event_set(PENDING_EVENT_TX_DONE)) {
 		reset_pending_event(PENDING_EVENT_TX_DONE);
-
-		if (sState == OT_RADIO_STATE_TRANSMIT ||
-		    radio_api->get_capabilities(radio_dev) & IEEE802154_HW_SLEEP_TO_TX) {
-			sState = OT_RADIO_STATE_RECEIVE;
-			handle_tx_done(aInstance);
-		}
+		sState = OT_RADIO_STATE_RECEIVE;
+		handle_tx_done(aInstance);
 	}
 
 	if (is_pending_event_set(PENDING_EVENT_SLEEP)) {
@@ -914,13 +923,7 @@ otError otPlatRadioTransmit(otInstance *aInstance, otRadioFrame *aPacket)
 
 	__ASSERT_NO_MSG(aPacket == &sTransmitFrame);
 
-	enum ieee802154_hw_caps radio_caps;
-
-	radio_caps = radio_api->get_capabilities(radio_dev);
-
-	if (sState == OT_RADIO_STATE_RECEIVE ||
-	    (sState == OT_RADIO_STATE_SLEEP &&
-	     radio_caps & IEEE802154_HW_SLEEP_TO_TX)) {
+	if (sState == OT_RADIO_STATE_RECEIVE || sState == OT_RADIO_STATE_SLEEP) {
 		if (run_tx_task(aInstance) == 0) {
 			error = OT_ERROR_NONE;
 		}
@@ -1000,9 +1003,8 @@ otRadioCaps otPlatRadioGetCaps(otInstance *aInstance)
 		caps |= OT_RADIO_CAPS_ACK_TIMEOUT;
 	}
 
-	if (radio_caps & IEEE802154_HW_SLEEP_TO_TX) {
-		caps |= OT_RADIO_CAPS_SLEEP_TO_TX;
-	}
+	/* All Zephyr 802.15.4 drivers support transmitting from a low-power state. */
+	caps |= OT_RADIO_CAPS_SLEEP_TO_TX;
 
 #if !defined(CONFIG_OPENTHREAD_THREAD_VERSION_1_1)
 	if (radio_caps & IEEE802154_HW_TX_SEC) {

@@ -2,19 +2,19 @@ STM32CubeL4
 ###########
 
 Origin:
-   ST Microelectronics
-   http://www.st.com/en/embedded-software/stm32cubel4.html
+   STMicroelectronics
+   https://www.st.com/en/embedded-software/stm32cubel4.html
 
 Status:
-   version v1.18.2
+   version 1.18.2
 
 Purpose:
-   ST Microelectronics official MCU package for STM32L4 series.
+   STMicroelectronics official MCU package for STM32L4 series.
 
 Description:
-   This package is an extract of official STM32CubeL4 package written by ST Microelectronics.
+   This package is an extract of official STM32CubeL4 package written by STMicroelectronics.
    It is composed of STM32Cube hardware abstraction layer (HAL) and low layer (LL) plus a set
-   of CMSIS headers files, one for each SoC in STM32L4 series.
+   of CMSIS headers files, one for each SoC in the STM32L4 series.
 
 Dependencies:
     None.
@@ -35,7 +35,6 @@ License Link:
    https://opensource.org/licenses/BSD-3-Clause
 
 Patch List:
-
    *Changes from official delivery:
     -dos2unix applied
     -trailing white spaces removed
@@ -47,5 +46,13 @@ Patch List:
    *Fix to remove PAGESIZE definition which conflicts with POSIX
     Impacted files:
      drivers/include/Legacy/stm32_hal_legacy.h
+
+   *Fix HAL_DFSDM_IRQHandler
+      HAL_DFSDM_IRQHandler handles IRQ flags in an if {} else if {} condition.
+      This causes interrupts to be handled once and only the first flag
+      encountered in the condition, while there can be several flags raised.
+     Impacted files:
+       drivers/src/stm32f7xx_hal_dfsdm.c
+     ST Internal Reference: HAL1-27454
 
    See release_note.html from STM32Cube

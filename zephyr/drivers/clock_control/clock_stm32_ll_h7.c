@@ -21,6 +21,9 @@
 #include <stm32_backup_domain.h>
 #include <stm32_hsem.h>
 
+/* Power supply / regulator configuration node */
+#define PWRC_NODE DT_INST(0, st_stm32h7_pwr)
+
 /* Macros to fill up prescaler values */
 #if defined(CONFIG_SOC_SERIES_STM32H7RSX)
 #define hsi_divider(v) CONCAT(LL_RCC_HSI_DIV_, v)
@@ -190,6 +193,11 @@
 #define STM32H7_BUS_CLK_REG	DT_REG_ADDR(DT_NODELABEL(rcc)) + 0x60
 #endif
 
+#if IS_ENABLED(STM32_PLL_P_ENABLED)
+BUILD_ASSERT(((STM32_PLL_P_DIVISOR == 1) || (STM32_PLL_P_DIVISOR % 2) == 0),
+	     "STM32H7/H7RS PLL1 DIVP divisor factor must be 1 or even");
+#endif /* STM32_PLL_P_ENABLED */
+
 static uint32_t get_bus_clock(uint32_t clock, uint32_t prescaler)
 {
 	return clock / prescaler;
@@ -280,16 +288,37 @@ static uint32_t get_sysclk_frequency(void)
 
 static int32_t prepare_regulator_voltage_scale(void)
 {
-	/* Make sure to put the CPU in highest Voltage scale during clock configuration */
-	/* Highest voltage is SCALE0 */
+	/* Put the CPU in the highest voltage scale supported by the board */
 #if defined(CONFIG_SOC_SERIES_STM32H7RSX)
+	/* VOS0 is always safe to use on STM32H7RS */
 	LL_PWR_SetRegulVoltageScaling(LL_PWR_REGU_VOLTAGE_SCALE0);
 	while (LL_PWR_IsActiveFlag_VOSRDY() == 0) {
+	}
+#elif defined(SYSCFG_PWRCR_ODEN)
+	/*
+	 * On STM32H74x/H75x lines, VOS0 is the overdrive scale entered by
+	 * setting SYSCFG_PWRCR.ODEN, and is only valid when Vcore is generated
+	 * by the LDO (H7 Data Sheets; stm32h7xx_hal_pwr.h). Other supply modes
+	 * (e.g. SMPS-direct, LDO off) are limited to VOS1.
+	 */
+	if (DT_ENUM_HAS_VALUE(PWRC_NODE, power_supply, ldo) ||
+	    DT_ENUM_HAS_VALUE(PWRC_NODE, power_supply, smps_ldo) ||
+	    DT_ENUM_HAS_VALUE(PWRC_NODE, power_supply, smps_ext_ldo)) {
+		/* Enable the SYSCFG clock so the ODEN write takes effect. */
+		LL_APB4_GRP1_EnableClock(LL_APB4_GRP1_PERIPH_SYSCFG);
+		__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+	} else {
+		__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+	}
+
+	while (LL_PWR_IsActiveFlag_VOS() == 0) {
+	}
 #else
+	/* On other STM32H7 lines VOS0 does not use ODEN and is always safe */
 	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 	while (LL_PWR_IsActiveFlag_VOS() == 0) {
-#endif
 	}
+#endif
 
 	return 0;
 }
@@ -392,16 +421,17 @@ int enabled_clock(uint32_t src_clk)
 	return -ENOTSUP;
 }
 
+static int stm32_clock_control_configure(const struct device *dev,
+					 clock_control_subsys_t sub_system, void *data);
+
 static int stm32_clock_control_on(const struct device *dev, clock_control_subsys_t sub_system)
 {
 	struct stm32_pclken *pclken = (struct stm32_pclken *)(sub_system);
 	volatile int temp;
 
-	ARG_UNUSED(dev);
-
 	if (!IN_RANGE(pclken->bus, STM32_PERIPH_BUS_MIN, STM32_PERIPH_BUS_MAX)) {
-		/* Attempt to toggle a wrong periph clock bit */
-		return -ENOTSUP;
+		/* Source selection entry: apply it instead of toggling a gate */
+		return stm32_clock_control_configure(dev, sub_system, NULL);
 	}
 
 	z_stm32_hsem_lock(CFG_HW_RCC_SEMID, HSEM_LOCK_DEFAULT_RETRY);
@@ -719,9 +749,9 @@ static int stm32_clock_control_get_subsys_rate(const struct device *clock,
 		}
 #else /* CONFIG_SOC_SERIES_STM32H7RSX */
 		if (IS_ENABLED(STM32_TIMER_PRESCALER)) {
-			*rate = STM32_D2PPRE2 <= 4 ? ahb_clock : apb1_clock * 4;
+			*rate = STM32_D2PPRE2 <= 4 ? ahb_clock : apb2_clock * 4;
 		} else {
-			*rate = STM32_D2PPRE2 <= 2 ? ahb_clock : apb1_clock * 2;
+			*rate = STM32_D2PPRE2 <= 2 ? ahb_clock : apb2_clock * 2;
 		}
 #endif /* CONFIG_SOC_SERIES_STM32H7RSX */
 		break;
@@ -874,7 +904,8 @@ static void stm32_clock_switch_to_hsi(void)
 __unused
 static int set_up_plls(void)
 {
-#if defined(STM32_PLL_ENABLED) || defined(STM32_PLL2_ENABLED) || defined(STM32_PLL3_ENABLED)
+#if !defined(CONFIG_CPU_CORTEX_M4) &&                                                              \
+	(defined(STM32_PLL_ENABLED) || defined(STM32_PLL2_ENABLED) || defined(STM32_PLL3_ENABLED))
 	int r;
 	uint32_t vco_input_range;
 	uint32_t vco_output_range;
@@ -892,7 +923,7 @@ static int set_up_plls(void)
 		LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
 	}
 
-#if defined(CONFIG_STM32_MEMMAP) && defined(CONFIG_BOOTLOADER_MCUBOOT)
+#if defined(CONFIG_FLASH_STM32_NOR_MEMMAP) && defined(CONFIG_BOOTLOADER_MCUBOOT)
 	/*
 	 * Don't disable PLL during application initialization
 	 * that runs in memmap mode when (Q/O)SPI uses PLL
@@ -1099,7 +1130,8 @@ static int set_up_plls(void)
 	/* Init PLL source to None */
 	LL_RCC_PLL_SetSource(LL_RCC_PLLSOURCE_NONE);
 
-#endif /* STM32_PLL_ENABLED || STM32_PLL2_ENABLED || STM32_PLL3_ENABLED */
+#endif /* !CONFIG_CPU_CORTEX_M4 && (STM32_PLL_ENABLED || STM32_PLL2_ENABLED || STM32_PLL3_ENABLED)
+	*/
 
 	return 0;
 }

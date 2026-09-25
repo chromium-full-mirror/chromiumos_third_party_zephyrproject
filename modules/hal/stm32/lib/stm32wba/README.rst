@@ -6,7 +6,7 @@ Origin:
    https://github.com/STMicroelectronics/STM32CubeWBA
 
 Status:
-   version v1.9.0
+   version v1.10.0
 
 Purpose:
    This library is used on STM32WBA series to port BLE and IEEE802154 controller libraries in
@@ -48,10 +48,11 @@ Description:
       - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/inc/ot_inc/types.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ble_full/ll_fw_config.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ble_basic/ll_fw_config.h
+      - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ble_basic_plus/ll_fw_config.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ieee_15_4_basic/ll_fw_config.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/thread/ll_fw_config.h
-      - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/ble_15_4/ll_fw_config.h
-      - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/ble_full_15_4/ll_fw_config.h
+      - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/ble_basic_15_4/ll_fw_config.h
+      - Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/ble_basic_plus_15_4/ll_fw_config.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_sys/inc/linklayer_plat.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_sys/inc/ll_sys.h
       - Middlewares/ST/STM32_WPAN/link_layer/ll_sys/src/ll_sys_cs.c
@@ -78,11 +79,11 @@ Description:
       - Projects/Common/WPAN/Modules/stm_list.c
       - Projects/Common/WPAN/Modules/stm_list.h
       - Projects/Common/WPAN/Modules/utilities_common.h
+      - Projects/Common/WPAN/Modules/pka_ctrl.c
+      - Projects/Common/WPAN/Modules/pka_ctrl.h
       - Projects/Common/WPAN/Interfaces/hw.h
       - Projects/Common/WPAN/Interfaces/hw_aes.c
       - Projects/Common/WPAN/Interfaces/hw_if.h
-      - Projects/Common/WPAN/Interfaces/hw_pka.c
-      - Projects/Common/WPAN/Interfaces/hw_pka_p256.c
       - Projects/Common/WPAN/Modules/Log/log_module.c
       - Projects/Common/WPAN/Modules/Log/log_module.h
       - Projects/Common/WPAN/Modules/BasicAES/baes.h
@@ -93,8 +94,6 @@ Description:
       - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/System/Config/Debug_GPIO/app_debug.h
       - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/System/Config/Log/log_module_conf.h
       - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/STM32_WPAN/Target/power_table.c
-      - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/STM32_WPAN/Target/bpka.c
-      - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/STM32_WPAN/Target/bpka.h
       - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/STM32_WPAN/Target/linklayer_plat.c
       - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/STM32_WPAN/Target/ll_sys_if.c
       - Projects/NUCLEO-WBA65RI/Applications/BLE/BLE_TransparentMode/STM32_WPAN/Target/ll_sys_if.h
@@ -115,7 +114,7 @@ URL:
    https://github.com/STMicroelectronics/STM32CubeWBA
 
 Commit:
-   92e834c2c34cf473b73271d54674a91a9c78477d
+   e455b860ceb52aaa0332a98f1e7a10bbd7014fc9
 
 Maintained-by:
    External
@@ -184,4 +183,13 @@ Patch List:
          * app_conf.h
          * ll_sys_if.h
          * linklayer_plat.h
-         * ll_sys_startup.c
+
+  * Brought back CFG_LPM_STDBY_WAKEUP_TIME macro to avoid including multiple files. Impacted file:
+         * app_conf.h
+
+  * Added #ifndef __ZEPHYR__. Impacted file:
+         * app_common.h
+
+  * IEEE 802.15.4 feature support in Zephyr architecture requires :
+         * specific libraries accessible in https://github.com/stm32-hotspot/STM32WBA-Zephyr-custom-binaries
+         * additionnal files "stm32wba_802154.h" and "stm32wba_802154_callbacks.h" in hal/stm32/lib/stm32wba/STM32WPAN/ieee802154 folder

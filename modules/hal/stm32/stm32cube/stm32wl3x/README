@@ -1,0 +1,48 @@
+STM32CubeWL3
+############
+
+Origin:
+   STMicroelectronics
+   https://www.st.com/en/embedded-software/stm32cubewl3.html
+
+Status:
+   version 1.5.0
+
+Purpose:
+   STMicroelectronics official MCU package for STM32WL3 series.
+
+Description:
+   This package is an extract of official STM32CubeWL3 package written by STMicroelectronics.
+   It is composed of STM32Cube hardware abstraction layer (HAL) and low layer (LL) plus a set
+   of CMSIS headers files, one for each SoC in the STM32WL3 series.
+
+Dependencies:
+    None.
+
+URL:
+   https://github.com/STMicroelectronics/STM32CubeWL3
+
+Commit:
+   a9cdf2a35810b354c7c34d77465d862b9b8cd945
+
+Maintained-by:
+   External
+
+License:
+   BSD-3-Clause
+
+License Link:
+   https://opensource.org/licenses/BSD-3-Clause
+
+Patch List:
+   *Added provision to enable HAL & LL asserts
+    -Added stm32cube/stm32wl3x/drivers/include/stm32_assert.h
+    -Removed unused stm32cube/stm32wl3x/drivers/include/stm32_assert_template.h
+
+   *Added patches to enable compilation with Zephyr
+    -exclude stm32cube/stm32wl3x/soc/system_stm32wl3x.c from build
+      . Missing definitions moved to 'zephyr/soc/st/stm32/stm32wl3x/soc.c'
+        . SystemCoreClock (CMSIS global variable)
+        . RAM_VR          (STM32WL3x RAM virtual registers)
+    -in stm32cube/stm32wl3x/drivers/include/Legacy/stm32_hal_legacy.h
+      . Guard PAGESIZE definition with #ifndef __ZEPHYR__ as it conflicts with POSIX

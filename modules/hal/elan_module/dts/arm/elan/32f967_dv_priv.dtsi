@@ -1,14 +1,47 @@
 /*
- * Copyright (c) 2026 ELAN Microelectronics Corp.
+ * SPDX-FileCopyrightText: 2026 ELAN Microelectronics Corp.
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/dt-bindings/clock/em32_clock_upstream.h>
+/*
+ * Board-specific CPU power state wiring.
+ *
+ * Per EM32F967 spec, the PWRCTRL PD_SW field selects power domain switch mode
+ * (Active/CPU/Standby1/GHM/Standby2). We expose the Zephyr PM states for
+ * PDSW1/PDSW2/PDSW4 here.
+ */
+
+&cpu0 {
+	cpu-power-states = <&cpu_pd &standby1>;
+};
+
+/ {
+	cpus {
+		power-states {
+			/* PDSW1 - CPU Power Down (suspend-to-idle) */
+			cpu_pd: cpu_pd {
+				compatible = "zephyr,power-state";
+				power-state-name = "suspend-to-idle";
+				substate-id = <1>;
+				min-residency-us = <5000>; /* 1 second */
+				exit-latency-us = <10>;
+			};
+
+			/* PDSW2 - Standby1 (standby with selective RAM retention) */
+			standby1: standby1 {
+				compatible = "zephyr,power-state";
+				power-state-name = "standby";
+				substate-id = <2>;
+				min-residency-us = <1000000>; /* 1 second */
+				exit-latency-us = <5000>;
+			};
+
+		};
+	};
+};
 
 / {
 	chosen {
-		zephyr,console = &uart1;
-		zephyr,shell-uart = &uart1;
 		zephyr,spi2 = &spi2;
 		zephyr,udc0 = &usbd;
 		zephyr,entropy = &trng0;
@@ -17,73 +50,16 @@
 	aliases {
 		spi2 = &spi2;
 		watchdog0 = &wdt0;
-		clock0 = &clk_ahb_v2;
-	};
-
-	clocks {
-		clk_apb_v2: clk-apb-v2 {
-			//compatible = "elan,em32-apb-v2";
-			compatible = "elan,em32-apb-v2", "elan,em32-apb";
-			#clock-cells = <1>;
-
-			/*
-			 * Reference AHB v2 as APB source clock.
-			 * The specifier cell is a placeholder here.
-			 */
-			clocks = <&clk_ahb_v2 EM32_GATE_NONE>;
-			status = "okay";
-		};
-
-		/*
-		 * New AHB clock controller (v2) with one specifier cell:
-		 * <&clk_ahb_v2 gate>
-		 */
-		clk_ahb_v2: clk-ahb-v2 {
-			//compatible = "elan,em32-ahb-v2";
-			compatible = "elan,em32-ahb-v2", "elan,em32-ahb";
-			#clock-cells = <1>;
-
-			clock-source = <EM32_CLK_SRC_IRCHIGH>;
-			clock-frequency = <EM32_CLK_FREQ_IRCHIGH96>;
-			clock-divider = <EM32_AHB_CLK_DIV1>;
-
-			status = "okay";
-		};
-	};
-	soc {
-		/* Information control (trim codes, device id/version, etc.) */
-		infoctrl: syscon@100a6000 {
-			compatible = "syscon";
-			reg = <0x100a6000 0x2000>;
-			reg-io-width = <4>;
-			status = "disabled";
-		};
 	};
 };
 
 &spi2 {
 	compatible = "arm,pl022";
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_SSP2>;
-	status = "okay";
-};
-
-&uart1 {
-	compatible = "elan,em32-uart";
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_UART1>;
-	status = "okay";
-};
-
-&gpioa {
-	clocks = <&clk_ahb_v2 EM32_GATE_HCLKG_GPIOA>;
-	status = "okay";
-};
-
-&gpiob {
-	clocks = <&clk_ahb_v2 EM32_GATE_HCLKG_GPIOB>;
 	status = "okay";
 };
 
 &zephyr_udc0 {
+	compatible = "elan,em32-usbd";
 	status = "okay";
 };
 
@@ -96,59 +72,36 @@
 };
 
 &trng0 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_TRNG>;
 	status = "okay";
 };
 
 &wdt0 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_DWG>;
 	status = "okay";
 };
 
 &crypto0 {
-	clocks = <&clk_apb_v2 EM32_GATE_HCLKG_ENCRYPT>;
 	status = "okay";
 };
 
 /* Enable Timer controllers */
 &timer1 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_TMR1>;
 	status = "okay";
 };
 
 &timer2 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_TMR2>;
 	status = "okay";
-};
-
-&timer3 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_TMR3>;
-};
-
-&timer4 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_TMR4>;
 };
 
 /* Enable RTC */
 &rtc0 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_RTC>;
 	status = "okay";
 };
 
 /* Enable PWM Controller - PWMB N output on PA3 */
 &pwm0 {
-	clocks = <&clk_apb_v2 EM32_GATE_PCLKG_PWM>;
 	status = "okay";
 };
 
-&sysctrl {
-	status = "disabled";
-};
-
 &pwrctrl {
-	status = "disabled";
-};
-
-&clkctrl {
 	status = "disabled";
 };

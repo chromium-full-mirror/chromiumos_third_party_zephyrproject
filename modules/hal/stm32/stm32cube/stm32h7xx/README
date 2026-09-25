@@ -2,19 +2,19 @@ STM32CubeH7
 ###########
 
 Origin:
-   ST Microelectronics
-   http://www.st.com/en/embedded-software/stm32cubeh7.html
+   STMicroelectronics
+   https://www.st.com/en/embedded-software/stm32cubeh7.html
 
 Status:
-   version v1.12.1
+   version 1.13.0
 
 Purpose:
-   ST Microelectronics official MCU package for STM32H7 series.
+   STMicroelectronics official MCU package for STM32H7 series.
 
 Description:
-   This package is an extract of official STM32CubeH7 package written by ST Microelectronics.
+   This package is an extract of official STM32CubeH7 package written by STMicroelectronics.
    It is composed of STM32Cube hardware abstraction layer (HAL) and low layer (LL) plus a set
-   of CMSIS headers files, one for each SoC in STM32H7 series.
+   of CMSIS headers files, one for each SoC in the STM32H7 series.
 
 Dependencies:
     None.
@@ -23,7 +23,7 @@ URL:
    https://github.com/STMicroelectronics/STM32CubeH7
 
 Commit:
-   f5c0b7a2b1f6eb26fde150f72edb2d7deb647066
+   5abb9764b32e11a6557b90bf39531528019b5761
 
 Maintained-by:
    External
@@ -35,7 +35,6 @@ License Link:
    https://opensource.org/licenses/BSD-3-Clause
 
 Patch List:
-
    *Changes from official delivery:
     -dos2unix applied
     -trailing white spaces removed
@@ -44,40 +43,24 @@ Patch List:
     -Added stm32cube/stm32h7xx/drivers/include/stm32_assert.h
     -Removed unused stm32cube/stm32h7xx/drivers/include/stm32_assert_template.h
 
-   *Fix context descriptor leak
-    - Impacted file: stm32h7xx_hal_eth.c
-    - Internal reference: Not available. Will be fixed as part of a new eth hal implementation
-
-   *fix to the V2 HAL API to get PTP to work
-     In the HAL_ETH_ReadData function where it checks for the last descriptor,
-     we added a checked if the TSA bit was set in DESC1
-     If the TSA bit is set then have a peak at the context descriptor which should be the one
-     after the last descriptor
-     If the CTXT bit is set in the context descriptor then extract the timestamps
-     Impacted files:
-     drivers/src/stm32h7xx_hal_eth.c
-     ST Internal Reference: 142115
-
-   *Fix to remove PAGESIZE definition which conflicts with POSIX
-    Impacted files:
-     drivers/include/Legacy/stm32_hal_legacy.h
-
    *Fix SDIO initialization failure when skipping card identification sequence
      Fixes an issue in the STM32H7 SDIO driver where HAL_SDIO_Init() fails if
      the card identification sequence is skipped.
      Impacted files:
       stm32cube/stm32h7xx/drivers/src/stm32h7xx_hal_sdio.c
 
-   *Fix SDIO polling mode data transfer issues
-     Fixes two related issues in the STM32H7 SDIO driver: incorrect block count calculation 
-     that caused the card to hang, and improper buffer size handling that led to misaligned FIFO writes. 
-     Together, these changes ensure correct and stable data transfer in polling mode.
-     Impacted file: 
-      stm32cube/stm32h7xx/drivers/src/stm32h7xx_hal_sdio.c
-         
-   *Fix an issue in the STM32H7 HAL OSPI by correcting the DMA source and destination
-      addresses in the HAL_MDMA_Start_IT() call.
-      Impacted files:
-      stm32cube/stm32h7xx/drivers/src/stm32h7xx_hal_ospi.c
+   *Fix HAL_DFSDM_IRQHandler
+      HAL_DFSDM_IRQHandler handles IRQ flags in an if {} else if {} condition.
+      This causes interrupts to be handled once and only the first flag
+      encountered in the condition, while there can be several flags raised.
+     Impacted files:
+       drivers/src/stm32f7xx_hal_dfsdm.c
+     ST Internal Reference: HAL1-27454
+
+   *Define new LL APIs for VREFBUF that will be part of the HAL next release.
+      Modifications applied from stm32h7xx-hal-driver repository:
+      https://github.com/STMicroelectronics/stm32h7xx-hal-driver/commit/13dbe01ff0be6a24e47d0b4d8cf4de3f22c754a
+     - Impacted file: drivers/include/stm32h7xx_ll_system.h
+     - See also: https://github.com/zephyrproject-rtos/hal_stm32/pull/381
 
    See release_note.html from STM32Cube

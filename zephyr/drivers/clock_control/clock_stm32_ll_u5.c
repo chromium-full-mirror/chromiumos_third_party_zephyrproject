@@ -149,6 +149,7 @@ int enabled_clock(uint32_t src_clk)
 	    ((src_clk == STM32_SRC_LSI) && IS_ENABLED(STM32_LSI_ENABLED)) ||
 	    ((src_clk == STM32_SRC_MSIS) && IS_ENABLED(STM32_MSIS_ENABLED)) ||
 	    ((src_clk == STM32_SRC_MSIK) && IS_ENABLED(STM32_MSIK_ENABLED)) ||
+	    ((src_clk == STM32_SRC_SHSI) && IS_ENABLED(STM32_SHSI_ENABLED)) ||
 	    ((src_clk == STM32_SRC_PLL1_P) && IS_ENABLED(STM32_PLL_P_ENABLED)) ||
 	    ((src_clk == STM32_SRC_PLL1_Q) && IS_ENABLED(STM32_PLL_Q_ENABLED)) ||
 	    ((src_clk == STM32_SRC_PLL1_R) && IS_ENABLED(STM32_PLL_R_ENABLED)) ||
@@ -165,16 +166,17 @@ int enabled_clock(uint32_t src_clk)
 	return -ENOTSUP;
 }
 
+static int stm32_clock_control_configure(const struct device *dev,
+					 clock_control_subsys_t sub_system, void *data);
+
 static int stm32_clock_control_on(const struct device *dev, clock_control_subsys_t sub_system)
 {
 	struct stm32_pclken *pclken = (struct stm32_pclken *)(sub_system);
 	volatile int temp;
 
-	ARG_UNUSED(dev);
-
 	if (!IN_RANGE(pclken->bus, STM32_PERIPH_BUS_MIN, STM32_PERIPH_BUS_MAX)) {
-		/* Attempt to toggle a wrong periph clock bit */
-		return -ENOTSUP;
+		/* Source selection entry: apply it instead of toggling a gate */
+		return stm32_clock_control_configure(dev, sub_system, NULL);
 	}
 
 	sys_set_bits(DT_REG_ADDR(DT_NODELABEL(rcc)) + pclken->bus,
@@ -313,6 +315,11 @@ static int stm32_clock_control_get_subsys_rate(const struct device *dev,
 		*rate = STM32_HSI48_FREQ;
 		break;
 #endif /* STM32_HSI48_ENABLED */
+#if defined(STM32_SHSI_ENABLED)
+	case STM32_SRC_SHSI:
+		*rate = STM32_SHSI_FREQ;
+		break;
+#endif /* STM32_SHSI_ENABLED */
 #if defined(STM32_PLL_ENABLED)
 	case STM32_SRC_PLL1_P:
 		*rate = get_pllout_frequency(get_pllsrc_frequency(PLL1_ID),
@@ -890,6 +897,12 @@ static void set_up_fixed_clock_sources(void)
 	if (IS_ENABLED(STM32_HSI48_ENABLED)) {
 		LL_RCC_HSI48_Enable();
 		while (LL_RCC_HSI48_IsReady() != 1) {
+		}
+	}
+
+	if (IS_ENABLED(STM32_SHSI_ENABLED)) {
+		LL_RCC_SHSI_Enable();
+		while (LL_RCC_SHSI_IsReady() != 1) {
 		}
 	}
 }

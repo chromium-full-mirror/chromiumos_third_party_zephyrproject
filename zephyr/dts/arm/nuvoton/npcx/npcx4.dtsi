@@ -15,7 +15,7 @@
 /* npcx4 series low-voltage io controls mapping table */
 #include "npcx4/npcx4-lvol-ctrl-map.dtsi"
 /* npcx4 series reset mapping table */
-#include "zephyr/dt-bindings/reset/npcx4_reset.h"
+#include <zephyr/dt-bindings/reset/npcx4_reset.h>
 
 /* Device tree declarations of npcx soc family */
 #include "npcx.dtsi"
@@ -159,6 +159,7 @@
 			apb3-prescaler = <8>; /* APB3_CLK runs at 15MHz */
 			apb4-prescaler = <8>; /* APB4_CLK runs at 15MHz */
 			ram-pd-depth = <8>; /* Valid bit-depth of RAM_PDn reg */
+			fast-clk-to-espi-sleep-support;
 			pwdwn-ctl-val = <0xfb
 					 0xff
 					 0x1f /* No GDMA1_PD/GDMA2_PD */

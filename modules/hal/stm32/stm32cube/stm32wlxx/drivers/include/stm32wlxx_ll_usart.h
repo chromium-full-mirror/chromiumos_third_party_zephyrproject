@@ -56,6 +56,10 @@ static const uint32_t USART_PRESCALER_TAB[] =
   32UL,
   64UL,
   128UL,
+  256UL,
+  256UL,
+  256UL,
+  256UL,
   256UL
 };
 /**
@@ -4396,4 +4400,3 @@ void        LL_USART_ClockStructInit(LL_USART_ClockInitTypeDef *USART_ClockInitS
 #endif
 
 #endif /* STM32WLxx_LL_USART_H */
-

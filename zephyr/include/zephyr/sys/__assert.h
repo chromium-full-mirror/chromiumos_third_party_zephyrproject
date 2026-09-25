@@ -10,23 +10,6 @@
 #include <stdbool.h>
 #include <zephyr/toolchain.h>
 
-#ifdef CONFIG_ASSERT
-#ifndef __ASSERT_ON
-#ifdef CONFIG_ASSERT_LEVEL
-#define __ASSERT_ON CONFIG_ASSERT_LEVEL
-#endif
-#endif
-#endif
-
-#ifdef CONFIG_FORCE_NO_ASSERT
-#undef __ASSERT_ON
-#define __ASSERT_ON 0
-#endif
-
-#ifndef __ASSERT_ON
-#define __ASSERT_ON 0
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -74,13 +57,15 @@ void __printf_like(1, 2) assert_print(const char *fmt, ...);
 	__ASSERT_PRINT("ASSERTION FAIL\n")
 #endif
 
-#ifdef __ASSERT_ON
-#if (__ASSERT_ON < 0) || (__ASSERT_ON > 2)
-#error "Invalid __ASSERT() level: must be between 0 and 2"
-#endif
+#if defined(CONFIG_ASSERT) && !defined(CONFIG_FORCE_NO_ASSERT) && \
+	defined(CONFIG_ASSERT_LEVEL) && (CONFIG_ASSERT_LEVEL > 0)
 
-#if __ASSERT_ON
+BUILD_ASSERT(CONFIG_ASSERT_LEVEL >= 0 && CONFIG_ASSERT_LEVEL <= 2,
+	     "Invalid CONFIG_ASSERT_LEVEL: must be between 0 and 2");
 
+#if CONFIG_ASSERT_LEVEL == 1
+#warning "__ASSERT() statements are ENABLED"
+#endif /* CONFIG_ASSERT_LEVEL == 1 */
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -97,11 +82,12 @@ void assert_post_action(const char *file, unsigned int line);
  * When the assert test mode is enabled, the default kernel fatal error handler
  * and the custom assert hook function may return in order to allow the test to
  * proceed.
+ * NOTE: this macro is INTERNAL and should not be used outside of this header!
  */
 #ifdef CONFIG_ASSERT_TEST
-#define __ASSERT_UNREACHABLE
+#define __ASSERT_AFTER_TRIGGER_UNREACHABILITY_MARKER
 #else
-#define __ASSERT_UNREACHABLE CODE_UNREACHABLE
+#define __ASSERT_AFTER_TRIGGER_UNREACHABILITY_MARKER CODE_UNREACHABLE
 #endif
 
 #ifdef __cplusplus
@@ -110,20 +96,20 @@ void assert_post_action(const char *file, unsigned int line);
 
 #define __ASSERT_NO_MSG(test)                                             \
 	do {                                                              \
-		if (!(test)) {                                            \
+		if (unlikely(!(test))) {                                  \
 			__ASSERT_LOC(test);                               \
 			__ASSERT_POST_ACTION();                           \
-			__ASSERT_UNREACHABLE;                             \
+			__ASSERT_AFTER_TRIGGER_UNREACHABILITY_MARKER;     \
 		}                                                         \
 	} while (false)
 
 #define __ASSERT(test, fmt, ...)                                          \
 	do {                                                              \
-		if (!(test)) {                                            \
+		if (unlikely(!(test))) {                                  \
 			__ASSERT_LOC(test);                               \
 			__ASSERT_MSG_INFO(fmt, ##__VA_ARGS__);            \
 			__ASSERT_POST_ACTION();                           \
-			__ASSERT_UNREACHABLE;                             \
+			__ASSERT_AFTER_TRIGGER_UNREACHABILITY_MARKER;     \
 		}                                                         \
 	} while (false)
 
@@ -133,20 +119,14 @@ void assert_post_action(const char *file, unsigned int line);
 		__ASSERT(test, fmt, ##__VA_ARGS__);                \
 	} while (false)
 
-#if (__ASSERT_ON == 1)
-#warning "__ASSERT() statements are ENABLED"
-#endif
+
 #else
+
 #define __ASSERT(test, fmt, ...) { }
 #define __ASSERT_EVAL(expr1, expr2, test, fmt, ...) expr1
 #define __ASSERT_NO_MSG(test) { }
 #define __ASSERT_POST_ACTION() { }
-#endif
-#else
-#define __ASSERT(test, fmt, ...) { }
-#define __ASSERT_EVAL(expr1, expr2, test, fmt, ...) expr1
-#define __ASSERT_NO_MSG(test) { }
-#define __ASSERT_POST_ACTION() { }
+
 #endif
 
 #ifdef CONFIG_ASSERT_CUSTOM_HEADER

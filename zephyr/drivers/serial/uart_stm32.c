@@ -156,15 +156,6 @@ uint32_t lpuartdiv_calc(const uint64_t clock_rate, const uint32_t baud_rate)
 #define STM32_ASYNC_STATUS_TIMEOUT (DMA_STATUS_BLOCK + 1)
 #endif
 
-#ifdef CONFIG_PM
-static void uart_stm32_pm_policy_state_lock_get_unconditional(void)
-{
-	pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
-	if (IS_ENABLED(CONFIG_PM_S2RAM)) {
-		pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
-	}
-}
-
 #if defined(CONFIG_PM) && defined(IS_UART_WAKEUP_FROMSTOP_INSTANCE)
 static void uart_stm32_pm_enable_wakeup_line(uint32_t wakeup_line)
 {
@@ -185,6 +176,15 @@ static void uart_stm32_pm_enable_wakeup_line(uint32_t wakeup_line)
 #endif /* CONFIG_SOC_SERIES_STM32WB0X */
 }
 #endif /* CONFIG_PM && IS_UART_WAKEUP_FROMSTOP_INSTANCE */
+
+#ifdef CONFIG_PM
+static void uart_stm32_pm_policy_state_lock_get_unconditional(void)
+{
+	pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+	if (IS_ENABLED(CONFIG_PM_S2RAM)) {
+		pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+	}
+}
 
 static void uart_stm32_pm_policy_state_lock_get(const struct device *dev)
 {
@@ -213,6 +213,28 @@ static void uart_stm32_pm_policy_state_lock_put(const struct device *dev)
 		uart_stm32_pm_policy_state_lock_put_unconditional();
 	}
 }
+
+#ifdef CONFIG_UART_ASYNC_API
+static __maybe_unused void uart_stm32_rx_wakeup_lock_get(const struct device *dev)
+{
+	struct uart_stm32_data *data = dev->data;
+
+	if (!data->rx_woken) {
+		data->rx_woken = true;
+		uart_stm32_pm_policy_state_lock_get_unconditional();
+	}
+}
+
+static __maybe_unused void uart_stm32_rx_wakeup_lock_put(const struct device *dev)
+{
+	struct uart_stm32_data *data = dev->data;
+
+	if (data->rx_woken) {
+		data->rx_woken = false;
+		uart_stm32_pm_policy_state_lock_put_unconditional();
+	}
+}
+#endif /* CONFIG_UART_ASYNC_API */
 #endif /* CONFIG_PM */
 
 static inline int uart_stm32_set_baudrate(const struct device *dev, uint32_t baud_rate)
@@ -373,14 +395,27 @@ static inline void uart_stm32_set_hwctrl(const struct device *dev,
 {
 	const struct uart_stm32_config *config = dev->config;
 
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL && hwctrl == LL_USART_HWCONTROL_RTS_CTS) {
+		hwctrl = LL_USART_HWCONTROL_CTS;
+	}
+#endif
+
 	LL_USART_SetHWFlowCtrl(config->usart, hwctrl);
 }
 
 static inline uint32_t uart_stm32_get_hwctrl(const struct device *dev)
 {
 	const struct uart_stm32_config *config = dev->config;
+	uint32_t hwctrl = LL_USART_GetHWFlowCtrl(config->usart);
 
-	return LL_USART_GetHWFlowCtrl(config->usart);
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL && hwctrl == LL_USART_HWCONTROL_CTS) {
+		hwctrl = LL_USART_HWCONTROL_RTS_CTS;
+	}
+#endif
+
+	return hwctrl;
 }
 
 #if HAS_DRIVER_ENABLE
@@ -1115,12 +1150,24 @@ static void uart_stm32_irq_rx_enable(const struct device *dev)
 {
 	const struct uart_stm32_config *config = dev->config;
 
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL) {
+		gpio_pin_set_dt(&config->rts_gpio, 1);
+	}
+#endif
+
 	ll_usart_irq_rx_enable(config->usart);
 }
 
 static void uart_stm32_irq_rx_disable(const struct device *dev)
 {
 	const struct uart_stm32_config *config = dev->config;
+
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL) {
+		gpio_pin_set_dt(&config->rts_gpio, 0);
+	}
+#endif
 
 	ll_usart_irq_rx_disable(config->usart);
 }
@@ -1180,16 +1227,12 @@ static int uart_stm32_irq_is_pending(const struct device *dev)
 		 LL_USART_IsEnabledIT_TC(usart)));
 }
 
-static int uart_stm32_irq_update(const struct device *dev)
-{
-	return 1;
-}
-
 static void uart_stm32_irq_callback_set(const struct device *dev,
 					uart_irq_callback_user_data_t cb,
 					void *cb_data)
 {
 	struct uart_stm32_data *data = dev->data;
+	unsigned int key = irq_lock();
 
 	data->user_cb = cb;
 	data->user_data = cb_data;
@@ -1198,6 +1241,8 @@ static void uart_stm32_irq_callback_set(const struct device *dev,
 	data->async_cb = NULL;
 	data->async_user_data = NULL;
 #endif
+
+	irq_unlock(key);
 }
 
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN */
@@ -1404,12 +1449,20 @@ static void uart_stm32_isr(const struct device *dev)
 #if defined(CONFIG_PM) || defined(CONFIG_UART_ASYNC_API)
 	const struct uart_stm32_config *config = dev->config;
 	USART_TypeDef *usart = config->usart;
+
+	/*
+	 * The TC flag is checked several times in this ISR
+	 * but it may change in the background while we're
+	 * handling the IRQ. Read the flag once and perform
+	 * checks against this cached value instead, such that
+	 * the whole ISR sees the same status regardless of
+	 * any hardware event that may happen.
+	 */
+	bool tx_complete = LL_USART_IsEnabledIT_TC(usart) && LL_USART_IsActiveFlag_TC(usart);
 #endif
 
 #ifdef CONFIG_PM
-	if (LL_USART_IsEnabledIT_TC(usart) &&
-		LL_USART_IsActiveFlag_TC(usart)) {
-
+	if (tx_complete) {
 		if (data->tx_poll_stream_on) {
 			/* A poll stream transmission just completed,
 			 * allow system to suspend
@@ -1417,6 +1470,12 @@ static void uart_stm32_isr(const struct device *dev)
 			LL_USART_DisableIT_TC(usart);
 			data->tx_poll_stream_on = false;
 			uart_stm32_pm_policy_state_lock_put(dev);
+			/* This TC belonged to the poll stream and is now handled.
+			 * Clear it so the async branch below does not treat it as
+			 * an async TX completion and release the PM constraint a
+			 * second time, which underflows the policy lock count.
+			 */
+			tx_complete = false;
 		}
 		/* Stream transmission was either async or IRQ based,
 		 * constraint will be released at the same time TC IT
@@ -1439,11 +1498,8 @@ static void uart_stm32_isr(const struct device *dev)
 		LL_USART_ClearFlag_WKUP(usart);
 
 #ifdef CONFIG_UART_ASYNC_API
-		if (!data->rx_woken) {
-			/* Prevent SoC from entering STOP mode until RX goes IDLE */
-			uart_stm32_pm_policy_state_lock_get_unconditional();
-			data->rx_woken = true;
-		}
+		/* Prevent SoC from entering STOP mode until RX goes IDLE */
+		uart_stm32_rx_wakeup_lock_get(dev);
 #endif
 
 #ifdef USART_ISR_REACK
@@ -1472,11 +1528,8 @@ static void uart_stm32_isr(const struct device *dev)
 		LOG_DBG("idle interrupt occurred");
 
 #ifdef CONFIG_PM
-		if (data->rx_woken) {
-			/* Allow SoC to enter STOP mode now that RX is IDLE */
-			uart_stm32_pm_policy_state_lock_put_unconditional();
-			data->rx_woken = false;
-		}
+		/* Allow SoC to enter STOP mode now that RX is IDLE */
+		uart_stm32_rx_wakeup_lock_put(dev);
 #endif
 
 		if (data->dma_rx.timeout == 0) {
@@ -1486,8 +1539,7 @@ static void uart_stm32_isr(const struct device *dev)
 			async_timer_start(&data->dma_rx.timeout_work,
 								data->dma_rx.timeout);
 		}
-	} else if (LL_USART_IsEnabledIT_TC(usart) && LL_USART_IsActiveFlag_TC(usart)) {
-
+	} else if (tx_complete) {
 		LL_USART_DisableIT_TC(usart);
 		/* Generate TX_DONE event when transmission is done */
 		async_evt_tx_done(data);
@@ -1508,6 +1560,10 @@ static void uart_stm32_isr(const struct device *dev)
 		LOG_DBG("rx timeout interrupt occurred");
 
 		LL_USART_ClearFlag_RTO(usart);
+#ifdef CONFIG_PM
+		/* Allow SoC to enter STOP mode now that RX has timed out */
+		uart_stm32_rx_wakeup_lock_put(dev);
+#endif
 		uart_stm32_dma_rx_flush(dev, STM32_ASYNC_STATUS_TIMEOUT);
 #endif /* HAS_RTO */
 	}
@@ -1526,6 +1582,7 @@ static int uart_stm32_async_callback_set(const struct device *dev,
 					 void *user_data)
 {
 	struct uart_stm32_data *data = dev->data;
+	unsigned int key = irq_lock();
 
 	data->async_cb = callback;
 	data->async_user_data = user_data;
@@ -1534,6 +1591,8 @@ static int uart_stm32_async_callback_set(const struct device *dev,
 	data->user_cb = NULL;
 	data->user_data = NULL;
 #endif
+
+	irq_unlock(key);
 
 	return 0;
 }
@@ -1566,9 +1625,25 @@ static inline void uart_stm32_dma_rx_enable(const struct device *dev)
 {
 	const struct uart_stm32_config *config = dev->config;
 	struct uart_stm32_data *data = dev->data;
+	USART_TypeDef *usart = config->usart;
 
-	LL_USART_EnableDMAReq_RX(config->usart);
+#ifdef CONFIG_UART_STM32U5_ERRATA_DMAT_AFFECTED
+	/*
+	 * Workaround for STM32H5/U5: USART does not generate DMA requests
+	 * after clearing/setting DMAR. This issue is not documented in the
+	 * errata but behaves similarly to the documented DMAT issue.
+	 * Toggle UE (USART Enable) to reset the USART internal state machine
+	 * before re-enabling DMAR.
+	 */
+	LL_USART_Disable(usart);
+	LL_USART_Enable(usart);
+	/* Wait for USART to be ready after re-enable */
+	while (!LL_USART_IsActiveFlag_TEACK(usart)) {
+		/* busy-wait for transmit enable acknowledge */
+	}
+#endif /* CONFIG_UART_STM32U5_ERRATA_DMAT_AFFECTED */
 
+	LL_USART_EnableDMAReq_RX(usart);
 	data->dma_rx.enabled = true;
 }
 
@@ -1606,6 +1681,9 @@ static int uart_stm32_async_rx_disable(const struct device *dev)
 	LL_USART_DisableIT_IDLE(usart);
 #endif /* HAS_RTO */
 
+	/* Disable error interrupt to prevent spurious ISRs when async RX is disabled */
+	LL_USART_DisableIT_ERROR(usart);
+
 	uart_stm32_dma_rx_flush(dev, STM32_ASYNC_STATUS_TIMEOUT);
 
 	async_evt_rx_buf_release(data);
@@ -1627,8 +1705,18 @@ static int uart_stm32_async_rx_disable(const struct device *dev)
 	data->rx_next_buffer = NULL;
 	data->rx_next_buffer_len = 0;
 
-	/* When async rx is disabled, enable interruptible instance of uart to function normally */
-	ll_usart_irq_rx_enable(usart);
+	/* Leave the RXNE interrupt disabled. Async RX turned it off when it took
+	 * over the receiver, and re-arming interrupt-driven RX is the caller's
+	 * responsibility (via uart_irq_rx_enable()), not the async teardown's.
+	 * This keeps the receiver quiet for pure async users (no spurious
+	 * per-byte ISRs).
+	 */
+
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL) {
+		gpio_pin_set_dt(&config->rts_gpio, 0);
+	}
+#endif
 
 	LOG_DBG("rx: disabled");
 
@@ -1725,6 +1813,13 @@ void uart_stm32_dma_rx_cb(const struct device *dma_dev, void *user_data,
 			 * called in ISR context. So force the RX timeout
 			 * to minimum value and let the RX timeout to do the job.
 			 */
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+			const struct uart_stm32_config *config = uart_dev->config;
+
+			if (config->rts_gpio.port != NULL) {
+				gpio_pin_set_dt(&config->rts_gpio, 0);
+			}
+#endif
 			k_work_reschedule(&data->dma_rx.timeout_work, K_TICKS(1));
 		}
 	} else {
@@ -1978,6 +2073,12 @@ static int uart_stm32_async_rx_enable(const struct device *dev,
 
 	/* Request next buffer */
 	async_evt_rx_buf_request(data);
+
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL) {
+		gpio_pin_set_dt(&config->rts_gpio, 1);
+	}
+#endif
 
 	LOG_DBG("async rx enabled");
 
@@ -2245,7 +2346,6 @@ static DEVICE_API(uart, uart_stm32_driver_api) = {
 	.irq_err_enable = uart_stm32_irq_err_enable,
 	.irq_err_disable = uart_stm32_irq_err_disable,
 	.irq_is_pending = uart_stm32_irq_is_pending,
-	.irq_update = uart_stm32_irq_update,
 	.irq_callback_set = uart_stm32_irq_callback_set,
 #endif /* CONFIG_UART_INTERRUPT_DRIVEN */
 #ifdef CONFIG_UART_ASYNC_API
@@ -2432,6 +2532,21 @@ static int uart_stm32_init(const struct device *dev)
 		return err;
 	}
 
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+	if (config->rts_gpio.port != NULL) {
+		if (!gpio_is_ready_dt(&config->rts_gpio)) {
+			LOG_ERR("RTS GPIO device not ready");
+			return -ENODEV;
+		}
+
+		err = gpio_pin_configure_dt(&config->rts_gpio, GPIO_OUTPUT_INACTIVE);
+		if (err < 0) {
+			LOG_ERR("Failed to configure RTS GPIO (%d)", err);
+			return err;
+		}
+	}
+#endif
+
 	err = uart_stm32_registers_configure(dev);
 	if (err < 0) {
 		return err;
@@ -2548,34 +2663,34 @@ static int uart_stm32_pm_action(const struct device *dev, enum pm_device_action 
 #ifdef CONFIG_UART_ASYNC_API
 /* src_dev and dest_dev should be 'MEMORY' or 'PERIPHERAL'. */
 #define UART_DMA_CHANNEL_INIT(index, dir, dir_cap, src_dev, dest_dev)	\
-	.dma_dev = DEVICE_DT_GET(STM32_DMA_CTLR(index, dir)),		\
+	.dma_dev = DEVICE_DT_GET(STM32_DT_INST_DMA_CTLR(index, dir)),	\
 	.dma_channel = DT_INST_DMAS_CELL_BY_NAME(index, dir, channel),	\
 	.dma_cfg = {							\
-		.dma_slot = STM32_DMA_SLOT(index, dir, slot),		\
+		.dma_slot = STM32_DT_INST_DMA_SLOT(index, dir),		\
 		.channel_direction = STM32_DMA_CONFIG_DIRECTION(	\
-					STM32_DMA_CHANNEL_CONFIG(index, dir)),\
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),	\
 		.cyclic =  STM32_DMA_CONFIG_CYCLIC(			\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),  \
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),  \
 		.channel_priority = STM32_DMA_CONFIG_PRIORITY(		\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),	\
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),	\
 		.source_data_size = STM32_DMA_CONFIG_##src_dev##_DATA_SIZE(\
-					STM32_DMA_CHANNEL_CONFIG(index, dir)),\
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),	\
 		.dest_data_size = STM32_DMA_CONFIG_##dest_dev##_DATA_SIZE(\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),	\
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),	\
 		/* single transfers (burst length = data size) */	\
 		.source_burst_length = STM32_DMA_CONFIG_##src_dev##_DATA_SIZE(\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),	\
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),	\
 		.dest_burst_length = STM32_DMA_CONFIG_##dest_dev##_DATA_SIZE(\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),	\
+			STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),	\
 		.block_count = 1,					\
 		.dma_callback = uart_stm32_dma_##dir##_cb,		\
 	},								\
 	.src_addr_increment = STM32_DMA_CONFIG_##src_dev##_ADDR_INC(	\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),	\
+		STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),		\
 	.dst_addr_increment = STM32_DMA_CONFIG_##dest_dev##_ADDR_INC(	\
-				STM32_DMA_CHANNEL_CONFIG(index, dir)),	\
+		STM32_DT_INST_DMA_CHANNEL_CONFIG(index, dir)),		\
 	.fifo_threshold = STM32_DMA_FEATURES_FIFO_THRESHOLD(		\
-				STM32_DMA_FEATURES(index, dir)),
+		STM32_DT_INST_DMA_FEATURES(index, dir)),
 #endif /* CONFIG_UART_ASYNC_API */
 
 #if defined(CONFIG_UART_INTERRUPT_DRIVEN) || defined(CONFIG_UART_ASYNC_API) || defined(CONFIG_PM)
@@ -2633,11 +2748,22 @@ static int uart_stm32_pm_action(const struct device *dev, enum pm_device_action 
 #ifdef CONFIG_PM
 #define STM32_UART_PM_WAKEUP(index)						\
 	.wakeup_source = DT_INST_PROP(index, wakeup_source),			\
-	.wakeup_line = COND_CODE_1(DT_INST_NODE_HAS_PROP(index, wakeup_line),	\
-			(DT_INST_PROP(index, wakeup_line)),			\
-			(STM32_WAKEUP_LINE_NONE)),
+	.wakeup_line = DT_INST_PROP_OR(index, wakeup_line, STM32_WAKEUP_LINE_NONE),
 #else
 #define STM32_UART_PM_WAKEUP(index) /* Not used */
+#endif
+
+#if defined(CONFIG_UART_STM32_ABNORMAL_RTS_ERRATUM_WORKAROUND)
+#define STM32_UART_RTS_GPIO(index)						\
+	.rts_gpio = GPIO_DT_SPEC_INST_GET_OR(index, st_sw_rts_gpios, {0}),
+#define STM32_UART_CHECK_DT_RTS_GPIO(index)					\
+	BUILD_ASSERT(!DT_INST_NODE_HAS_PROP(index, st_sw_rts_gpios) ||		\
+		     DT_INST_PROP(index, hw_flow_control),			\
+		     "Node " DT_NODE_PATH(DT_DRV_INST(index))			\
+		     " 'st,sw-rts-gpios' requires 'hw-flow-control' to be enabled");
+#else
+#define STM32_UART_RTS_GPIO(index) /* Not used */
+#define STM32_UART_CHECK_DT_RTS_GPIO(index)
 #endif
 
 /* Ensure DTS doesn't present an incompatible parity configuration.
@@ -2753,6 +2879,7 @@ static int uart_stm32_pm_action(const struct device *dev, enum pm_device_action 
 		.de_deassert_time = DT_INST_PROP(index, de_deassert_time),	\
 		.de_invert = DT_INST_PROP(index, de_invert),			\
 		.fifo_enable = DT_INST_PROP(index, fifo_enable),		\
+		STM32_UART_RTS_GPIO(index)					\
 		STM32_UART_IRQ_HANDLER_FUNC(index)				\
 		STM32_UART_PM_WAKEUP(index)					\
 	};									\
@@ -2776,6 +2903,7 @@ static int uart_stm32_pm_action(const struct device *dev, enum pm_device_action 
 	STM32_UART_CHECK_DT_DATA_BITS(index)					\
 	STM32_UART_CHECK_DT_STOP_BITS_0_5(index)				\
 	STM32_UART_CHECK_DT_STOP_BITS_1_5(index)				\
-	STM32_UART_CHECK_SHARED_IRQ(index)
+	STM32_UART_CHECK_SHARED_IRQ(index)					\
+	STM32_UART_CHECK_DT_RTS_GPIO(index)
 
 DT_INST_FOREACH_STATUS_OKAY(STM32_UART_INIT)

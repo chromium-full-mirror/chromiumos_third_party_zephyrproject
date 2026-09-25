@@ -30,11 +30,20 @@ Dependencies:
     * Generation script available in current repo under scripts/genpinctrl
       and configuration files.
 
+Generation:
+   HAL1 based series are generated with scripts/genpinctrl/genpinctrl.py
+   using the STM32 Open Pin Data repository and commit listed below.
+
+   HAL2 based series are generated with scripts/genpinctrl/genpinctrl_hal2.py
+   using STM32Cube package DFP pinout files. The STM32Cube package URL and
+   commit used to resolve each DFP repository and commit are documented in the
+   corresponding stm32cube/*/README file.
+
 URL:
    https://github.com/STMicroelectronics/STM32_open_pin_data
 
 Commit:
-   d2ca9b5ed0b35ad3aa92e91984ec7addae58bf7e
+   7d1f1514ed5583ec5007ad91236b4e1d377295b1
 
 Maintained-by:
    External

@@ -2,19 +2,19 @@ STM32CubeH5
 ###########
 
 Origin:
-   ST Microelectronics
-   http://www.st.com/en/embedded-software/stm32cubeh5.html
+   STMicroelectronics
+   https://www.st.com/en/embedded-software/stm32cubeh5.html
 
 Status:
-   version v1.6.0
+   version 1.7.0
 
 Purpose:
-   ST Microelectronics official MCU package for STM32H5 series.
+   STMicroelectronics official MCU package for STM32H5 series.
 
 Description:
-   This package is an extract of official STM32CubeH5 package written by ST Microelectronics.
+   This package is an extract of official STM32CubeH5 package written by STMicroelectronics.
    It is composed of STM32Cube hardware abstraction layer (HAL) and low layer (LL) plus a set
-   of CMSIS headers files, one for each SoC in STM32H5 series.
+   of CMSIS headers files, one for each SoC in the STM32H5 series.
 
 Dependencies:
     None.
@@ -23,7 +23,8 @@ URL:
    https://github.com/STMicroelectronics/STM32CubeH5
 
 Commit:
-   e25dd1b1d0e8871627e79e2d1453687f0f22835c
+   4e039436d8561003a1d88b78a1520f3f81eadd24
+
 Maintained-by:
    External
 
@@ -34,7 +35,6 @@ License Link:
    https://opensource.org/licenses/BSD-3-Clause
 
 Patch List:
-
    *Changes from official delivery:
     -dos2unix applied
     -trailing white spaces removed
@@ -42,42 +42,36 @@ Patch List:
    *Provision to enable hal & ll asserts added
     -Added stm32cube/stm32h5xx/drivers/include/stm32_assert.h
     -Removed unused stm32cube/stm32h5xx/drivers/include/stm32_assert_template.h
-    -in stm32cube/stm32h5xx/drivers/src/
-      . renamed stm32h5xx_hal_msp_template. c to stm32h5xx_hal_msp.c
-      . renamed stm32h5xx_hal_timebase_rtc_alarm_template. c to stm32h5xx_hal_timebase_rtc_alarm.c
-      . renamed stm32h5xx_hal_timebase_rtc_wakeup_template. c to stm32h5xx_hal_timebase_rtc_wakeup.c
-      . renamed stm32h5xx_hal_timebase_tim_template. c to stm32h5xx_hal_timebase_tim.c
 
-   *fix to the V2 HAL API to get PTP to work
-     impacted file : stm32h5xx_hal_eth.c
-     In the HAL_ETH_ReadData function where it checks for the last descriptor,
-     we added a checked if the TSA bit was set in DESC1
-     If the TSA bit is set then have a peak at the context descriptor which should be the one
-     after the last descriptor
-     If the CTXT bit is set in the context descriptor then extract the timestamps
-     ST internal bug : 161504
+   *Fix Ethernet RX timestamp context handling
+     Prevents stale or incomplete RX timestamps by clearing the cached timestamp,
+     reading only CPU-owned timestamp context descriptors, and advancing the RX
+     descriptor index after consuming a valid context descriptor. Packets with
+     timestamp context descriptors still owned by DMA are retried later.
+     Impacted file:
+      stm32cube/stm32h5xx/drivers/src/stm32h5xx_hal_eth.c
+     ST Internal Reference: 683183939fd90b986d0d8626d624ab85
 
    *Fix to remove PAGESIZE definition which conflicts with POSIX
     Impacted files:
      drivers/include/Legacy/stm32_hal_legacy.h
 
-   *Fix SDIO initialization failure when skipping card identification sequence
-     Fixes an issue in the STM32H5 SDIO driver where HAL_SDIO_Init() fails if
-     the card identification sequence is skipped.
+   *Fix HAL_MDF_IRQHandler
+      HAL_MDF_IRQHandler handles IRQ flags in an if {} else if {} condition.
+      This causes interrupts to be handled once and only the first flag
+      encountered in the condition, while there can be several flags raised.
      Impacted files:
-      stm32cube/stm32h5xx/drivers/src/stm32h5xx_hal_sdio.c
+       drivers/src/stm32h5xx_hal_mdf.c
+     ST Internal Reference: HAL1-27843
 
-   *Fix SDIO polling mode data transfer issues
-     Fixes two related issues in the STM32H5 SDIO driver: incorrect block count calculation
-     that caused the card to hang, and improper buffer size handling that led to misaligned FIFO writes.
-     Together, these changes ensure correct and stable data transfer in polling mode.
+   *Fix incomplete OTGFS initialization on H5E5/H5F5
+      Due to an implementation defect, the USB_CoreInit() implementation
+      did not enable the FS PHY on STM32H5 lines with both OTG_FS and OTG_HS
+      (i.e., H5E5/H5F5), preventing usage of OTG_FS entirely. This fix is
+      cherry-picked from stm32h5xx-hal-driver. The original fix commit is
+      e73ad7e5c09abb40bed787b49068fb1f87343c19.
      Impacted file:
-      stm32cube/stm32h5xx/drivers/src/stm32h5xx_hal_sdio.c
-
-   *Fix CPP compilation error
-     Moves the cpp guard outside MDF1.
-     Impacted file:
-      stm32cube/stm32h5xx/drivers/include/stm32h5xx_hal_mdf.h
-     ST internal bug : HAL1-27445
+      stm32cube/stm32h5xx/drivers/src/stm32h5xx_ll_usb.c
+     ST Internal Reference: HAL1-27918
 
    See release_note.html from STM32Cube

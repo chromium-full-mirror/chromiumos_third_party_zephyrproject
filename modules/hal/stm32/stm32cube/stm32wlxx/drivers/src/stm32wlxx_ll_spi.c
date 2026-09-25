@@ -368,7 +368,7 @@ ErrorStatus LL_I2S_DeInit(const SPI_TypeDef *SPIx)
   *          - SUCCESS: SPI registers are Initialized
   *          - ERROR: SPI registers are not Initialized
   */
-ErrorStatus LL_I2S_Init(SPI_TypeDef *SPIx, LL_I2S_InitTypeDef *I2S_InitStruct)
+ErrorStatus LL_I2S_Init(SPI_TypeDef *SPIx,const LL_I2S_InitTypeDef *I2S_InitStruct)
 {
   uint32_t i2sdiv = 2U;
   uint32_t i2sodd = 0U;
@@ -529,4 +529,3 @@ void LL_I2S_ConfigPrescaler(SPI_TypeDef *SPIx, uint32_t PrescalerLinear, uint32_
   */
 
 #endif /* USE_FULL_LL_DRIVER */
-

@@ -8,6 +8,10 @@ if(CONFIG_SOC_SERIES_RW6XX)
         set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.coex ON)
         set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.rw61x ON)
 
+        if(CONFIG_NXP_IEEE802154_MAC)
+            set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.zb ON)
+        endif()
+
         zephyr_compile_definitions(
             gPlatformDisableVendorSpecificInit=1U
             gPlatformUseTimerManager_d=0
@@ -54,22 +58,22 @@ if(CONFIG_SOC_SERIES_MCXW7XX)
             gPlatformNbuDebugGpioDAccessEnabled_d=0
             gPlatformSetSfcConfigAtInit_d=0
             gPlatformSetWakeUpDelayAtInit_d=0
-            gPlatformSetBleMaxTxPowerAtInit_d=0
         )
     endif()
 endif()
 
 if(CONFIG_SOC_SERIES_MCXW2XX)
-    if(CONFIG_BT)
-        set(CONFIG_MCUX_COMPONENT_driver.ostimer ON)
-        set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework ON)
-        set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform ON)
-        set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.mcxw23 ON)
-        set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.ble ON)
-        zephyr_compile_definitions(
-            gPlatformUseTimerManager_d=0
-        )
-    endif()
+  if(CONFIG_BT)
+    set(CONFIG_MCUX_COMPONENT_driver.ostimer ON)
+    set(CONFIG_MCUX_COMPONENT_driver.trng ON)
+    set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework ON)
+    set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform ON)
+    set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.mcxw23 ON)
+    set(CONFIG_MCUX_COMPONENT_middleware.wireless.framework.platform.ble ON)
+    zephyr_compile_definitions(
+      gPlatformUseTimerManager_d=0
+    )
+  endif()
 endif()
 
 if(CONFIG_MCUX_COMPONENT_middleware.wireless.framework)

@@ -20,7 +20,7 @@
  * @defgroup bt_hci_api Bluetooth HCI
  *
  * @since 3.7
- * @version 0.2.0
+ * @version 0.3.0
  *
  * @ingroup bluetooth
  * @{
@@ -41,7 +41,8 @@ extern "C" {
 struct bt_hci_setup_params {
 	/** The public identity address to give to the controller. This field is used when the
 	 *  driver selects @kconfig{CONFIG_BT_HCI_SET_PUBLIC_ADDR} to indicate that it supports
-	 *  setting the controller's public address.
+	 *  setting the controller's public address. It is @ref BT_ADDR_ANY when the application
+	 *  has not created a public identity.
 	 */
 	bt_addr_t public_addr;
 };
@@ -63,22 +64,11 @@ enum {
 	 * >   practical opportunity.
 	 */
 	BT_HCI_QUIRK_NO_AUTO_DLE = BIT(1),
-};
-
-/** Possible values for the 'bus' member of the bt_hci_driver struct */
-enum __deprecated bt_hci_bus { /* Use macro BT_DT_HCI_BUS_GET() instead */
-	BT_HCI_BUS_VIRTUAL       = 0,
-	BT_HCI_BUS_USB           = 1,
-	BT_HCI_BUS_PCCARD        = 2,
-	BT_HCI_BUS_UART          = 3,
-	BT_HCI_BUS_RS232         = 4,
-	BT_HCI_BUS_PCI           = 5,
-	BT_HCI_BUS_SDIO          = 6,
-	BT_HCI_BUS_SPI           = 7,
-	BT_HCI_BUS_I2C           = 8,
-	BT_HCI_BUS_SMD           = 9,
-	BT_HCI_BUS_VIRTIO        = 10,
-	BT_HCI_BUS_IPC           = 11,
+	/** The controller advertises the controller to host flow control
+	 * commands as supported but does not accept them. The host treats
+	 * the feature as not supported.
+	 */
+	BT_HCI_QUIRK_NO_FLOW_CONTROL = BIT(2),
 };
 
 #define BT_DT_HCI_QUIRK_OR(node_id, prop, idx) \
@@ -101,6 +91,39 @@ enum __deprecated bt_hci_bus { /* Use macro BT_DT_HCI_BUS_GET() instead */
 #define BT_DT_HCI_BUS_INST_GET(inst) BT_DT_HCI_BUS_GET(DT_DRV_INST(inst))
 
 /**
+ * @brief Common Bluetooth HCI driver configuration.
+ *
+ * This structure is common to all Bluetooth HCI drivers and must be the first member
+ * in the object pointed to by the config field in the device
+ * structure.
+ */
+struct bt_hci_driver_config {
+	/** Quirks for this HCI device instance */
+	uint32_t quirks;
+};
+
+/**
+ * @brief Static initializer for @p bt_hci_driver_config struct
+ *
+ * @param node_id Devicetree node identifier
+ */
+#define BT_DT_HCI_DRIVER_CONFIG_GET(node_id)                                                    \
+	{                                                                                       \
+		.quirks = (uint32_t)BT_DT_HCI_QUIRKS_GET(node_id),                                \
+	}
+
+/**
+ * @brief Static initializer for @p bt_hci_driver_config struct from
+ * @c DT_DRV_COMPAT instance.
+ *
+ * @param inst @c DT_DRV_COMPAT instance number
+ * @see BT_DT_HCI_DRIVER_CONFIG_GET()
+ */
+
+#define BT_DT_HCI_DRIVER_CONFIG_INST_GET(inst)                                                  \
+	BT_DT_HCI_DRIVER_CONFIG_GET(DT_DRV_INST(inst))
+
+/**
  * @def_driverbackendgroup{Bluetooth HCI,bt_hci_api}
  * @{
  */
@@ -113,10 +136,35 @@ enum __deprecated bt_hci_bus { /* Use macro BT_DT_HCI_BUS_GET() instead */
 typedef int (*bt_hci_recv_t)(const struct device *dev, struct net_buf *buf);
 
 /**
+ * @brief Common Bluetooth HCI driver data.
+ *
+ * This structure is common to all Bluetooth HCI drivers and must be the first member
+ * in the driver's data struct.
+ */
+struct bt_hci_driver_data {
+	/** Callback for the driver to deliver data received from the controller to the host. */
+	bt_hci_recv_t recv;
+#if defined(CONFIG_BT_HCI_SET_PUBLIC_ADDR) || defined(__DOXYGEN__)
+	/**
+	 * @brief Public identity address to configure in the controller.
+	 *
+	 * @ref BT_ADDR_ANY when there is none, which is what zero-initialized
+	 * driver data starts out with, and not @ref BT_ADDR_NONE (see
+	 * bt_hci_get_public_addr()).
+	 *
+	 * Set with bt_hci_set_public_addr(), read with bt_hci_get_public_addr().
+	 *
+	 * @kconfig_dep{CONFIG_BT_HCI_SET_PUBLIC_ADDR}
+	 */
+	bt_addr_t public_addr;
+#endif /* CONFIG_BT_HCI_SET_PUBLIC_ADDR */
+};
+
+/**
  * @brief Callback API to open the HCI transport.
  * See bt_hci_open() for argument description
  */
-typedef int (*bt_hci_api_open_t)(const struct device *dev, bt_hci_recv_t recv);
+typedef int (*bt_hci_api_open_t)(const struct device *dev);
 
 /**
  * @brief Callback API to close the HCI transport.
@@ -166,6 +214,54 @@ __subsystem struct bt_hci_driver_api {
  */
 
 /**
+ * @brief Deliver an HCI packet from the driver.
+ *
+ * This function is called by the HCI driver to deliver data received from the
+ * controller to the host. The buffer contains the raw HCI packet, including the
+ * packet type prefix encoded in the H:4 format.
+ *
+ * If the function returns 0 (success) the reference to @c buf was moved to the
+ * higher layer (e.g. host stack). On error, the caller (HCI driver) still owns
+ * the reference and is responsible for eventually calling @ref net_buf_unref
+ * on it.
+ *
+ * @param dev  HCI device
+ * @param buf  Buffer containing data received from the controller.
+ *
+ * @return 0 on success or negative POSIX error number on failure.
+ * @retval -ENOTCONN The HCI transport is not open.
+ */
+static inline int bt_hci_recv_err(const struct device *dev, struct net_buf *buf)
+{
+	struct bt_hci_driver_data *data = dev->data;
+
+	if (data->recv == NULL) {
+		return -ENOTCONN;
+	}
+
+	return data->recv(dev, buf);
+}
+
+/**
+ * @brief Deliver an HCI packet from the driver.
+ *
+ * This function is the same as @ref bt_hci_recv_err except that it will internally handle
+ * error situations and always consume the buffer reference.
+ *
+ * @param dev  HCI device
+ * @param buf  Buffer containing data received from the controller.
+ */
+static inline void bt_hci_recv(const struct device *dev, struct net_buf *buf)
+{
+	int err;
+
+	err = bt_hci_recv_err(dev, buf);
+	if (err != 0) {
+		net_buf_unref(buf);
+	}
+}
+
+/**
  * @brief Open the HCI transport.
  *
  * Opens the HCI transport for operation. This function must not
@@ -175,13 +271,29 @@ __subsystem struct bt_hci_driver_api {
  * @param dev  HCI device
  * @param recv This is callback through which the HCI driver provides the
  *             host with data from the controller. The callback is expected
- *             to be called from thread context.
+ *             to be called from thread context, and it may be called already
+ *             before bt_hci_open() returns.
  *
  * @return 0 on success or negative POSIX error number on failure.
+ * @retval -EALREADY The HCI transport is already open.
  */
 static inline int bt_hci_open(const struct device *dev, bt_hci_recv_t recv)
 {
-	return DEVICE_API_GET(bt_hci, dev)->open(dev, recv);
+	struct bt_hci_driver_data *data = dev->data;
+	int err;
+
+	if (data->recv != NULL) {
+		return -EALREADY;
+	}
+
+	data->recv = recv;
+
+	err = DEVICE_API_GET(bt_hci, dev)->open(dev);
+	if (err != 0) {
+		data->recv = NULL;
+	}
+
+	return err;
 }
 
 /**
@@ -197,12 +309,19 @@ static inline int bt_hci_open(const struct device *dev, bt_hci_recv_t recv)
 static inline int bt_hci_close(const struct device *dev)
 {
 	const struct bt_hci_driver_api *api = DEVICE_API_GET(bt_hci, dev);
+	struct bt_hci_driver_data *data = dev->data;
+	int err = 0;
 
 	if (api->close == NULL) {
 		return -ENOSYS;
 	}
 
-	return api->close(dev);
+	err = api->close(dev);
+	if (err == 0) {
+		data->recv = NULL;
+	}
+
+	return err;
 }
 
 /**
@@ -253,6 +372,55 @@ static inline int bt_hci_setup(const struct device *dev, struct bt_hci_setup_par
 	return api->setup(dev, params);
 }
 #endif
+
+/**
+ * @brief Set the public identity address for the controller.
+ *
+ * Stores the public address the driver should configure in the controller.
+ *
+ * The Bluetooth Host calls this before bt_hci_open() when the application has
+ * created a public identity with bt_id_create(). A controller-only application
+ * can likewise call it before opening the transport.
+ *
+ * The driver reads the address with bt_hci_get_public_addr() and applies it
+ * while opening the transport, or in its setup() implementation.
+ *
+ * @kconfig_dep{CONFIG_BT_HCI_SET_PUBLIC_ADDR}
+ *
+ * @param dev  HCI device
+ * @param addr Public address, or @ref BT_ADDR_ANY to clear a previously set one.
+ *             @ref BT_ADDR_NONE does not clear it, see bt_hci_get_public_addr().
+ */
+void bt_hci_set_public_addr(const struct device *dev, const bt_addr_t *addr);
+
+/**
+ * @brief Get the public identity address the driver is to configure.
+ *
+ * Returns the address stored with bt_hci_set_public_addr(), for the driver to
+ * write into the controller while opening the transport. It does not query
+ * the controller.
+ *
+ * "No address" is @ref BT_ADDR_ANY and not @ref BT_ADDR_NONE, even though the
+ * name of the latter suggests it. @ref BT_ADDR_ANY is the address part of
+ * @ref BT_ADDR_LE_ANY, with which the Host marks an identity that has no
+ * address, and it is what the setup() op receives in
+ * @ref bt_hci_setup_params.public_addr when there is no public identity, so a
+ * driver has one check whichever way it gets the address. It is also the
+ * all-zero address, so driver data that has never been written already reads
+ * as "no address". This function cannot fail, so the driver compares the
+ * address it returns with @ref BT_ADDR_ANY, using bt_addr_eq(), before it
+ * uses it.
+ *
+ * @kconfig_dep{CONFIG_BT_HCI_SET_PUBLIC_ADDR}
+ *
+ * @param dev HCI device
+ *
+ * @return The address to configure, never NULL, valid until the next
+ *         bt_hci_set_public_addr() call for the device. It compares equal to
+ *         @ref BT_ADDR_ANY when no public address has been set, or it has been
+ *         cleared.
+ */
+const bt_addr_t *bt_hci_get_public_addr(const struct device *dev);
 
 /**
  * @}

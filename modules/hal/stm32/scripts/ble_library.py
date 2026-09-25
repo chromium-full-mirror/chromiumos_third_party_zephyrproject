@@ -74,10 +74,14 @@ file_list_wba = {
         + "ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ble_basic/"
         + "ll_fw_config.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ble_basic_plus/"
+        + "ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/ieee_15_4_basic/"
         + "ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/"
-        + "ble_15_4/ll_fw_config.h",
+        + "ble_basic_15_4/ll_fw_config.h",
+        "Middlewares/ST/STM32_WPAN/link_layer/ll_cmd_lib/config/concurrent/"
+        + "ble_basic_plus_15_4/ll_fw_config.h",
         "Middlewares/ST/STM32_WPAN/ble/stack/include/ble_bufsize.h",
         "Middlewares/ST/STM32_WPAN/ble/stack/include/ble_const.h",
         "Middlewares/ST/STM32_WPAN/ble/stack/include/ble_defs.h",
@@ -132,6 +136,8 @@ file_list_wba = {
         "Projects/Common/WPAN/Modules/stm_list.c",
         "Projects/Common/WPAN/Modules/stm_list.h",
         "Projects/Common/WPAN/Modules/utilities_common.h",
+        "Projects/Common/WPAN/Modules/pka_ctrl.c",
+        "Projects/Common/WPAN/Modules/pka_ctrl.h",
         "Projects/Common/WPAN/Interfaces/hw.h",
         "Projects/Common/WPAN/Interfaces/hw_aes.c",
         "Projects/Common/WPAN/Interfaces/hw_if.h",
@@ -150,6 +156,7 @@ wb0_ble_transparent_mode_app_path = "Projects/NUCLEO-WB09KE/Applications/BLE/" \
 file_list_wb0 = {
     "STM32_BLE": [
         "Middlewares/ST/STM32_BLE/ble.h",
+        "Middlewares/ST/STM32_BLE/ble_legacy.h",
         "Middlewares/ST/STM32_BLE/stack/config/ble_stack_user_cfg.c",
         "Middlewares/ST/STM32_BLE/stack/include/ble_api.h",
         "Middlewares/ST/STM32_BLE/stack/include/ble_const.h",

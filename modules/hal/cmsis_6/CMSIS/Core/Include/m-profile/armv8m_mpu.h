@@ -66,11 +66,11 @@
 #define MPU_ATTR_NORMAL_OUTER_WT_RA         (0b1010)
 #define MPU_ATTR_NORMAL_OUTER_WT_WA         (0b1001)
 #define MPU_ATTR_NORMAL_OUTER_WT_RA_WA      (0b1011)
-#define MPU_ATTR_NORMAL_OUTER_WB_TR_RA      (0b0101)
-#define MPU_ATTR_NORMAL_OUTER_WB_TR_WA      (0b0110)
+#define MPU_ATTR_NORMAL_OUTER_WB_TR_RA      (0b0110)
+#define MPU_ATTR_NORMAL_OUTER_WB_TR_WA      (0b0101)
 #define MPU_ATTR_NORMAL_OUTER_WB_TR_RA_WA   (0b0111)
-#define MPU_ATTR_NORMAL_OUTER_WB_RA         (0b1101)
-#define MPU_ATTR_NORMAL_OUTER_WB_WA         (0b1110)
+#define MPU_ATTR_NORMAL_OUTER_WB_RA         (0b1110)
+#define MPU_ATTR_NORMAL_OUTER_WB_WA         (0b1101)
 #define MPU_ATTR_NORMAL_OUTER_WB_RA_WA      (0b1111)
 #define MPU_ATTR_NORMAL_INNER_NON_CACHEABLE (0b0100)
 #define MPU_ATTR_NORMAL_INNER_WT_TR_RA      (0b0010)
@@ -79,11 +79,11 @@
 #define MPU_ATTR_NORMAL_INNER_WT_RA         (0b1010)
 #define MPU_ATTR_NORMAL_INNER_WT_WA         (0b1001)
 #define MPU_ATTR_NORMAL_INNER_WT_RA_WA      (0b1011)
-#define MPU_ATTR_NORMAL_INNER_WB_TR_RA      (0b0101)
-#define MPU_ATTR_NORMAL_INNER_WB_TR_WA      (0b0110)
+#define MPU_ATTR_NORMAL_INNER_WB_TR_RA      (0b0110)
+#define MPU_ATTR_NORMAL_INNER_WB_TR_WA      (0b0101)
 #define MPU_ATTR_NORMAL_INNER_WB_TR_RA_WA   (0b0111)
-#define MPU_ATTR_NORMAL_INNER_WB_RA         (0b1101)
-#define MPU_ATTR_NORMAL_INNER_WB_WA         (0b1110)
+#define MPU_ATTR_NORMAL_INNER_WB_RA         (0b1110)
+#define MPU_ATTR_NORMAL_INNER_WB_WA         (0b1101)
 #define MPU_ATTR_NORMAL_INNER_WB_RA_WA      (0b1111)
 
 /** \brief Memory Attribute
@@ -127,7 +127,7 @@
  * Execute-never
  * XN = Execute-never, EX = Executable
  */
-/** \brief Normal memory, Execution only permitted if read permitted */
+/** \brief Normal memory, Execution not permitted */
 #define ARM_MPU_XN (1U)
 
 /** \brief Normal memory, Execution only permitted if read permitted */
@@ -259,12 +259,17 @@ __STATIC_INLINE void ARM_MPU_SetMemAttrEx(MPU_Type* mpu, uint8_t idx, uint8_t at
   const uint8_t reg = idx / 4U;
   const uint32_t pos = ((idx % 4U) * 8U);
   const uint32_t mask = 0xFFU << pos;
+  /* attr is uint8_t; integer promotion makes "attr << pos" a signed int
+   * shift, which overflows int's representable range (and is undefined
+   * behaviour) once attr >= 0x80 and pos == 24. Promote to uint32_t first
+   * so the shift is unsigned and cannot overflow. */
+  const uint32_t val = (uint32_t)attr << pos;
 
   if (reg >= (sizeof(mpu->MAIR) / sizeof(mpu->MAIR[0]))) {
     return; // invalid index
   }
 
-  mpu->MAIR[reg] = ((mpu->MAIR[reg] & ~mask) | ((attr << pos) & mask));
+  mpu->MAIR[reg] = ((mpu->MAIR[reg] & ~mask) | (val & mask));
 }
 
 /** Set the memory attribute encoding.

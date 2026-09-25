@@ -2,13 +2,13 @@
 
 The **CMSIS** (Common Microcontroller Software Interface Standard) is a set of APIs, software components, tools, and workflows that help to simplify software re-use, reduce the learning curve for microcontroller developers, speed-up project build and debug, and thus reduce the time to market for new applications.
 
-CMSIS started as a vendor-independent hardware abstraction layer Arm&reg; Cortex&reg;-M based processors and was later extended to support entry-level Arm Cortex-A based processors. To simplify access, CMSIS defines generic tool interfaces and enables consistent device support by providing simple software interfaces to the processor and the peripherals.
+CMSIS started as a vendor-independent hardware abstraction layer for Arm&reg; Cortex&reg;-M based processors and was later extended to support entry-level Arm Cortex-A based processors. To simplify access, CMSIS defines generic tool interfaces and enables consistent device support by providing simple software interfaces to the processor and the peripherals.
 
 CMSIS has been created to help the industry in standardization. It enables consistent software layers and device support across a wide range of development tools and microcontrollers. CMSIS is not a huge software layer that introduces overhead and does not define standard peripherals. The silicon industry can therefore support the wide variations of Arm Cortex processor-based devices with this common standard.
 
 ## CMSIS Components {#cmsis_components}
 
-![CMSIS Components Overview](./images/cmsis_components.png)
+![CMSIS Components Overview](./images/cmsis_components_630.png)
 
 <h2>CMSIS Base Software Components</h2>
 
@@ -53,6 +53,12 @@ CMSIS has been created to help the industry in standardization. It enables consi
   <div class="tile" onclick="document.location='../Toolbox/index.html'">
     <span class="tileh h2">CMSIS-Toolbox</span><span class="tiletxt">A set of command-line tools to work with software packs</span><span class="tilelinks"><a href="https://github.com/Open-CMSIS-Pack/cmsis-toolbox/blob/main/README.md">Guide</a> | <a href="https://github.com/Open-CMSIS-Pack/cmsis-toolbox">GitHub</a></span>
   </div>
+  <div class="tile">
+    <span class="tileh h2">CMSIS Solution</span><span class="tiletxt">VS Code extension for managing CMSIS solutions</span><span class="tilelinks"><a href="https://mdk-packs.github.io/vscode-cmsis-solution-docs/index.html">Guide</a> | <a href="https://marketplace.visualstudio.com/items?itemName=Arm.cmsis-csolution">Marketplace</a></span>
+  </div>
+  <div class="tile">
+    <span class="tileh h2">CMSIS Debugger</span><span class="tiletxt">VS Code extension for debugging Arm Cortex-M processor-based devices</span><span class="tilelinks"><a href="https://github.com/Open-CMSIS-Pack/vscode-cmsis-debugger">GitHub</a> | <a href="https://marketplace.visualstudio.com/items?itemName=Arm.vscode-cmsis-debugger">Marketplace</a></span>
+  </div><br>
   <div class="tile" onclick="document.location='../Stream/index.html'">
     <span class="tileh h2">CMSIS-Stream</span><span class="tiletxt">Tools and methods for optimizing DSP/ML block data streams</span><span class="tilelinks"><a href="https://github.com/ARM-software/CMSIS-Stream/blob/main/README.md">Guide</a> | <a href="https://github.com/ARM-software/cmsis-stream">GitHub</a></span>
   </div>
@@ -81,14 +87,23 @@ CMSIS has been created to help the industry in standardization. It enables consi
 
 The benefits of the CMSIS are:
 
- - CMSIS reduces the learning curve, development costs, and time-to-market. Developers can write software quicker through a variety of easy-to-use, standardized software interfaces.
- - Consistent software interfaces improve the software portability and re-usability. Generic software libraries and interfaces provide consistent software framework.
- - It provides interfaces for debug connectivity, debug peripheral views, software delivery, and device support to reduce time-to-market for new microcontroller deployment.
- - It allows to use the compiler of your choice, as it is compiler independent and thus supported by mainstream compilers.
- - It enhances program debugging with peripheral information for debuggers and ITM channels for printf-style output.
- - CMSIS is delivered in CMSIS-Pack format which enables fast software delivery, simplifies updates, and enables consistent integration into development tools.
- - CMSIS-Zone will simplify system resource and partitioning as it manages the configuration of multiple processors, memory areas, and peripherals.
- - IDE and Continuous Integration (CI) are important workflows for embedded software developers. The CMSIS-Toolbox provides command-line build tools with CMake backend and integration into IDEs such as VS Code.
+- CMSIS reduces the learning curve, development costs, and time-to-market. Developers can write software quicker
+  through a variety of easy-to-use, standardized software interfaces.
+- Consistent software interfaces improve the software portability and re-usability. Generic software libraries and
+  interfaces provide consistent software framework.
+- It provides interfaces for debug connectivity, debug peripheral views, software delivery, and device support to
+  reduce time-to-market for new microcontroller deployment.
+- It allows to use the compiler of your choice, as it is compiler independent and thus supported by mainstream
+  compilers.
+- It enhances program debugging with peripheral information for debuggers and ITM channels for printf-style output.
+- CMSIS is delivered in CMSIS-Pack format which enables fast software delivery, simplifies updates, and enables
+  consistent integration into development tools.
+- CMSIS-Zone will simplify system resource and partitioning as it manages the configuration of multiple processors,
+  memory areas, and peripherals.
+- IDE and Continuous Integration (CI) are important workflows for embedded software developers:
+    - The CMSIS-Toolbox provides command-line build tools with CMake backend.
+    - The CMSIS Solution and CMSIS Debugger extensions for VS Code can be used to create an IDE for projects based on
+      [CSolution format](https://open-cmsis-pack.github.io/cmsis-toolbox/YML-Input-Format/).
 
 ## Development {#development}
 
@@ -145,7 +160,7 @@ The CMSIS source code is checked for MISRA C:2012 conformance. MISRA deviations 
 
 ## Migration from CMSIS v5 {#migration_cmsis5}
 
-The functionality of invidivdual CMSIS v6 software components is kept primarily same as in CMSIS v5.9.0. However, some CMSIS components are now delivered in their standalone CMSIS packs and may also have different naming, structure and dependencies.
+The functionality of individual CMSIS v6 software components is kept primarily same as in CMSIS v5.9.0. However, some CMSIS components are now delivered in their standalone CMSIS packs and may also have different naming, structure and dependencies.
 
 While use of CMSIS-Pack concept greatly helps to abstract many of this changes from users, there are still some simple adaptation required to fully enable CMSIS v6 support in software developed based on CMSIS v5 structure. Following migration guides explain necessary steps for such porting:
 

@@ -45,6 +45,10 @@
 - name: ADC_VINM / ADC_VINP
   match: "^ADC(?:\\d+)?_VIN[PM]\\d+$"
 
+- name: ADF
+  match: "^ADF(?:\\d+)_(?:CCK[0-1]|SDI[0-1])$"
+  slew-rate: very-high-speed
+
 - name: CAN_RX
   match: "^CAN\\d*_RX$"
   bias: pull-up
@@ -170,11 +174,18 @@
 - name: JTAG PORT
   match: "^(SYS|DEBUG)_((JTMS-?)?SWDIO|(JTCK-?)?SWCLK|JTDI|(JTDO-?)?(TRACESWO|SWO)?|(N)?JTRST|TRACECLK|TRACED\\d)$"
 
+- name: LCD
+  match: "^LCD_(SEG([0-9]|[1-4][0-9]|5[0-1])|COM[0-7]|VLCD)$"
+
 - name: LPTIM
   match: "^LPTIM[1-6]_(IN[1-2]|CH[1-4]|ETR|OUT)$"
 
 - name: LTDC
   match: "^LTDC_(?:DE|CLK|HSYNC|VSYNC|R[0-7]|G[0-7]|B[0-7])$"
+
+- name: MDF
+  match: "^MDF1_(?:CCK[0-1]|CKI[0-7]|SDI[0-7])$"
+  slew-rate: very-high-speed
 
 - name: OCTOSPI
   match: "^OCTOSPI(.*)(?:CLK|NCS[1-2]?|DQS|IO[0-7])$"

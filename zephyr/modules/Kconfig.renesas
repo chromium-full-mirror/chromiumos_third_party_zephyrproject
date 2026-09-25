@@ -434,6 +434,11 @@ config USE_RZ_FSP_SPI
 	help
 	  Enable RZ FSP SPI driver
 
+config USE_RZ_FSP_SPI_B
+	bool
+	help
+	  Enable RZ FSP SPI B driver
+
 config USE_RZ_FSP_WDT
 	bool
 	help
@@ -448,6 +453,16 @@ config USE_RZ_FSP_QSPI_SPIBSC
 	bool
 	help
 	  Enable RZ FSP QSPI SPIBSC driver
+
+config USE_RZ_FSP_DISPLAY
+	bool
+	help
+	  Enable RZ FSP Display driver
+
+config USE_RZ_FSP_MIPI_DSI
+	bool
+	help
+	  Enable RZ FSP MIPI-DSI driver
 
 endif
 

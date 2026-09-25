@@ -20,6 +20,9 @@
 
 #include <zephyr/logging/log.h>
 #include <zephyr/irq.h>
+
+#include <string.h>
+
 LOG_MODULE_REGISTER(dma_stm32, CONFIG_DMA_LOG_LEVEL);
 
 #define DT_DRV_COMPAT st_stm32u5_dma
@@ -319,10 +322,13 @@ static void dma_stm32_irq_handler(const struct device *dev, uint32_t id)
 		}
 		status = DMA_STATUS_COMPLETE;
 	} else {
-		LOG_ERR("Transfer Error.");
-		stream->busy = false;
-		dma_stm32_dump_stream_irq(dev, id);
-		dma_stm32_clear_stream_irq(dev, id);
+		/* Let HAL DMA handle flags on its own */
+		if (!stream->hal_override) {
+			LOG_ERR("Transfer Error.");
+			stream->busy = false;
+			dma_stm32_dump_stream_irq(dev, id);
+			dma_stm32_clear_stream_irq(dev, id);
+		}
 		status = -EIO;
 	}
 
@@ -333,7 +339,7 @@ static void dma_stm32_irq_handler(const struct device *dev, uint32_t id)
 
 static int dma_stm32_get_priority(uint8_t priority, uint32_t *ll_priority)
 {
-	if (priority > ARRAY_SIZE(table_priority)) {
+	if (priority >= ARRAY_SIZE(table_priority)) {
 		LOG_ERR("Priority error. %d", priority);
 		return -EINVAL;
 	}
@@ -362,6 +368,158 @@ static int dma_stm32_get_direction(enum dma_channel_direction direction,
 
 	return 0;
 }
+
+#ifndef CONFIG_STM32_HAL2
+static int dma_stm32_hal_map_data_size(uint32_t z_size, uint32_t *hal_size, uint32_t hal_byte,
+				       uint32_t hal_halfword, uint32_t hal_word)
+{
+	switch (z_size) {
+	case 1:
+		*hal_size = hal_byte;
+		return 0;
+	case 2:
+		*hal_size = hal_halfword;
+		return 0;
+	case 4:
+		*hal_size = hal_word;
+		return 0;
+	default:
+		return -ENOTSUP;
+	}
+}
+
+static int dma_stm32_hal_map_mode(const struct dma_config *cfg, uint32_t *hal_mode)
+{
+	if (cfg->cyclic) {
+#ifdef DMA_CIRCULAR
+		*hal_mode = DMA_CIRCULAR;
+#else
+		return -ENOTSUP;
+#endif
+	} else {
+		*hal_mode = DMA_NORMAL;
+	}
+
+	return 0;
+}
+
+static int dma_stm32_hal_map_addr_adj(enum dma_addr_adj z_adj, uint32_t *hal_inc,
+				      uint32_t hal_inc_val, uint32_t hal_noinc_val)
+{
+	switch (z_adj) {
+	case DMA_ADDR_ADJ_INCREMENT:
+		*hal_inc = hal_inc_val;
+		return 0;
+	case DMA_ADDR_ADJ_NO_CHANGE:
+		*hal_inc = hal_noinc_val;
+		return 0;
+	case DMA_ADDR_ADJ_DECREMENT:
+		return -ENOTSUP;
+	default:
+		return -EINVAL;
+	}
+}
+
+static int dma_stm32_hal_config_widths(const struct dma_config *cfg, DMA_InitTypeDef *hal_config)
+{
+	int ret;
+
+	ret = dma_stm32_hal_map_data_size(cfg->source_data_size, &hal_config->SrcDataWidth,
+					  DMA_SRC_DATAWIDTH_BYTE, DMA_SRC_DATAWIDTH_HALFWORD,
+					  DMA_SRC_DATAWIDTH_WORD);
+	if (ret < 0) {
+		return ret;
+	}
+
+	return dma_stm32_hal_map_data_size(cfg->dest_data_size, &hal_config->DestDataWidth,
+					   DMA_DEST_DATAWIDTH_BYTE, DMA_DEST_DATAWIDTH_HALFWORD,
+					   DMA_DEST_DATAWIDTH_WORD);
+}
+
+static int dma_stm32_hal_config_increments(uint16_t source_addr_adj, uint16_t dest_addr_adj,
+					   DMA_InitTypeDef *hal_config)
+{
+	int ret;
+
+	ret = dma_stm32_hal_map_addr_adj(source_addr_adj, &hal_config->SrcInc,
+					 DMA_SINC_INCREMENTED, DMA_SINC_FIXED);
+	if (ret < 0) {
+		return ret;
+	}
+
+	return dma_stm32_hal_map_addr_adj(dest_addr_adj, &hal_config->DestInc,
+					  DMA_DINC_INCREMENTED, DMA_DINC_FIXED);
+}
+
+/*
+ * Default DMA driver configuration relies on these values,
+ * in case the fields have not been initialized in the @p zephyr_config.
+ *
+ * hal_config->Request			= GPDMA1_REQUEST_ADC1;
+ * hal_config->BlkHWRequest		= DMA_BREQ_SINGLE_BURST;
+ * hal_config->Direction		= DMA_PERIPH_TO_MEMORY;
+ * hal_config->SrcInc			= DMA_SINC_FIXED;
+ * hal_config->DestInc			= DMA_DINC_FIXED;
+ * hal_config->SrcDataWidth		= DMA_SRC_DATAWIDTH_BYTE;
+ * hal_config->DestDataWidth		= DMA_DEST_DATAWIDTH_BYTE;
+ * hal_config->Priority			= DMA_LOW_PRIORITY_LOW_WEIGHT;
+ * hal_config->SrcBurstLength		= 0;
+ * hal_config->DestBurstLength		= 0;
+ * hal_config->TransferAllocatedPort	= DMA_SRC_ALLOCATED_PORT0;
+ * hal_config->TransferEventMode	= DMA_TCEM_BLOCK_TRANSFER;
+ * hal_config->Mode			= DMA_NORMAL;
+ */
+int dma_stm32_zcfg_to_halcfg(const struct device *dma, const struct dma_config *zephyr_config,
+			     DMA_InitTypeDef *hal_config, uint16_t source_addr_adj,
+			     uint16_t dest_addr_adj)
+{
+	int ret;
+
+	__ASSERT_NO_MSG(dma != NULL && zephyr_config != NULL && hal_config != NULL);
+
+	memset(hal_config, 0, sizeof(*hal_config));
+
+	ret = dma_stm32_get_direction(zephyr_config->channel_direction, &hal_config->Direction);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = dma_stm32_get_priority(zephyr_config->channel_priority, &hal_config->Priority);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = dma_stm32_hal_config_widths(zephyr_config, hal_config);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = dma_stm32_hal_map_mode(zephyr_config, &hal_config->Mode);
+	if (ret < 0) {
+		return ret;
+	}
+
+	ret = dma_stm32_hal_config_increments(source_addr_adj, dest_addr_adj, hal_config);
+	if (ret < 0) {
+		return ret;
+	}
+
+	hal_config->SrcBurstLength = zephyr_config->source_burst_length;
+	hal_config->DestBurstLength = zephyr_config->dest_burst_length;
+
+	hal_config->Request = zephyr_config->dma_slot;
+
+#ifdef DMA_BREQ_SINGLE_BURST
+	hal_config->BlkHWRequest = DMA_BREQ_SINGLE_BURST;
+#endif
+
+#ifdef DMA_TCEM_BLOCK_TRANSFER
+	hal_config->TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+#endif
+
+	return 0;
+}
+#endif /* CONFIG_STM32_HAL2 */
 
 static int dma_stm32_disable_stream(DMA_TypeDef *dma, uint32_t id)
 {
@@ -623,7 +781,6 @@ static int dma_stm32_configure(const struct device *dev,
 #endif /* CONFIG_STM32_HAL2 */
 #endif /* CONFIG_ARM_SECURE_FIRMWARE */
 
-
 #if defined(CONFIG_SOC_SERIES_STM32H7RSX)
 	if (dma == HPDMA1) {
 		/* Overwrite the config in case of HPDMA */
@@ -723,21 +880,41 @@ static int dma_stm32_suspend(const struct device *dev, uint32_t id)
 {
 	const struct dma_stm32_config *config = dev->config;
 	DMA_TypeDef *dma = (DMA_TypeDef *)(config->base);
-	const struct dma_stm32_stream *stream = &config->streams[id];
 
 	if (id >= config->max_streams) {
 		return -EINVAL;
 	}
 
-	/* Suspend the channel and wait for suspend Flag set */
+	/* Request channel suspension */
 	LL_DMA_SuspendChannel(STM32_DMA_GET_CHANNEL(dma, id));
-	/* It's not enough to wait for the SUSPF bit with LL_DMA_IsActiveFlag_SUSP */
-	do {
-		k_busy_wait(800); /* A delay is needed (800us is valid) */
-	} while (LL_DMA_IsActiveFlag_SUSP(STM32_DMA_GET_CHANNEL(dma, id)) != 1 &&
-			stream->busy == true);
 
-	/* Do not Reset the channel to allow resuming later */
+	/*
+	 * Wait until the channel becomes effectively suspended (SUSPF).
+	 * Also handle the case where the channel was/has become idle:
+	 * the suspension request has no effect on idle channels and
+	 * SUSPF will never be set in such cases.
+	 *
+	 * Note that this function is isr-ok so we MUST NOT rely on
+	 * metadata updated by the ISR (such as stream->busy); only
+	 * the hardware status flags are trustworthy here.
+	 */
+	do {
+		/*
+		 * It's not enough to wait for the SUSPF bit with
+		 * LL_DMA_IsActiveFlag_SUSP - a delay is needed.
+		 */
+		k_busy_wait(800);
+	} while (!LL_DMA_IsActiveFlag_SUSP(STM32_DMA_GET_CHANNEL(dma, id))
+		 && !LL_DMA_IsActiveFlag_IDLE(STM32_DMA_GET_CHANNEL(dma, id)));
+
+	/*
+	 * Don't bother clearing the suspension request if the channel was idle
+	 * (and has thus NOT been suspended) as only dma_resume() and dma_stop()
+	 * are allowed to be called by the DMA API on "suspended" channels, and
+	 * both of these functions will clear the suspension request.
+	 *
+	 * Obviously, also don't reset the channel to allow resuming it later.
+	 */
 	return 0;
 }
 
@@ -800,6 +977,24 @@ static int dma_stm32_init(const struct device *dev)
 		LOG_ERR("clock op failed\n");
 		return -EIO;
 	}
+
+#if defined(CONFIG_SOC_SERIES_STM32N6X) && defined(CONFIG_ARM_SECURE_FIRMWARE)
+	DMA_TypeDef *dma = (DMA_TypeDef *)(config->base);
+
+	if (dma == HPDMA1) {
+		/* HPDMA supports per-channel CID configuration.
+		 * Configure each channel to use CID1 as do other
+		 * bus masters (see soc/st/stm32/stm32n6x/soc.c).
+		 * Without this configuration, transfers would appear
+		 * to complete but silently fail to move any data.
+		 */
+		for (uint32_t i = 0; i < config->max_streams; i++) {
+			LL_DMA_SetStaticIsolation(dma, dma_stm32_id_to_stream(i),
+						  LL_DMA_CHANNEL_STATIC_CID_1);
+			LL_DMA_EnableIsolation(dma, dma_stm32_id_to_stream(i));
+		}
+	}
+#endif /* CONFIG_SOC_SERIES_STM32N6X && CONFIG_ARM_SECURE_FIRMWARE */
 
 	config->config_irq(dev);
 
