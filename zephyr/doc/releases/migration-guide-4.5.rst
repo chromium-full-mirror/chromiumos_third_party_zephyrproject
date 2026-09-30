@@ -152,6 +152,16 @@ Boards
   <REGULATOR_RPI_PICO_MODE_NORMAL>`` properties are now set by default in the SoC dtsi. Boards
   that previously set them explicitly can remove those lines. (:github:`114751`)
 
+* On RP2350 (rpi_pico family), the ``hazard3`` and ``m33`` cpucluster qualifiers are deprecated in
+  favor of ``hazard3_0`` and ``m33_0``, which explicitly identify the cluster as CPU0 and pave the
+  way for dual-core support. All in-tree RP2350 boards have been migrated to the new qualifiers
+  (e.g. ``rpi_pico2/rp2350a/m33`` to ``rpi_pico2/rp2350a/m33_0``). Out-of-tree boards using the bare
+  ``hazard3``/``m33`` qualifiers should rename their board files, ``board.yml`` ``cpucluster:``
+  entries, and Kconfig select lines to use ``SOC_RP2350[AB]_HAZARD3_0``/``SOC_RP2350[AB]_M33_0``.
+  The bare ``hazard3``/``m33`` entries in ``soc.yml`` and the corresponding
+  ``SOC_RP2350[AB]_HAZARD3``/``_M33`` Kconfig symbols are deprecated and will both be removed in a
+  future release.
+
 * The Kconfig options :kconfig:option:`CONFIG_SRAM_SIZE` and
   :kconfig:option:`CONFIG_SRAM_BASE_ADDRESS` have been deprecated, boards should instead use the
   devicetree ``zephyr.sram`` chosen node to specify the RAM node which will be used (whose values
@@ -356,6 +366,11 @@ Boards
 
 * The Silabs Kconfig option ``CONFIG_SOC_SILABS_PM_LOW_INTERRUPT_LATENCY``
   has been renamed to :kconfig:option:`CONFIG_SOC_VENDOR_SILABS_PM_LOW_INTERRUPT_LATENCY`.
+
+* The stm32h573i_dk and stm32h5f5j_dk disco kit are now adopting the mspi controller model.
+  This is the next step of the migration to mspi stm32 support. For both boards, declare the xspi
+  node as ``st,stm32-xspi-controller`` compatible. The stm32h5 device DTS will be updated
+  once all the target boards are changed.
 
 Device Drivers and Devicetree
 *****************************
@@ -658,6 +673,17 @@ Digital Microphone
   have been updated. Application code using :c:func:`dmic_configure`, :c:func:`dmic_trigger`, and
   :c:func:`dmic_read` is not impacted.
 
+Disk
+====
+
+* :kconfig:option:`CONFIG_NVME_REQUEST_TIMEOUT` is documented and ranged in
+  seconds. The NVMe request timeout path previously compared that value against
+  :c:func:`k_uptime_get_32` milliseconds without converting, so the default of
+  ``5`` expired after about 5 ms instead of 5 seconds. The driver now converts
+  with ``MSEC_PER_SEC`` before scheduling and expiry checks. Review any
+  non-default setting if the application depended on the former short timeout
+  behavior. (:github:`117809`)
+
 Display
 =======
 
@@ -691,6 +717,16 @@ Display
   property and gains an optional ``red-blue-swap`` boolean to indicate the panel expects
   BGR channel order. Boards relying on firmware-negotiated pixel order to correct swapped
   channels must also set ``red-blue-swap``. (:github:`115633`)
+
+* The ``chipone,co5300`` MIPI DSI display driver no longer maintains an
+  internal shadow framebuffer, and the ``pitch-align``, ``addr-align``, and
+  ``ext-ram`` devicetree properties have been removed from the
+  :dtcompatible:`chipone,co5300` binding. Boards previously relying on these
+  properties to satisfy display-controller alignment requirements should
+  instead enable :kconfig:option:`CONFIG_LV_Z_AREA_X_ALIGNMENT_WIDTH` and
+  :kconfig:option:`CONFIG_LV_Z_AREA_Y_ALIGNMENT_WIDTH` (LVGL) so that
+  invalidated areas are rounded to the required boundary before reaching the
+  driver. (:github:`117765`)
 
 DMA
 ===
@@ -903,6 +939,9 @@ GPIO
   behavior as before since these flags were effectively ignored. (:github:`104690`)
 
 * On STM32F1 series, GPIO output pins now use 50 MHz max. speed instead of 10 MHz. (:github:`104690`)
+
+* The :dtcompatible:`awinic,aw9523b-gpio` driver no longer has the ``reset-gpios`` property. This has instead
+  been moved to the parent :dtcompatible:`awinic,aw9523b` MFD device.
 
 Haptics
 =======
@@ -1233,6 +1272,28 @@ NXP
     /* After */
     #include <nxp/mcx/mcxc/nxp_mcxc242.dtsi>
 
+* The NXP MCXN series gained dedicated per-part composer DTSI files for
+  mcxn547, mcxn947 and mcxn236 (``nxp_mcxn547.dtsi``, ``nxp_mcxn947.dtsi``
+  and ``nxp_mcxn236.dtsi``), alongside the new mcxn546, mcxn946 and mcxn235
+  phantom parts added this release. Each of these files just includes the
+  existing series file (``nxp_mcxn54x.dtsi``, ``nxp_mcxn94x.dtsi`` and
+  ``nxp_mcxn23x.dtsi`` respectively) with no overrides, and in-tree boards
+  for mcxn547, mcxn947 and mcxn236 now include the new per-part file
+  instead. The series files themselves are unchanged and still work if
+  included directly, so this is not a required migration, but out-of-tree
+  boards for these three parts may want to switch to the new per-part
+  files for consistency with the rest of the series.
+
+  Example:
+
+  .. code-block:: dts
+
+    /* Before */
+    #include <nxp/mcx/mcxn/nxp_mcxn94x.dtsi>
+
+    /* After */
+    #include <nxp/mcx/mcxn/nxp_mcxn947.dtsi>
+
 * The NXP i.MX RT DTSI files were reorganized from the flat directory
   ``dts/arm/nxp/imxrt/`` into per-series subdirectories, Out-of-tree
   boards that include these files directly must update their includes.
@@ -1513,6 +1574,65 @@ STM32
   ``pinctrl-names``, ``mclk-enable``, ``mclk-divider``, ``synchronous``, and
   ``fifo-threshold``. (:github:`104423`)
 
+* :dtcompatible:`st,stm32-adc` binding has been restructured to reflect the ADC hardware
+  topology. A parent node now represents the ADC common block, which holds the clock and
+  the settings shared by all the ADC instances connected to it, while a new ``child-binding``
+  represents the ADC instances themselves.
+
+  The existing ``&adcN`` node labels still designate the ADC instances, which are now children
+  of a common block node labelled ``&adcN_common``, where ``N`` lists the instances sharing the
+  block (for example ``&adc1_common``, ``&adc12_common`` or ``&adc123_common``). The common block
+  node must be enabled in addition to the instance node.
+
+  The following properties shall be moved from the ``&adcN`` instance node to its ``&adcN_common``
+  parent node: ``clocks``, ``clock-names``, ``st,adc-clock-source``, ``st,adc-prescaler`` and
+  ``vref-mv``. Since the clock is now described once per common block, instances sharing it can
+  no longer be given conflicting clock settings.
+
+  .. tabs::
+
+    .. group-tab:: Before
+
+      .. code-block:: devicetree
+
+          &adc1 {
+            clocks = <&rcc STM32_CLOCK(AHB2, 13)>,
+                     <&rcc STM32_SRC_SYSCLK ADC_SEL(3)>;
+            clock-names = "adcx", "adc_ker";
+            st,adc-clock-source = "ASYNC";
+            st,adc-prescaler = <4>;
+            vref-mv = <3000>;
+            pinctrl-0 = <&adc1_in1_pa0>;
+            pinctrl-names = "default";
+            status = "okay";
+          };
+
+    .. group-tab:: After
+
+      .. code-block:: devicetree
+
+          &adc12_common {
+            clocks = <&rcc STM32_CLOCK(AHB2, 13)>,
+                     <&rcc STM32_SRC_SYSCLK ADC_SEL(3)>;
+            clock-names = "adcx", "adc_ker";
+            st,adc-clock-source = "ASYNC";
+            st,adc-prescaler = <4>;
+            vref-mv = <3000>;
+            status = "okay";
+          };
+
+          &adc1 {
+            pinctrl-0 = <&adc1_in1_pa0>;
+            pinctrl-names = "default";
+            status = "okay";
+          };
+
+  Note that ``vref-mv`` only needs to be set when it differs from its ``3300`` default value.
+
+  For :dtcompatible:`st,stm32f1-adc` and :dtcompatible:`st,stm32f4-adc`, each instance keeps its
+  own register clock, so ``clocks`` and ``clock-names`` stay on the ``&adcN`` node.
+  (:github:`117309`)
+
 * :dtcompatible:`st,hci-stm32wba` and :dtcompatible:`st,stm32wba-ieee802154` nodes
   (with nodelabels ``bt_hci_wba`` and ``ieee802154`` respectively) are now
   children of a top-level :dtcompatible:`st,stm32wba-radio` node with nodelabel
@@ -1734,6 +1854,16 @@ Timer
   the header once, which emits :c:func:`sys_clock_set_timeout`,
   :c:func:`sys_clock_elapsed` and :c:func:`sys_clock_cycle_get_32` /
   :c:func:`sys_clock_cycle_get_64` (:github:`115844`).
+
+* When :kconfig:option:`SYSTEM_TIMER_LPM_COMPANION_COUNTER` is enabled, the Low-Power
+  Companion counter, selected by the :ref:`generic chosen <devicetree-zephyr-chosen-nodes>`
+  ``zephyr,system-timer-companion``, is checked at build time and must be usable as
+  wake-up source. If not already present, the ``wakeup-source`` property should be
+  added to such nodes to indicate they can be used as wake-up source. (:github:`117274`)
+
+  .. note::
+
+    This behavior was already expected in previous Zephyr releases but never asserted.
 
 USB
 ===
@@ -2018,6 +2148,14 @@ Bluetooth HCI
   (most don't) there's also a new :c:func:`bt_hci_recv_err` API that leaves the responsibility
   of unrefing the buffer to the caller in case of error situations.
 
+* :kconfig:option:`CONFIG_BT_HCI_SET_PUBLIC_ADDR` no longer selects
+  :kconfig:option:`CONFIG_BT_HCI_SETUP`. Out-of-tree HCI drivers that apply the public
+  address in their ``setup()`` implementation must now select
+  :kconfig:option:`CONFIG_BT_HCI_SETUP` themselves; without it the ``setup`` member does
+  not exist in :c:struct:`bt_hci_driver_api` and the callback is not invoked. The address
+  is now also available from the time the transport is opened, through
+  :c:func:`bt_hci_get_public_addr`, allowing drivers to apply it during ``open()`` instead.
+
 Bluetooth Host
 ==============
 
@@ -2078,6 +2216,23 @@ Bluetooth Host
 * :c:member:`bt_le_ext_adv_info.sid` now reflects the SID given to
   :c:func:`bt_le_ext_adv_update_param`. Previously it kept the value from
   :c:func:`bt_le_ext_adv_create` even though the controller applied the new one.
+
+* :c:func:`bt_addr_le_to_str` now formats LE addresses with a single-character type prefix,
+  ``P:`` for public and ``R:`` for random, directly followed by the address, e.g.
+  ``R:11:22:33:44:55:66``. The previous ``11:22:33:44:55:66 (random)`` form is no longer
+  produced, and address types carrying additional HCI-level bits, such as
+  ``BT_ADDR_LE_RANDOM_ID``, are formatted by their base type rather than as ``(random-id)`` or
+  a raw hex value. Code that parses Zephyr log or shell output to extract addresses must be
+  updated. :c:macro:`BT_ADDR_LE_STR_LEN` has shrunk from ``30`` to ``20`` accordingly.
+
+* :c:func:`bt_addr_le_from_str` no longer takes a separate address type string. It accepts only
+  the ``P:``/``R:`` prefixed format produced by :c:func:`bt_addr_le_to_str`; the previous
+  ``"XX:XX:XX:XX:XX:XX"`` + ``"public"``/``"random"`` form is not supported. All Bluetooth
+  shell commands that take an LE address (for example ``bt connect``, ``bt disconnect``,
+  ``bt clear``, ``bt fal-add``, ``bt per-adv-sync-create``, ``gatt resubscribe`` and
+  ``bap_broadcast_assistant add_src``) consequently take it as a single
+  ``P:XX:XX:XX:XX:XX:XX`` or ``R:XX:XX:XX:XX:XX:XX`` argument instead of an address followed
+  by a separate type argument.
 
 Bluetooth Mesh
 ==============
@@ -2252,6 +2407,9 @@ Modem
   :c:struct:`modem_cellular_vendor_config`, not :c:struct:`modem_cellular_data`.
 * Cellular modem instance PPP pointer is now automatically populated in
   :c:struct:`modem_cellular_config`. Assignment to :c:struct:`modem_cellular_data` must be removed.
+* Chat script callback argument types have been updated. A new
+  :c:struct:`modem_chat_script_completion_info` pointer is now inserted before the ``user_data``
+  argument.
 
 PTP
 ===
@@ -2470,6 +2628,21 @@ Other subsystems
   ``__ASSERT()`` or ``__ASSERT_NO_MSG()`` directly, as these macros already compile out when
   assertions are disabled.
   Mark values used only by assertions with ``__maybe_unused`` or ``ARG_UNUSED()`` as appropriate.
+
+FIDO2
+=====
+
+* The FIDO2 transport callback API has changed. The
+  :c:type:`fido2_transport_recv_cb_t` callback now returns an ``int`` to
+  indicate whether a received message was accepted by the FIDO2 core, and
+  :c:type:`fido2_transport_cancel_cb_t` now takes the
+  :c:struct:`fido2_transport` instance that received the cancel command.
+  Out-of-tree transports must be updated to handle the receive callback
+  return value and pass the transport instance when invoking the cancel
+  callback. (:github:`116552`)
+* Application-provided user-presence backends selected with
+  :kconfig:option:`CONFIG_FIDO2_UP_CUSTOM` must now implement
+  :c:func:`fido2_up_reset` to clear their state for each new request. (:github:`116552`)
 
 hawkBit
 =======

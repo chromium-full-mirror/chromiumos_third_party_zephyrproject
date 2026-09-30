@@ -151,6 +151,31 @@ Removed APIs and options
       * ``scobc_module1``
       * ``xiao_esp32c6``
 
+    * The following boards have been deprecated and renamed:
+
+      * ``adafruit_metro_rp2350/rp2350b/m33`` to ``adafruit_metro_rp2350/rp2350b/m33_0``
+      * ``motion_2350_pro/rp2350a/m33`` to ``motion_2350_pro/rp2350a/m33_0``
+      * ``motion_2350_pro/rp2350a/hazard3`` to ``motion_2350_pro/rp2350a/hazard3_0``
+      * ``beetle_rp2350/rp2350a/m33`` to ``beetle_rp2350/rp2350a/m33_0``
+      * ``beetle_rp2350/rp2350a/hazard3`` to ``beetle_rp2350/rp2350a/hazard3_0``
+      * ``pico2_spe/rp2350a/m33`` to ``pico2_spe/rp2350a/m33_0``
+      * ``pico_plus2/rp2350b/m33`` to ``pico_plus2/rp2350b/m33_0``
+      * ``pico_plus2/rp2350b/hazard3`` to ``pico_plus2/rp2350b/hazard3_0``
+      * ``rpi_pico2/rp2350a/m33`` to ``rpi_pico2/rp2350a/m33_0``
+      * ``rpi_pico2/rp2350a/m33/w`` to ``rpi_pico2/rp2350a/m33_0/w``
+      * ``rpi_pico2/rp2350a/m33/mcuboot`` to ``rpi_pico2/rp2350a/m33_0/mcuboot``
+      * ``rpi_pico2/rp2350a/m33/w/mcuboot`` to ``rpi_pico2/rp2350a/m33_0/w/mcuboot``
+      * ``rpi_pico2/rp2350a/hazard3`` to ``rpi_pico2/rp2350a/hazard3_0``
+      * ``xiao_rp2350/rp2350a/m33`` to ``xiao_rp2350/rp2350a/m33_0``
+      * ``xiao_rp2350/rp2350a/hazard3`` to ``xiao_rp2350/rp2350a/hazard3_0``
+      * ``rp2350_zero/rp2350a/m33`` to ``rp2350_zero/rp2350a/m33_0``
+      * ``rp2350_zero/rp2350a/hazard3`` to ``rp2350_zero/rp2350a/hazard3_0``
+      * ``rp2350b_core/rp2350b/m33`` to ``rp2350b_core/rp2350b/m33_0``
+      * ``rp2350b_core/rp2350b/hazard3`` to ``rp2350b_core/rp2350b/hazard3_0``
+      * ``w5500_evb_pico2/rp2350a/m33`` to ``w5500_evb_pico2/rp2350a/m33_0``
+      * ``w6100_evb_pico2/rp2350a/m33`` to ``w6100_evb_pico2/rp2350a/m33_0``
+      * ``w6300_evb_pico2/rp2350a/m33`` to ``w6300_evb_pico2/rp2350a/m33_0``
+
 * Build system
 
     * ``CONFIG_BUILD_NO_GAP_FILL``
@@ -387,6 +412,16 @@ Deprecated APIs and options
   * The Nordic SoC headers :file:`<haltium_power.h>` and :file:`<haltium_pm_s2ram.h>`
     have been renamed to :file:`<soc_power.h>` and :file:`<soc_pm_s2ram.h>` respectively.
 
+* Raspberry Pi
+
+  * The RP2350 ``SOC_RP2350A_HAZARD3``, ``SOC_RP2350A_M33``, ``SOC_RP2350B_HAZARD3``, and
+    ``SOC_RP2350B_M33`` Kconfig symbols, along with the corresponding bare ``hazard3``/``m33``
+    cpuclusters in ``soc.yml``, are deprecated in favor of ``SOC_RP2350A_HAZARD3_0``,
+    ``SOC_RP2350A_M33_0``, ``SOC_RP2350B_HAZARD3_0``, and ``SOC_RP2350B_M33_0`` and their
+    ``hazard3_0``/``m33_0`` cpuclusters, to align RP2350 dual-core cluster naming with the hardware
+    model v2. Both the old Kconfig symbols and the ``soc.yml`` entries will be removed
+    in a future release. All in-tree boards have been migrated.
+
 * Ring buffer
 
   * The ring buffer item API (:c:func:`ring_buf_item_init`, :c:func:`ring_buf_item_put`,
@@ -566,6 +601,8 @@ New APIs and options
       :c:func:`bt_hci_pkt_parse_cmd_rsp` and friends) for framing HCI command packets and
       parsing command responses independently of the Host.
     * :c:func:`bt_hci_lockstep_cmd_send_sync`
+    * :c:func:`bt_hci_lockstep_reset`
+    * :c:func:`bt_hci_set_public_addr` and :c:func:`bt_hci_get_public_addr`
     * :c:func:`bt_le_bond_addr_res_support`, :c:enum:`bt_le_addr_res_support` and
       :c:member:`bt_conn_auth_info_cb.addr_res_support_read`
     * :c:enumerator:`BT_LE_SCAN_OPT_EXT_FILTER_POLICY`
@@ -611,6 +648,20 @@ New APIs and options
 
   * :c:enumerator:`PIXEL_FORMAT_YUYV`
   * :c:macro:`PANEL_PIXEL_FORMAT_YUYV`
+
+* FIDO2
+
+  * :c:func:`fido2_up_reset`
+  * :c:macro:`FIDO2_BLE_SERVICE_UUID_VAL`
+  * :c:macro:`FIDO2_BLE_SERVICE_DATA_PAIRING_MODE`
+  * :kconfig:option:`CONFIG_FIDO2_TRANSPORT_BLE`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_REQUIRE_AUTHENTICATED_LINK`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_RX_WORKQ_STACK_SIZE`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_CONTROL_POINT_LENGTH`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_RX_QUEUE_DEPTH`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_TX_FRAME_COUNT`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_KEEPALIVE_INTERVAL_MS`
+  * :kconfig:option:`CONFIG_FIDO2_BLE_RX_TIMEOUT_MS`
 
 * Fuel Gauge
 
@@ -694,6 +745,10 @@ New APIs and options
 * Network
 
   * Add :c:func:`net_eth_set_if_type_wifi` to set the ethernet interface type to Wi-Fi.
+  * Add a public neighbor cache API: :c:func:`net_if_ipv4_nbr_flush` and
+    :c:func:`net_if_ipv6_nbr_flush` drop the neighbors an interface has
+    learned, and :c:func:`net_if_ipv4_nbr_rm` and :c:func:`net_if_ipv6_nbr_rm`
+    remove a single one. On an Ethernet link the IPv4 cache is the ARP cache.
   * Add :c:func:`net_dhcpv4_set_reboot_hint` to seed the DHCPv4 client with a
     previously leased address for INIT-REBOOT.
   * Add an mDNS responder interface policy
@@ -751,7 +806,19 @@ New APIs and options
     Memberships still held when the socket is closed are dropped automatically,
     and :kconfig:option:`CONFIG_NET_SOCKETS_PACKET_MCAST_MEMBERSHIP_COUNT` sets
     how many memberships can be active at the same time.
+  * Add TCP selective acknowledgment of received data (:rfc:`2018`,
+    :kconfig:option:`CONFIG_NET_TCP_SACK`, enabled by default). Zephyr now
+    offers SACK in the handshake and reports out-of-order data held in the
+    receive queue, so that a sender which supports SACK can resend only the
+    missing data. Incoming SACK blocks are not yet used when retransmitting.
   * :kconfig:option:`CONFIG_PTP_NETWORK_MODE_HYBRID`
+  * Add an SNTP server (:kconfig:option:`CONFIG_SNTP_SERVER`) that answers time
+    queries on UDP port 123 on every enabled address family. The application
+    sets the system clock and then tells the server about its clock source with
+    :c:func:`sntp_server_clock_source`; until it does, the server tells clients
+    that its time must not be used. The SNTP client is now selected by
+    :kconfig:option:`CONFIG_SNTP` alone, both share
+    :kconfig:option:`CONFIG_SNTP_LIB`.
 
 * Power Management
 
@@ -789,6 +856,10 @@ New APIs and options
   * :kconfig:option:`CONFIG_SECURE_STORAGE_ITS_TRANSFORM_AEAD_SCHEME_IS_CONFIGURABLE`
   * :kconfig:option:`CONFIG_SECURE_STORAGE_ITS_TRANSFORM_AEAD_KEY_SIZE_IS_CONFIGURABLE`
 
+
+* Timer
+
+  * :c:func:`z_sys_clock_lpm_enter`
 
 * USB Type-C
 
@@ -1251,6 +1322,7 @@ New Drivers
 
 * Clock control
 
+  * :dtcompatible:`aesc,clock-controller` (:github:`116703`)
   * :dtcompatible:`bflb,bl616cl-clock-controller` (:github:`112738`)
   * :dtcompatible:`bflb,bl808-clock-controller` (:github:`105580`)
   * :dtcompatible:`bflb,mm-clk` (:github:`105580`)

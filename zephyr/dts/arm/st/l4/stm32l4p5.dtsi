@@ -394,7 +394,7 @@
 			interrupt-names = "dcmi";
 			clocks = <&rcc STM32_CLOCK(AHB2, 14)>;
 			dmas = <&dma1 1 91 (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
-					    STM32_DMA_MEM_INC | STM32_DMA_PERIPH_8BITS |
+					    STM32_DMA_MEM_INC | STM32_DMA_PERIPH_32BITS |
 					    STM32_DMA_MEM_32BITS |
 					    STM32_DMA_PRIORITY_HIGH) STM32_DMA_FIFO_1_4>;
 			status = "disabled";
@@ -455,6 +455,14 @@
 
 			#address-cells = <1>;
 			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		hash: crypto@50060400 {
+			compatible = "st,stm32-hash";
+			reg = <0x50060400 0x400>;
+			clocks = <&rcc STM32_CLOCK(AHB2, 17)>;
+			resets = <&rctl STM32_RESET(AHB2, 17)>;
 			status = "disabled";
 		};
 

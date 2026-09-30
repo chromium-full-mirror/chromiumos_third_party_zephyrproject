@@ -13,6 +13,7 @@ toolchain:
 supported:
   - uart
   - gpio
+  - dma
   - spi
   - i2c
   - rtc
@@ -21,4 +22,5 @@ supported:
   - mbox
   - input
   - wuc
+  - adc
 vendor: nxp

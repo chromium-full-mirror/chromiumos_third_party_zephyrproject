@@ -63,6 +63,13 @@ zephyr_compile_definitions(
   USE_FULL_LL_DRIVER
 )
 
+# DMA support in HAL2 drivers shall be enable only if DMA drivers are enabled.
+if(CONFIG_USE_STM32_HAL_DMA)
+  zephyr_compile_definitions(USE_HAL_DMA_MODULE=1)
+else()
+  zephyr_compile_definitions(USE_HAL_DMA_MODULE=0)
+endif()
+
 # Include list of all supported STM32 SoC series
 include(series_list.cmake)
 

@@ -27,15 +27,19 @@
 		zephyr,flash-controller = &flash;
 	};
 
-	cpus {
+	cpus: cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+
+		/* Both HP cores implement the same ISA, so the base and the
+		 * extension list are described once for all of them here.
+		 */
+		riscv,isa-base = "rv32i";
+		riscv,isa-extensions = "i", "m", "a", "f", "c", "zicsr", "zifencei";
 
 		cpu0: cpu@0 {
 			device_type = "cpu";
 			compatible = "espressif,riscv", "riscv";
-			riscv,isa-base = "rv32i";
-			riscv,isa-extensions = "i", "m", "a", "f", "c", "zicsr", "zifencei";
 			reg = <0>;
 			cpu-power-states = <&light_sleep &deep_sleep>;
 			clock-source = <ESP32_CPU_CLK_SRC_PLL>;
@@ -47,8 +51,6 @@
 		cpu1: cpu@1 {
 			device_type = "cpu";
 			compatible = "espressif,riscv", "riscv";
-			riscv,isa-base = "rv32i";
-			riscv,isa-extensions = "i", "m", "a", "f", "c", "zicsr", "zifencei";
 			reg = <1>;
 			cpu-power-states = <&light_sleep &deep_sleep>;
 			clock-source = <ESP32_CPU_CLK_SRC_PLL>;
@@ -596,6 +598,16 @@
 			clocks = <&clock ESP32_GDMA_MODULE>;
 			dma-channels = <6>;
 			dma-buf-addr-alignment = <64>;
+			status = "disabled";
+		};
+
+		ppa: ppa@50087000 {
+			compatible = "espressif,esp32-ppa";
+			reg = <0x50087000 DT_SIZE_K(4)>,
+			      <0x50088000 DT_SIZE_K(4)>;
+			reg-names = "ppa", "dma2d";
+			interrupts = <DMA2D_IN_CH0_INTR_SOURCE IRQ_DEFAULT_PRIORITY 0>;
+			interrupt-parent = <&intc>;
 			status = "disabled";
 		};
 
