@@ -8,13 +8,18 @@ toolchain:
   - zephyr
   - gnuarmemb
 supported:
+  - adc
   - bluetooth
   - comparator
   - counter
   - dma
   - entropy
+  - flash
   - gpio
+  - hwinfo
   - pwm
   - spi
   - uart
+  - watchdog
+  - netif:openthread
 vendor: silabs

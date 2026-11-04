@@ -16,66 +16,6 @@
 #include <et171_hal/et171_hal_smu.h>
 #include <et171_hal/et171_hal_otp.h>
 
-static inline void disable_unused_device()
-{
-	const uint32_t unused_ip = 0
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(usb), okay) || 1 /* Egis's usb driver will handle it by itself */
-		| SMU_RST_USB2
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spis), okay)
-		| SMU_RST_SPIS
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spi0), okay) && !CONFIG_XIP
-		| SMU_RST_SPIM1
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spi1), okay)
-		| SMU_RST_SPIM2
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spi2), okay)
-		| SMU_RST_SPIM3
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(rtc0), okay)
-		| SMU_RST_RTC
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(pit0), okay) && !DT_NODE_EXISTS(DT_NODELABEL(ext_wdt))
-		| SMU_RST_PITPWM
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(i2c0), okay) && 0 /* keep enable, i2c is using to workaround for WFI issue */
-		| SMU_RST_I2C
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(uart0), okay)
-		| SMU_RST_UART
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(gpio0), okay)
-		| SMU_RST_GPIO
-#endif
-#if !DT_NODE_HAS_STATUS(DT_NODELABEL(wdt), okay)
-		| SMU_RST_WDT
-#endif
-#if !CONFIG_HAS_EGIS_ET171_SXSMCRYPT
-		| SMU_RST_CRYPTO
-#endif
-		;
-	if (unused_ip)
-		HAL_SMU_ResetLow(unused_ip);
-}
-
-static int soc_pre_init(void)
-{
-#if CONFIG_XIP && CONFIG_ICACHE
-	/* Since caching is enabled before z_data_copy(), RAM functions may still be cached
-	 * in the d-cache instead of being written to SRAM. In this case, the i-cache will
-	 * fetch the wrong content from SRAM. Thus, using "fence.i" to fix it.
-	 */
-	__asm__ volatile("fence.i" ::: "memory");
-#endif
-
-	/* Load Analog triming value from OTP */
-	HAL_OTP_LoadAnalogConfig();
-
-	/* Load Root clock triming value from OTP */
-	HAL_OTP_GetRootClock();
-
 #define AHB_BASE_CLOCK (200 * 1000000) /* 200MHz */
 #if DT_NODE_HAS_STATUS(DT_NODELABEL(clock), okay)
 #   if DT_NODE_HAS_PROP(DT_NODELABEL(clock), ahb_divide)
@@ -166,8 +106,112 @@ static int soc_pre_init(void)
 #   define APB_CLOCK (APB_BASE_CLOCK / 2)
 #endif
 
+static inline void disable_unused_device()
+{
+	const uint32_t unused_ip = 0
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(usb), okay) || 1 /* Egis's usb driver will handle it by itself */
+		| SMU_RST_USB2
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spis), okay)
+		| SMU_RST_SPIS
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spi0), okay) && !CONFIG_XIP
+		| SMU_RST_SPIM1
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spi1), okay)
+		| SMU_RST_SPIM2
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(spi2), okay)
+		| SMU_RST_SPIM3
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(rtc0), okay)
+		| SMU_RST_RTC
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(pit0), okay) && !DT_NODE_EXISTS(DT_NODELABEL(ext_wdt))
+		| SMU_RST_PITPWM
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(i2c0), okay) && 0 /* keep enable, i2c is using to workaround for WFI issue */
+		| SMU_RST_I2C
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(uart0), okay)
+		| SMU_RST_UART
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(gpio0), okay)
+		| SMU_RST_GPIO
+#endif
+#if !DT_NODE_HAS_STATUS(DT_NODELABEL(wdt), okay)
+		| SMU_RST_WDT
+#endif
+#if !CONFIG_HAS_EGIS_ET171_SXSMCRYPT
+		| SMU_RST_CRYPTO
+#endif
+		;
+	if (unused_ip)
+		HAL_SMU_ResetLow(unused_ip);
+}
+
+#if CONFIG_XIP
+#define MEMCTRL_CHG BIT(8)
+static __ramfunc uint32_t get_ahb_div()
+{
+	const uint32_t div_val =
+		(sys_read32(0xF0100004) & SMU_CLK_SRC_DIV_MASK) >> SMU_CLK_SRC_DIV_POS;
+	return (div_val < 4) ? (div_val + 1) : ((div_val == 4) ? 6 : (1 << (div_val - 2)));
+}
+static __ramfunc void configurate_root_clock(void)
+{
+	uint32_t pre_div, aft_div;
+	unsigned int key;
+
+	key = irq_lock();
+
+	/* Exit memory-mapped interface before SPI transfer. */
+	sys_write32(sys_read32(0xF0B00050), 0xF0B00050);
+	while (sys_read32(0xF0B00050) & MEMCTRL_CHG);
+
+	pre_div = get_ahb_div();
+	sys_write32(ROOT_CLK_250M | SET_AHB_DIV | SET_APB_DIV, 0xF0100004);
+	aft_div = get_ahb_div();
+
+	if (pre_div != aft_div) {
+		/* Restore the previous SPI clock frequency. */
+		uint32_t spi_clk_val = sys_read32(0xF0B00040);
+		int32_t spi_div_val = (int32_t)(spi_clk_val & 0xFF);
+
+		spi_div_val = (spi_div_val + 1) * pre_div / aft_div - 1;
+		if (spi_div_val > 0xFE) {
+			spi_div_val = 0xFE;
+		} else if (spi_div_val < 0) {
+			spi_div_val = 0x00;
+		}
+		sys_write32((spi_clk_val & ~0xFF) | (uint32_t)spi_div_val, 0xF0B00040);
+	}
+	irq_unlock(key);
+}
+#endif /* CONFIG_XIP */
+
+static int soc_pre_init(void)
+{
+#if CONFIG_XIP && CONFIG_ICACHE
+	/* Since caching is enabled before z_data_copy(), RAM functions may still be cached
+	 * in the d-cache instead of being written to SRAM. In this case, the i-cache will
+	 * fetch the wrong content from SRAM. Thus, using "fence.i" to fix it.
+	 */
+	__asm__ volatile("fence.i" ::: "memory");
+#endif
+
+	/* Load Analog triming value from OTP */
+	HAL_OTP_LoadAnalogConfig();
+
+	/* Load Root clock triming value from OTP */
+	HAL_OTP_GetRootClock();
+
 	/* AHB ~200Mhz / 3 = 66MHz AHB , ~66Mhz / 2 / 2 = 18Mhz APB */
+#if CONFIG_XIP
+	configurate_root_clock();
+#else
 	HAL_SMU_SetRootClock(ROOT_CLK_250M, SET_AHB_DIV, SET_APB_DIV);
+#endif
 
 	/* Workaround WFI wakeup issue. AE350_I2C->INTEN = 1;       */
 	sys_write32(1, 0xF0A00014U);
