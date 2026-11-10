@@ -26,7 +26,6 @@
 #include <zephyr/sys/util_macro.h>
 
 #include "common/bt_str.h"
-#include "common/rpa.h"
 #include "conn_internal.h"
 #include "gatt_internal.h"
 #include "hci_core.h"
@@ -322,7 +321,7 @@ struct bt_keys *bt_keys_find_irk(uint8_t id, const bt_addr_le_t *addr)
 			continue;
 		}
 
-		if (bt_rpa_irk_matches(key_pool[i].irk.val, &addr->a)) {
+		if (bt_addr_matches_irk(&addr->a, key_pool[i].irk.val)) {
 			LOG_DBG("RPA %s matches %s", bt_addr_str(&key_pool[i].irk.rpa),
 				bt_addr_le_str(&key_pool[i].addr));
 
@@ -554,6 +553,10 @@ static int keys_set(const char *name, size_t len_rd, settings_read_cb read_cb,
 static void id_add(struct bt_keys *keys, void *user_data)
 {
 	__ASSERT_NO_MSG(keys != NULL);
+
+	if ((keys->state & BT_KEYS_ID_ADDED) != 0U) {
+		return;
+	}
 
 	/* Only mark as pending here. Keys are added to the controller RL on
 	 * demand when advertising or scanning starts, avoiding bt_id_add()
