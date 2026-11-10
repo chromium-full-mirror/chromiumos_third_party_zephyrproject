@@ -14,8 +14,12 @@
 #include <stm32g0xx_ll_comp.h>
 #elif defined(CONFIG_SOC_SERIES_STM32G4X)
 #include <stm32g4xx_ll_comp.h>
+#elif defined(CONFIG_SOC_SERIES_STM32G5X)
+#include <stm32g5xx_ll_comp.h>
 #elif defined(CONFIG_SOC_SERIES_STM32H5X)
 #include <stm32h5xx_ll_comp.h>
+#elif defined(CONFIG_SOC_SERIES_STM32H7PX)
+#include <stm32h7pxx_ll_comp.h>
 #elif defined(CONFIG_SOC_SERIES_STM32H7X)
 #include <stm32h7xx_ll_comp.h>
 #elif defined(CONFIG_SOC_SERIES_STM32L0X)

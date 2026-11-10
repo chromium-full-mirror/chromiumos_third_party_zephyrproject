@@ -405,10 +405,21 @@ int zsock_connect_ctx(struct net_context *ctx, const struct net_sockaddr *addr,
 
 #if defined(CONFIG_SOCKS)
 	if (net_context_is_proxy_enabled(ctx)) {
-		ret = net_socks5_connect(ctx, addr, addrlen);
+		struct net_pkt *leftover = NULL;
+
+		ret = net_socks5_connect(ctx, addr, addrlen, &leftover);
 		if (ret < 0) {
 			errno = -ret;
 			return -1;
+		}
+
+		/* Data that came in behind the CONNECT reply has to be queued
+		 * before the receive callback is installed, so that it stays
+		 * ahead of whatever arrives next.
+		 */
+		if (leftover != NULL) {
+			zsock_received_cb(ctx, leftover, NULL, NULL, 0,
+					  ctx->user_data);
 		}
 
 		if (!sock_is_eof(ctx)) {
@@ -1633,6 +1644,14 @@ static ssize_t zsock_recv_stream_timed(struct net_context *ctx, struct net_msghd
 		if (!K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
 			res = zsock_wait_data(ctx, &timeout);
 			if (res < 0) {
+				/* Return the data already received in this
+				 * call (with MSG_WAITALL) instead of the
+				 * timeout or error.
+				 */
+				if (recv_len > 0) {
+					break;
+				}
+
 				return res;
 			}
 		}
@@ -1642,8 +1661,12 @@ again:
 			res = zsock_recv_stream_immediate(ctx, &buf, &available_len, flags);
 			recv_len += res;
 
-			if (res == 0 && recv_len == 0 && K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
-				return -EAGAIN;
+			if (res == 0 && K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+				if (recv_len == 0) {
+					return -EAGAIN;
+				}
+
+				break;
 			}
 
 			buf = (uint8_t *)(msg->msg_iov[iovec].iov_base) + res;
@@ -1672,10 +1695,12 @@ again:
 			res = zsock_recv_stream_immediate(ctx, &buf, &max_len, flags);
 			recv_len += res;
 
-			if (res == 0) {
-				if (recv_len == 0 && K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+			if (res == 0 && K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+				if (recv_len == 0) {
 					return -EAGAIN;
 				}
+
+				break;
 			}
 		}
 
@@ -1884,6 +1909,17 @@ static int zsock_poll_update_ctx(struct net_context *ctx,
 	}
 
 	return 0;
+}
+
+static int sock_poll_prepare_vmeth(void *obj, struct zvfs_pollfd *pfd, struct k_poll_event **pev,
+				   struct k_poll_event *pev_end)
+{
+	return zsock_poll_prepare_ctx(obj, pfd, pev, pev_end);
+}
+
+static int sock_poll_update_vmeth(void *obj, struct zvfs_pollfd *pfd, struct k_poll_event **pev)
+{
+	return zsock_poll_update_ctx(obj, pfd, pev);
 }
 
 static enum tcp_conn_option get_tcp_option(int optname)
@@ -3379,6 +3415,7 @@ int zsock_getpeername_ctx(struct net_context *ctx, struct net_sockaddr *addr,
 		addr6.sin6_port = net_sin6(&ctx->remote)->sin6_port;
 		memcpy(&addr6.sin6_addr, &net_sin6(&ctx->remote)->sin6_addr,
 		       sizeof(struct net_in6_addr));
+		addr6.sin6_scope_id = net_sin6(&ctx->remote)->sin6_scope_id;
 		newlen = sizeof(struct net_sockaddr_in6);
 
 		memcpy(addr, &addr6, MIN(*addrlen, newlen));
@@ -3486,28 +3523,6 @@ static int sock_ioctl_vmeth(void *obj, unsigned int request, va_list args)
 		}
 
 		return 0;
-	}
-
-	case ZFD_IOCTL_POLL_PREPARE: {
-		struct zsock_pollfd *pfd;
-		struct k_poll_event **pev;
-		struct k_poll_event *pev_end;
-
-		pfd = va_arg(args, struct zsock_pollfd *);
-		pev = va_arg(args, struct k_poll_event **);
-		pev_end = va_arg(args, struct k_poll_event *);
-
-		return zsock_poll_prepare_ctx(obj, pfd, pev, pev_end);
-	}
-
-	case ZFD_IOCTL_POLL_UPDATE: {
-		struct zsock_pollfd *pfd;
-		struct k_poll_event **pev;
-
-		pfd = va_arg(args, struct zsock_pollfd *);
-		pev = va_arg(args, struct k_poll_event **);
-
-		return zsock_poll_update_ctx(obj, pfd, pev);
 	}
 
 	case ZFD_IOCTL_SET_LOCK: {
@@ -3637,6 +3652,8 @@ const struct socket_op_vtable sock_fd_op_vtable = {
 		.write = sock_write_vmeth,
 		.close2 = sock_close2_vmeth,
 		.ioctl = sock_ioctl_vmeth,
+		.poll_prepare = sock_poll_prepare_vmeth,
+		.poll_update = sock_poll_update_vmeth,
 	},
 	.shutdown = sock_shutdown_vmeth,
 	.bind = sock_bind_vmeth,

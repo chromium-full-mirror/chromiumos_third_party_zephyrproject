@@ -37,6 +37,8 @@ PINCTRL_TEMPLATE = "pinctrl-template.j2"
 
 SUPPORTED_FAMILIES = [
     "stm32c5",
+    "stm32g5",
+    "stm32h7p",
 ]
 """Supported SoC families."""
 
@@ -425,8 +427,8 @@ def main(data_path: Path, output):
     # List of all JSON files in the soc_folder
     soc, soc_files = get_series_pinout_files(data_path)
 
-    family = soc[:7]
-    family_id = family[5:]
+    family = soc.rstrip("x")
+    family_id = family.removeprefix("stm32")
 
     try:
         # Create the directory if it does not exist
