@@ -46,8 +46,11 @@ struct lvgl_disp_data disp_data[DT_ZEPHYR_DISPLAYS_COUNT] = {{
 		     "LVGL display " #n " is not a display controller node");
 FOR_EACH(DISPLAY_NODE_CLASS_ASSERT, (), LV_DISPLAYS_IDX_LIST)
 
-#define IS_MONOCHROME_DISPLAY                                                                      \
-	UTIL_OR(IS_EQ(CONFIG_LV_Z_BITS_PER_PIXEL, 1), IS_EQ(CONFIG_LV_COLOR_DEPTH_1, 1))
+#if CONFIG_LV_Z_BITS_PER_PIXEL != 0
+#define BUFFER_BITS_PER_PIXEL CONFIG_LV_Z_BITS_PER_PIXEL
+#else
+#define BUFFER_BITS_PER_PIXEL LV_COLOR_FORMAT_GET_BPP(LV_COLOR_FORMAT_DEFAULT)
+#endif
 
 #define ALLOC_MONOCHROME_CONV_BUFFER                                                               \
 	UTIL_AND(IS_EQ(IS_MONOCHROME_DISPLAY, 1),                                                  \
@@ -82,7 +85,7 @@ FOR_EACH(DISPLAY_NODE_CLASS_ASSERT, (), LV_DISPLAYS_IDX_LIST)
 	+ 8)
 #else
 #define BUFFER_SIZE(n)                                                                             \
-	(CONFIG_LV_Z_BITS_PER_PIXEL *                                                              \
+	(BUFFER_BITS_PER_PIXEL *                                                                   \
 	 ((CONFIG_LV_Z_VDB_SIZE * DISPLAY_WIDTH(n) * DISPLAY_HEIGHT(n)) / 100) / 8)
 #endif /* IS_MONOCHROME_DISPLAY */
 
@@ -135,7 +138,7 @@ FOR_EACH(LV_BUFFERS_DEFINE, (), LV_DISPLAYS_IDX_LIST);
 
 #endif /* CONFIG_LV_Z_BUFFER_ALLOC_STATIC */
 
-#if CONFIG_LV_Z_LOG_LEVEL != 0
+#if LV_USE_LOG
 static void lvgl_log(lv_log_level_t level, const char *buf)
 {
 	switch (level) {
@@ -151,12 +154,19 @@ static void lvgl_log(lv_log_level_t level, const char *buf)
 	case LV_LOG_LEVEL_TRACE:
 		LOG_DBG("%s", buf + (sizeof("[Trace] ") - 1));
 		break;
-	case LV_LOG_LEVEL_USER:
-		LOG_INF("%s", buf + (sizeof("[User] ") - 1));
+	case LV_LOG_LEVEL_USER: {
+		static const char prefix[] = "[User] ";
+
+		if (strncmp(buf, prefix, sizeof(prefix) - 1) == 0) {
+			LOG_PRINTK("%s", buf + (sizeof(prefix) - 1));
+		} else {
+			LOG_PRINTK("%s", buf);
+		}
 		break;
 	}
+	}
 }
-#endif
+#endif /* LV_USE_LOG */
 
 #ifdef CONFIG_LV_Z_BUFFER_ALLOC_STATIC
 
@@ -278,7 +288,7 @@ static void lvgl_timer_handler_work(struct k_work *work)
 
 	/* schedule next timer verification */
 	if (wait_time == LV_NO_TIMER_READY) {
-		wait_time = CONFIG_LV_DEF_REFR_PERIOD;
+		wait_time = LV_DEF_REFR_PERIOD;
 	}
 
 	k_work_schedule_for_queue(&lvgl_workqueue, dwork, K_MSEC(wait_time));
@@ -379,9 +389,9 @@ int lvgl_init(void)
 	lv_init();
 	lv_tick_set_cb(k_uptime_get_32);
 
-#if CONFIG_LV_Z_LOG_LEVEL != 0
+#if LV_USE_LOG
 	lv_log_register_print_cb(lvgl_log);
-#endif
+#endif /* LV_USE_LOG */
 
 #ifdef CONFIG_LV_Z_USE_FILESYSTEM
 	lvgl_fs_init();

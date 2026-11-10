@@ -23,7 +23,8 @@
 #include <zephyr/ztest.h>
 
 #if defined(CONFIG_BT_PRIVACY)
-#include <common/rpa.h>
+#include <host/hci_core.h>
+#include <host/id.h>
 #include <host/keys.h>
 #endif
 
@@ -191,6 +192,48 @@ static void command_status(struct net_buf *buf, struct net_buf **evt, uint8_t le
 	cs->opcode = sys_cpu_to_le16(opcode);
 }
 
+/* Whether legacy advertising and scanning are enabled */
+static bool adv_enabled;
+static bool scan_enabled;
+
+/* The address the Host set last with LE Set Random Address */
+static bt_addr_t random_addr;
+
+static void le_set_adv_enable(struct net_buf *buf, struct net_buf **evt, uint8_t len,
+			      uint16_t opcode)
+{
+	const struct bt_hci_cp_le_set_adv_enable *cp = net_buf_pull_mem(buf, sizeof(*cp));
+
+	adv_enabled = cp->enable != 0U;
+	generic_success(buf, evt, len, opcode);
+}
+
+static void le_set_scan_enable(struct net_buf *buf, struct net_buf **evt, uint8_t len,
+			       uint16_t opcode)
+{
+	const struct bt_hci_cp_le_set_scan_enable *cp = net_buf_pull_mem(buf, sizeof(*cp));
+
+	scan_enabled = cp->enable != 0U;
+	generic_success(buf, evt, len, opcode);
+}
+
+static void le_set_random_address(struct net_buf *buf, struct net_buf **evt, uint8_t len,
+				  uint16_t opcode)
+{
+	const struct bt_hci_cp_le_set_random_address *cp = net_buf_pull_mem(buf, sizeof(*cp));
+	struct bt_hci_evt_cc_status *rp;
+
+	/* Core v6.3, Vol 4, Part E, 7.8.4 */
+	if (adv_enabled || scan_enabled) {
+		rp = cmd_complete(evt, len, opcode);
+		rp->status = BT_HCI_ERR_CMD_DISALLOWED;
+		return;
+	}
+
+	bt_addr_copy(&random_addr, &cp->bdaddr);
+	generic_success(buf, evt, len, opcode);
+}
+
 static const struct cmd_handler cmds[] = {
 	{
 		BT_HCI_OP_READ_LOCAL_FEATURES,
@@ -232,6 +275,21 @@ static const struct cmd_handler cmds[] = {
 		0U,
 		command_status,
 	},
+	{
+		BT_HCI_OP_LE_SET_RANDOM_ADDRESS,
+		sizeof(struct bt_hci_evt_cc_status),
+		le_set_random_address,
+	},
+	{
+		BT_HCI_OP_LE_SET_ADV_ENABLE,
+		sizeof(struct bt_hci_evt_cc_status),
+		le_set_adv_enable,
+	},
+	{
+		BT_HCI_OP_LE_SET_SCAN_ENABLE,
+		sizeof(struct bt_hci_evt_cc_status),
+		le_set_scan_enable,
+	},
 };
 
 static void cmd_handle(const struct device *dev, struct net_buf *cmd)
@@ -255,7 +313,25 @@ static void cmd_handle(const struct device *dev, struct net_buf *cmd)
 	bt_hci_recv(dev, evt);
 }
 
+/* What bt_hci_get_public_addr() returned the last time the transport was
+ * opened, for the public-address channel test below.
+ */
+static bt_addr_t opened_with_addr;
+static bool opened_with_public_addr;
+
 static int driver_open(const struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_BT_HCI_SET_PUBLIC_ADDR)) {
+		const bt_addr_t *addr = bt_hci_get_public_addr(dev);
+
+		opened_with_public_addr = !bt_addr_eq(addr, BT_ADDR_ANY);
+		bt_addr_copy(&opened_with_addr, addr);
+	}
+
+	return 0;
+}
+
+static int driver_close(const struct device *dev)
 {
 	ARG_UNUSED(dev);
 
@@ -275,6 +351,7 @@ static int driver_send(const struct device *dev, struct net_buf *buf)
 
 static DEVICE_API(bt_hci, driver_api) = {
 	.open = driver_open,
+	.close = driver_close,
 	.send = driver_send,
 };
 
@@ -411,14 +488,27 @@ ZTEST(bt_id_public_api, test_create_errors_and_capacity)
 	bt_addr_le_t addr4 = test_addr(5U);
 	bt_addr_le_t public_addr = test_addr(6U);
 	uint8_t irk[BT_IRK_SIZE] = {1U};
+	int err;
 	int id;
 
 	invalid_addr.a.val[5] = 0x40U;
 	public_addr.type = BT_ADDR_LE_PUBLIC;
 	zassert_equal(bt_id_create(&invalid_addr, NULL), -EINVAL,
 		      "Non-static random identity address was accepted");
-	zassert_equal(bt_id_create(&public_addr, NULL), -EINVAL,
-		      "Public identity address was accepted without controller support");
+	err = bt_id_create(&public_addr, NULL);
+	/* The same condition the Host applies: a public identity is taken when
+	 * the controller can be given one.
+	 */
+	if (IS_ENABLED(CONFIG_BT_HCI_SET_PUBLIC_ADDR) || IS_ENABLED(CONFIG_BT_HCI_VS)) {
+		zassert_equal(err, -EALREADY,
+			      "Public identity address after the default identity gave %d (!= %d)",
+			      err, -EALREADY);
+	} else {
+		zassert_equal(err, -EINVAL,
+			      "Public identity address without controller support gave %d (!= %d)",
+			      err, -EINVAL);
+	}
+
 	if (IS_ENABLED(CONFIG_BT_PRIVACY)) {
 		zassert_equal(bt_id_create(&addr1, irk), 1, "IRK was not accepted");
 	} else {
@@ -523,6 +613,28 @@ ZTEST(bt_id_public_api, test_delete_errors_and_empty_slot)
 		      "Deleting the tail identity did not shrink identity count");
 }
 
+ZTEST(bt_id_public_api, test_oob_rejects_invalid_identity)
+{
+	bt_addr_le_t addr1 = test_addr(2U);
+	bt_addr_le_t addr2 = test_addr(3U);
+	struct bt_le_oob oob = {0};
+	uint8_t first_unused_id = (uint8_t)identity_count();
+	int id1;
+	int id2;
+
+	zassert_equal(bt_le_oob_get_local(first_unused_id, &oob), -EINVAL,
+		      "First unused identity handle was accepted for OOB lookup");
+
+	id1 = bt_id_create(&addr1, NULL);
+	id2 = bt_id_create(&addr2, NULL);
+	zassert_equal(id1, 1, "Unexpected first secondary identity id");
+	zassert_equal(id2, 2, "Unexpected second secondary identity id");
+
+	zassert_ok(bt_id_delete((uint8_t)id1), "Failed to delete non-tail identity");
+	zassert_equal(bt_le_oob_get_local((uint8_t)id1, &oob), -EINVAL,
+		      "Deleted identity handle was accepted for OOB lookup");
+}
+
 #if defined(CONFIG_BT_PRIVACY)
 static bool is_zero_irk(const uint8_t *irk)
 {
@@ -553,7 +665,7 @@ static ZTEST(bt_id_public_api, test_reset_irk_updates_key)
 	zassert_ok(bt_id_reset_irk(BT_ID_DEFAULT, old_irk), "Failed to set the old IRK");
 	zassert_ok(bt_le_oob_get_local(BT_ID_DEFAULT, &old_oob), "Failed to get the old RPA");
 	zassert_true(bt_addr_le_is_rpa(&old_oob.addr), "The old address is not an RPA");
-	zassert_true(bt_rpa_irk_matches(old_irk, &old_oob.addr.a),
+	zassert_true(bt_addr_matches_irk(&old_oob.addr.a, old_irk),
 		     "The old RPA does not match the old IRK");
 
 	zassert_ok(bt_id_reset_irk(BT_ID_DEFAULT, supplied_irk), "Failed to set the supplied IRK");
@@ -567,9 +679,9 @@ static ZTEST(bt_id_public_api, test_reset_irk_updates_key)
 
 	zassert_ok(bt_le_oob_get_local(BT_ID_DEFAULT, &new_oob), "Failed to get the new RPA");
 	zassert_true(bt_addr_le_is_rpa(&new_oob.addr), "The new address is not an RPA");
-	zassert_true(bt_rpa_irk_matches(supplied_irk, &new_oob.addr.a),
+	zassert_true(bt_addr_matches_irk(&new_oob.addr.a, supplied_irk),
 		     "The new RPA does not match the supplied IRK");
-	zassert_false(bt_rpa_irk_matches(old_irk, &new_oob.addr.a),
+	zassert_false(bt_addr_matches_irk(&new_oob.addr.a, old_irk),
 		      "The new RPA still matches the old IRK");
 	zassert_false(bt_addr_le_eq(&old_oob.addr, &new_oob.addr),
 		      "The RPA did not change after the IRK reset");
@@ -596,7 +708,7 @@ static ZTEST(bt_id_public_api, test_reset_irk_invalidates_cached_rpa)
 	err = bt_le_ext_adv_get_info(adv, &info);
 	zassert_ok(err, "Failed to get the old advertising set info");
 	bt_addr_le_copy(&old_rpa, info.addr);
-	zassert_true(bt_rpa_irk_matches(old_irk, &old_rpa.a),
+	zassert_true(bt_addr_matches_irk(&old_rpa.a, old_irk),
 		     "The cached RPA does not match the old IRK");
 	zassert_ok(bt_le_ext_adv_delete(adv), "Failed to delete the old advertising set");
 
@@ -606,9 +718,9 @@ static ZTEST(bt_id_public_api, test_reset_irk_invalidates_cached_rpa)
 	err = bt_le_ext_adv_get_info(adv, &info);
 	zassert_ok(err, "Failed to get the new advertising set info");
 	bt_addr_le_copy(&new_rpa, info.addr);
-	zassert_true(bt_rpa_irk_matches(new_irk, &new_rpa.a),
+	zassert_true(bt_addr_matches_irk(&new_rpa.a, new_irk),
 		     "The refreshed cached RPA does not match the new IRK");
-	zassert_false(bt_rpa_irk_matches(old_irk, &new_rpa.a),
+	zassert_false(bt_addr_matches_irk(&new_rpa.a, old_irk),
 		      "The refreshed cached RPA still matches the old IRK");
 	zassert_false(bt_addr_le_eq(&old_rpa, &new_rpa),
 		      "The cached RPA did not change after the IRK reset");
@@ -709,4 +821,251 @@ static ZTEST(bt_id_public_api, test_reset_irk_rejects_active_roles)
 	err = bt_id_reset_irk(BT_ID_DEFAULT, NULL);
 	zassert_ok(err, "IRK reset failed after active roles stopped");
 }
+
+#if defined(CONFIG_BT_BROADCASTER) &&                                                              \
+	(!defined(CONFIG_BT_EXT_ADV) || defined(CONFIG_BT_EXT_ADV_LEGACY_SUPPORT))
+/* The test controller has no extended advertising, so this is the legacy advertiser */
+#define NRPA_ADV_PARAM                                                                             \
+	BT_LE_ADV_PARAM(BT_LE_ADV_OPT_USE_NRPA, BT_GAP_ADV_FAST_INT_MIN_2,                         \
+			BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+
+#if defined(CONFIG_BT_RPA_TIMEOUT_DYNAMIC)
+static ZTEST(bt_id_public_api, test_nrpa_adv_keeps_nrpa_on_rotation)
+{
+	struct bt_le_oob oob;
+	bt_addr_t rotated;
+	bt_addr_t nrpa;
+
+	zassert_ok(bt_le_set_rpa_timeout(1U), "Failed to set the RPA timeout");
+	/* Start a new RPA period, which uses the new timeout */
+	zassert_ok(bt_le_oob_get_local(BT_ID_DEFAULT, &oob), "Failed to get the local address");
+
+	zassert_ok(bt_le_adv_start(NRPA_ADV_PARAM, NULL, 0U, NULL, 0U),
+		   "Failed to start advertising");
+	bt_addr_copy(&nrpa, &random_addr);
+	zassert_true(BT_ADDR_IS_NRPA(&nrpa), "The advertiser does not use an NRPA");
+
+	k_sleep(K_MSEC(1500));
+	bt_addr_copy(&rotated, &random_addr);
+
+	zassert_ok(bt_le_adv_stop(), "Failed to stop advertising");
+	zassert_ok(bt_le_set_rpa_timeout(CONFIG_BT_RPA_TIMEOUT),
+		   "Failed to restore the RPA timeout");
+
+	zassert_true(BT_ADDR_IS_NRPA(&rotated), "The advertiser no longer uses an NRPA");
+	zassert_false(bt_addr_eq(&rotated, &nrpa), "The NRPA was not rotated");
+}
+
+#if defined(CONFIG_BT_OBSERVER)
+static ZTEST(bt_id_public_api, test_nrpa_adv_shares_nrpa_with_scanner)
+{
+	struct bt_le_oob oob;
+	bt_addr_t scan_addr;
+	bt_addr_t rotated;
+	bt_addr_t nrpa;
+	int passive_err;
+	int active_err;
+	bool scanning;
+
+	zassert_ok(bt_le_set_rpa_timeout(1U), "Failed to set the RPA timeout");
+	/* Start a new RPA period, which uses the new timeout */
+	zassert_ok(bt_le_oob_get_local(BT_ID_DEFAULT, &oob), "Failed to get the local address");
+
+	zassert_ok(bt_le_adv_start(NRPA_ADV_PARAM, NULL, 0U, NULL, 0U),
+		   "Failed to start advertising");
+	bt_addr_copy(&nrpa, &random_addr);
+
+	passive_err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, NULL);
+	if (passive_err == 0) {
+		(void)bt_le_scan_stop();
+	}
+	active_err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, NULL);
+	bt_addr_copy(&scan_addr, &random_addr);
+
+	k_sleep(K_MSEC(1500));
+	bt_addr_copy(&rotated, &random_addr);
+	scanning = scan_enabled;
+
+	if (active_err == 0) {
+		(void)bt_le_scan_stop();
+	}
+	zassert_ok(bt_le_adv_stop(), "Failed to stop advertising");
+	zassert_ok(bt_le_set_rpa_timeout(CONFIG_BT_RPA_TIMEOUT),
+		   "Failed to restore the RPA timeout");
+
+	zassert_ok(passive_err, "Passive scanning failed next to the advertiser");
+	zassert_ok(active_err, "Active scanning failed next to the advertiser");
+	zassert_true(bt_addr_eq(&scan_addr, &nrpa), "The scanner replaced the advertiser's NRPA");
+	zassert_true(BT_ADDR_IS_NRPA(&rotated), "The shared address is no longer an NRPA");
+	zassert_false(bt_addr_eq(&rotated, &nrpa), "The NRPA was not rotated");
+	zassert_true(scanning, "The scanner was not enabled again after the rotation");
+}
+#endif /* defined(CONFIG_BT_OBSERVER) */
+#endif /* defined(CONFIG_BT_RPA_TIMEOUT_DYNAMIC) */
+
+#if defined(CONFIG_BT_CENTRAL)
+static ZTEST(bt_id_public_api, test_nrpa_adv_rejects_conn_create)
+{
+	bt_addr_le_t remote = test_addr(0x47U);
+	struct bt_conn *conn = NULL;
+	int err;
+
+	zassert_ok(bt_le_adv_start(NRPA_ADV_PARAM, NULL, 0U, NULL, 0U),
+		   "Failed to start advertising");
+
+	err = bt_conn_le_create(&remote, BT_CONN_LE_CREATE_CONN, BT_LE_CONN_PARAM_DEFAULT, &conn);
+	if (conn != NULL) {
+		(void)bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+		bt_conn_unref(conn);
+	}
+
+	zassert_ok(bt_le_adv_stop(), "Failed to stop advertising");
+	zassert_equal(err, -EINVAL, "Creating a connection next to the advertiser gave %d", err);
+}
+#endif /* defined(CONFIG_BT_CENTRAL) */
+
+static ZTEST(bt_id_public_api, test_nrpa_adv_rejects_oob_get_local)
+{
+	struct bt_le_oob oob;
+	int err;
+
+	zassert_ok(bt_le_adv_start(NRPA_ADV_PARAM, NULL, 0U, NULL, 0U),
+		   "Failed to start advertising");
+	err = bt_le_oob_get_local(BT_ID_DEFAULT, &oob);
+	zassert_ok(bt_le_adv_stop(), "Failed to stop advertising");
+
+	zassert_equal(err, -EINVAL, "Getting OOB data next to the advertiser gave %d", err);
+}
+
+#if defined(CONFIG_BT_CENTRAL) && defined(CONFIG_BT_SMP)
+static ZTEST(bt_id_public_api, test_nrpa_adv_rejects_conn_create_with_host_resolving)
+{
+	bt_addr_le_t remote = test_addr(0x48U);
+	struct bt_conn *conn = NULL;
+	struct bt_keys *keys;
+	int unpair_err;
+	int stop_err;
+	int err;
+
+	/* The test controller has no resolving list, so the bond makes
+	 * bt_conn_le_create() resolve the peer's address in the Host.
+	 */
+	keys = bt_keys_get_type(BT_KEYS_IRK, BT_ID_DEFAULT, &remote);
+	zassert_not_null(keys, "Failed to create a test bond");
+	bt_id_add(keys);
+
+	zassert_ok(bt_le_adv_start(NRPA_ADV_PARAM, NULL, 0U, NULL, 0U),
+		   "Failed to start advertising");
+
+	err = bt_conn_le_create(&remote, BT_CONN_LE_CREATE_CONN, BT_LE_CONN_PARAM_DEFAULT, &conn);
+	if (conn != NULL) {
+		(void)bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+		bt_conn_unref(conn);
+	}
+
+	stop_err = bt_le_adv_stop();
+	unpair_err = bt_unpair(BT_ID_DEFAULT, NULL);
+
+	zassert_equal(err, -EINVAL, "Creating a connection next to the advertiser gave %d", err);
+	zassert_ok(stop_err, "Failed to stop advertising");
+	zassert_ok(unpair_err, "Failed to remove the test bond");
+}
+#endif /* defined(CONFIG_BT_CENTRAL) && defined(CONFIG_BT_SMP) */
+#endif /* CONFIG_BT_BROADCASTER && (!CONFIG_BT_EXT_ADV || CONFIG_BT_EXT_ADV_LEGACY_SUPPORT) */
+
+#if defined(CONFIG_BT_OBSERVER) && !defined(CONFIG_BT_BROADCASTER) &&                              \
+	defined(CONFIG_BT_RPA_TIMEOUT_DYNAMIC)
+/* Scan through one expiry of the RPA timeout. Report whether
+ * rpa_timeout() started the RPA timer again.
+ */
+static int scan_through_rpa_timeout(const struct bt_le_scan_param *param, uint16_t rpa_timeout_s,
+				    bool *pending)
+{
+	int err;
+
+	err = bt_le_scan_start(param, NULL);
+	if (err != 0) {
+		return err;
+	}
+
+	/* Wait half a second past the RPA timeout: rpa_timeout() has run,
+	 * and the next expiry is still ahead.
+	 */
+	(void)k_sleep(K_MSEC(rpa_timeout_s * MSEC_PER_SEC + 500U));
+	*pending = k_work_delayable_is_pending(&bt_dev.rpa_update);
+
+	return bt_le_scan_stop();
+}
+
+static ZTEST(bt_id_public_api, test_rpa_timer_stops_without_active_scanner)
+{
+	const uint16_t rpa_timeout_s = 1U;
+	struct bt_le_oob oob;
+	bool passive_pending = false;
+	bool active_pending = false;
+	int passive_err;
+	int active_err;
+
+	zassert_ok(bt_le_set_rpa_timeout(rpa_timeout_s), "Failed to set the RPA timeout");
+	/* Start a new RPA period, which uses the new timeout */
+	zassert_ok(bt_le_oob_get_local(BT_ID_DEFAULT, &oob), "Failed to get the local address");
+
+	passive_err = scan_through_rpa_timeout(BT_LE_SCAN_PASSIVE, rpa_timeout_s, &passive_pending);
+	active_err = scan_through_rpa_timeout(BT_LE_SCAN_ACTIVE, rpa_timeout_s, &active_pending);
+
+	zassert_ok(bt_le_set_rpa_timeout(CONFIG_BT_RPA_TIMEOUT),
+		   "Failed to restore the RPA timeout");
+
+	zassert_ok(passive_err, "Passive scanning failed: %d", passive_err);
+	zassert_ok(active_err, "Active scanning failed: %d", active_err);
+	zassert_false(passive_pending, "The RPA timer kept running for a passive scanner");
+	zassert_true(active_pending, "The RPA timer stopped for an active scanner");
+}
+#endif /* CONFIG_BT_OBSERVER && !CONFIG_BT_BROADCASTER && CONFIG_BT_RPA_TIMEOUT_DYNAMIC */
 #endif /* defined(CONFIG_BT_PRIVACY) */
+
+/* The public identity address reaches the driver through the common driver
+ * data, so that a driver can apply it while opening the transport rather than
+ * from the setup() op. The Host sets it before every open, which includes
+ * clearing it when the application has not created a public identity.
+ */
+ZTEST_SUITE(bt_hci_public_addr, NULL, NULL, NULL, NULL, NULL);
+
+static ZTEST(bt_hci_public_addr, test_public_addr_reaches_the_driver)
+{
+	bt_addr_le_t public_addr = {
+		.type = BT_ADDR_LE_PUBLIC,
+		.a.val = {0x01U, 0x02U, 0x03U, 0x04U, 0x05U, 0x06U},
+	};
+	int err;
+
+	if (!IS_ENABLED(CONFIG_BT_HCI_SET_PUBLIC_ADDR)) {
+		ztest_test_skip();
+	}
+
+	/* A public identity can only be the first one, so start from a closed
+	 * transport whether or not another suite has opened it.
+	 */
+	err = bt_disable();
+	zassert_true(err == 0 || err == -EALREADY, "Bluetooth disable gave %d", err);
+
+	zassert_equal(bt_id_create(&public_addr, NULL), BT_ID_DEFAULT,
+		      "Public identity address was not accepted");
+
+	zassert_ok(bt_enable(NULL), "Bluetooth init with a public identity failed");
+	zassert_true(opened_with_public_addr, "The driver was opened without a public address");
+	zassert_mem_equal(&opened_with_addr, &public_addr.a, sizeof(opened_with_addr),
+			  "The driver was opened with the wrong public address");
+
+	/* bt_disable() drops the identities, so the next open must not be given
+	 * the address this one left behind.
+	 */
+	zassert_ok(bt_disable(), "Bluetooth disable failed");
+	zassert_ok(bt_enable(NULL), "Bluetooth re-init failed");
+	zassert_false(opened_with_public_addr, "The driver was opened with a stale public address");
+	/* The documented value for "no address", which is not BT_ADDR_NONE */
+	zassert_true(bt_addr_eq(&opened_with_addr, BT_ADDR_ANY),
+		     "No public address did not read as BT_ADDR_ANY");
+
+	zassert_ok(bt_disable(), "Bluetooth disable failed");
+}

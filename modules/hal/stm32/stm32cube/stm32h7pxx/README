@@ -1,0 +1,55 @@
+STM32CubeH7P
+############
+
+Origin:
+   STMicroelectronics
+   https://www.st.com/en/embedded-software/stm32cubeh7p.html
+
+Status:
+   version 2.0.0
+
+Purpose:
+   STMicroelectronics official MCU package for STM32H7P series.
+
+Description:
+   This package is an extract of official STM32CubeH7P package written by STMicroelectronics.
+   It is composed of STM32Cube hardware abstraction layer (HAL) and low layer (LL) plus a set
+   of CMSIS headers files, one for each SoC in the STM32H7P series.
+
+Dependencies:
+   None.
+
+URL:
+   https://github.com/STMicroelectronics/STM32CubeH7P
+
+Commit:
+   94982c0018262122ada273271aa5a9e1b5b404e4
+
+Maintained-by:
+   External
+
+License:
+   BSD-3-Clause
+
+License Link:
+   https://opensource.org/licenses/BSD-3-Clause
+
+Patch List:
+   *Changes from official delivery:
+    -dos2unix applied
+    -trailing white spaces removed
+
+   *Disable HAL UCPD module
+      -The HAL UCPD module depends on the HAL DMA module which is not
+       always enabled in Zephyr. Since it is never used, as the Zephyr
+       driver for UCPD uses the LL API, disable the module completely
+       to avoid build errors.
+      -Impacted files:
+         - stm32cube/stm32h7pxx/drivers/templates/common/stm32h7pxx_hal_conf.h
+
+   *Make HAL DMA usage conditional
+      -Allow the USE_HAL_DMA_MODULE configuration option to come from the
+       compiler flags (-DUSE_HAL_DMA_MODULE=0/1), and enable DMA mode in
+       all other HAL modules only if the HAL DMA module itself is enabled.
+      -Impacted files:
+         - stm32cube/stm32h7pxx/drivers/templates/common/stm32h7pxx_hal_conf.h
